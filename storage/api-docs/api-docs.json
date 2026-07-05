@@ -1,0 +1,2738 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+        "title": "منصة خبرات - Khibrat HR SaaS API",
+        "description": "التوثيق الرسمي لكافة واجهات برمجة التطبيقات (APIs) لمنصة خبرات لإدارة الموارد البشرية",
+        "version": "1.0.0"
+    },
+    "servers": [
+        {
+            "url": "http://127.0.0.1:8000",
+            "description": "سيرفر التطوير المحلي"
+        }
+    ],
+    "paths": {
+        "/api/auth/login": {
+            "post": {
+                "tags": [
+                    "المصادقة (Authentication)"
+                ],
+                "summary": "تسجيل دخول المستخدم للمنصة",
+                "operationId": "8dcb70df1020986038d098cc08d05dae",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "email",
+                                    "password"
+                                ],
+                                "properties": {
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "example": "hr@khibrat.com"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "format": "password",
+                                        "example": "123456"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "تم تسجيل الدخول بنجاح وإعادة الـ Token",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Login successful."
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "user": {
+                                                    "type": "object"
+                                                },
+                                                "company": {
+                                                    "type": "object"
+                                                },
+                                                "token": {
+                                                    "type": "string",
+                                                    "example": "1|lhA7G..."
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "بيانات الدخول غير صحيحة"
+                    },
+                    "403": {
+                        "description": "الحساب غير نشط"
+                    }
+                }
+            }
+        },
+        "/api/auth/forgot-password": {
+            "post": {
+                "tags": [
+                    "المصادقة (Authentication)"
+                ],
+                "summary": "طلب رابط إعادة تعيين كلمة المرور (نسيان كلمة المرور)",
+                "operationId": "cff9b52a898f73f39d684747bd69c4e1",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "email"
+                                ],
+                                "properties": {
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "example": "hr@khibrat.com"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "تم توليد رمز إعادة التعيين بنجاح",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Password reset link has been generated."
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "email": {
+                                                    "type": "string",
+                                                    "example": "hr@khibrat.com"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "البريد الإلكتروني غير مسجل في النظام"
+                    }
+                }
+            }
+        },
+        "/api/auth/reset-password": {
+            "post": {
+                "tags": [
+                    "المصادقة (Authentication)"
+                ],
+                "summary": "إعادة تعيين كلمة المرور الجديدة باستخدام الـ Token",
+                "operationId": "6af92e090f994419a2295111b391a205",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "email",
+                                    "token",
+                                    "password"
+                                ],
+                                "properties": {
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "example": "hr@khibrat.com"
+                                    },
+                                    "token": {
+                                        "type": "string",
+                                        "example": "abcdef123456..."
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "format": "password",
+                                        "example": "new_password_123"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "تم تحديث كلمة المرور بنجاح",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Password updated successfully."
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "email": {
+                                                    "type": "string",
+                                                    "example": "hr@khibrat.com"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "الـ Token غير صحيح أو منتهي الصلاحية"
+                    }
+                }
+            }
+        },
+        "/api/auth/complete-first-login": {
+            "post": {
+                "tags": [
+                    "المصادقة (Authentication)"
+                ],
+                "summary": "تغيير كلمة المرور الإلزامية عند تسجيل الدخول الأول للمنصة",
+                "operationId": "b954f9b16adb04877cbe5d6a41900a9e",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "password",
+                                    "password_confirmation"
+                                ],
+                                "properties": {
+                                    "password": {
+                                        "type": "string",
+                                        "format": "password",
+                                        "minLength": 8,
+                                        "example": "New@Pass2026"
+                                    },
+                                    "password_confirmation": {
+                                        "type": "string",
+                                        "format": "password",
+                                        "example": "New@Pass2026"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "تم تحديث كلمة المرور وإغلاق حالة الدخول الأول بنجاح",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Initial password changed successfully. Welcome to Khibrat!"
+                                        },
+                                        "data": {
+                                            "type": "object",
+                                            "nullable": true
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "المستخدم غير مصادق عليه (Unauthenticated)"
+                    },
+                    "422": {
+                        "description": "خطأ في التحقق من المدخلات (مثال: عدم تطابق كلمة المرور أو ضعفها)"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/companies": {
+            "get": {
+                "tags": [
+                    "Companies"
+                ],
+                "summary": "List all tenant companies",
+                "operationId": "a9a97cf8e647a5430e03410a2685abdf",
+                "responses": {
+                    "200": {
+                        "description": "Successful operation"
+                    }
+                }
+            }
+        },
+        "/api/companies/{company}": {
+            "get": {
+                "tags": [
+                    "Companies"
+                ],
+                "summary": "Retrieve company details with subscription info",
+                "operationId": "0855706b525c08361e1128eb65ed7dc9",
+                "parameters": [
+                    {
+                        "name": "company",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful operation"
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "Companies"
+                ],
+                "summary": "Delete a company permanently",
+                "operationId": "52cd05b2eb5827b6eebeafa0ee216d96",
+                "parameters": [
+                    {
+                        "name": "company",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Company deleted successfully"
+                    }
+                }
+            }
+        },
+        "/api/companies/{company}/freeze": {
+            "post": {
+                "tags": [
+                    "Companies"
+                ],
+                "summary": "Freeze a company's account",
+                "operationId": "8f0db11fc07a533e570be1e7eaee9812",
+                "parameters": [
+                    {
+                        "name": "company",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Company frozen successfully"
+                    }
+                }
+            }
+        },
+        "/api/companies/{company}/activate": {
+            "post": {
+                "tags": [
+                    "Companies"
+                ],
+                "summary": "Reactivate a company's account",
+                "operationId": "ff05330a3f17f6bb53853e218ac594e2",
+                "parameters": [
+                    {
+                        "name": "company",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Company reactivated successfully"
+                    }
+                }
+            }
+        },
+        "/api/companies/stats": {
+            "get": {
+                "tags": [
+                    "الشركات والاشتراكات (Companies & Subscriptions)"
+                ],
+                "summary": "جلب الإحصائيات الشاملة والمالية للوحة التحكم (Dashboard Stats)",
+                "description": "يعيد هذا الـ API كافة الأرقام المالية، توزيع حالات الشركات للمخطط الدائري، البيانات الزمنية لآخر 6 أشهر للمخطط الخطي، وقائمة بآخر المنصات المسجلة لتغذية الـ Dashboard بالكامل.",
+                "operationId": "71f7bc5257c0a017561ed9a80ad763cc",
+                "responses": {
+                    "200": {
+                        "description": "تم جلب بيانات لوحة التحكم بنجاح",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "summary": {
+                                                    "properties": {
+                                                        "total_revenue": {
+                                                            "type": "number",
+                                                            "format": "float",
+                                                            "example": 2878
+                                                        },
+                                                        "monthly_revenue": {
+                                                            "type": "number",
+                                                            "format": "float",
+                                                            "example": 49.99
+                                                        },
+                                                        "yearly_revenue": {
+                                                            "type": "number",
+                                                            "format": "float",
+                                                            "example": 1200.5
+                                                        },
+                                                        "total_subscriptions": {
+                                                            "type": "integer",
+                                                            "example": 5
+                                                        },
+                                                        "new_companies_this_month": {
+                                                            "type": "integer",
+                                                            "example": 3
+                                                        },
+                                                        "auto_deletion_period_days": {
+                                                            "type": "integer",
+                                                            "example": 30
+                                                        }
+                                                    },
+                                                    "type": "object"
+                                                },
+                                                "status_distribution": {
+                                                    "properties": {
+                                                        "active": {
+                                                            "type": "integer",
+                                                            "example": 4
+                                                        },
+                                                        "frozen": {
+                                                            "type": "integer",
+                                                            "example": 1
+                                                        },
+                                                        "at_risk": {
+                                                            "type": "integer",
+                                                            "example": 0
+                                                        }
+                                                    },
+                                                    "type": "object"
+                                                },
+                                                "monthly_subscription_analytics": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "properties": {
+                                                            "month": {
+                                                                "type": "string",
+                                                                "example": "Jun 2026"
+                                                            },
+                                                            "count": {
+                                                                "type": "integer",
+                                                                "example": 5
+                                                            }
+                                                        },
+                                                        "type": "object"
+                                                    }
+                                                },
+                                                "latest_registered_platforms": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "properties": {
+                                                            "id": {
+                                                                "type": "string",
+                                                                "format": "uuid",
+                                                                "example": "74523827-0f69-45ce-be73-afd7be29f6e4"
+                                                            },
+                                                            "name": {
+                                                                "type": "string",
+                                                                "example": "شركة النور التقنية"
+                                                            },
+                                                            "created_at": {
+                                                                "type": "string",
+                                                                "format": "date",
+                                                                "example": "2026-07-03"
+                                                            },
+                                                            "status": {
+                                                                "type": "string",
+                                                                "example": "active"
+                                                            },
+                                                            "package": {
+                                                                "type": "string",
+                                                                "example": "paid"
+                                                            }
+                                                        },
+                                                        "type": "object"
+                                                    }
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "خطأ داخلي في السيرفر أثناء احتساب الإحصائيات"
+                    }
+                }
+            }
+        },
+        "/api/companies/{company}/leave-types": {
+            "get": {
+                "tags": [
+                    "Company Policies"
+                ],
+                "summary": "List leave types for a company",
+                "operationId": "7496c9aab588c683f6cab6750ca48d01",
+                "parameters": [
+                    {
+                        "name": "company",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Leave types retrieved successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Company Policies"
+                ],
+                "summary": "Create a leave type for a company",
+                "operationId": "3d3dd9735ac812b4671535d88be80d51",
+                "parameters": [
+                    {
+                        "name": "company",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "name",
+                                    "allocation_value",
+                                    "allocation_unit",
+                                    "is_paid"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "example": "Annual Leave"
+                                    },
+                                    "allocation_value": {
+                                        "type": "integer",
+                                        "example": 21
+                                    },
+                                    "allocation_unit": {
+                                        "type": "string",
+                                        "example": "days"
+                                    },
+                                    "is_paid": {
+                                        "type": "boolean",
+                                        "example": true
+                                    },
+                                    "requires_proof": {
+                                        "type": "boolean",
+                                        "example": false
+                                    },
+                                    "is_active": {
+                                        "type": "boolean",
+                                        "example": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Leave type created successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/companies/{company}/leave-types/{leaveType}": {
+            "put": {
+                "tags": [
+                    "Company Policies"
+                ],
+                "summary": "Update a leave type for a company",
+                "operationId": "abfc6485a954e64695047e34aa396f15",
+                "parameters": [
+                    {
+                        "name": "company",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    },
+                    {
+                        "name": "leaveType",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "example": "Annual Leave"
+                                    },
+                                    "allocation_value": {
+                                        "type": "integer",
+                                        "example": 21
+                                    },
+                                    "allocation_unit": {
+                                        "type": "string",
+                                        "example": "days"
+                                    },
+                                    "is_paid": {
+                                        "type": "boolean",
+                                        "example": true
+                                    },
+                                    "requires_proof": {
+                                        "type": "boolean",
+                                        "example": false
+                                    },
+                                    "is_active": {
+                                        "type": "boolean",
+                                        "example": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Leave type updated successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/companies/{company}/leave-types/{leaveType}/toggle": {
+            "post": {
+                "tags": [
+                    "Company Policies"
+                ],
+                "summary": "Toggle leave type active state",
+                "operationId": "7b406af6ddec6836c1f27d61faad5054",
+                "parameters": [
+                    {
+                        "name": "company",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    },
+                    {
+                        "name": "leaveType",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Leave type toggled successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/companies/{company}/salary-rules": {
+            "get": {
+                "tags": [
+                    "Company Policies"
+                ],
+                "summary": "List salary rules for a company",
+                "operationId": "b03bd88cdcb1728b28925c553a7b1c90",
+                "parameters": [
+                    {
+                        "name": "company",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Salary rules retrieved successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Company Policies"
+                ],
+                "summary": "Create a salary rule for a company",
+                "operationId": "6908411773608538f6fb3a356ee88042",
+                "parameters": [
+                    {
+                        "name": "company",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "rule_type",
+                                    "operation",
+                                    "value_type",
+                                    "value"
+                                ],
+                                "properties": {
+                                    "rule_type": {
+                                        "type": "string",
+                                        "example": "late"
+                                    },
+                                    "time_unit": {
+                                        "type": "string",
+                                        "example": "day"
+                                    },
+                                    "operation": {
+                                        "type": "string",
+                                        "example": "deduction"
+                                    },
+                                    "value_type": {
+                                        "type": "string",
+                                        "example": "fixed"
+                                    },
+                                    "value": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 50
+                                    },
+                                    "is_active": {
+                                        "type": "boolean",
+                                        "example": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Salary rule created successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/companies/{company}/salary-rules/{rule}": {
+            "put": {
+                "tags": [
+                    "Company Policies"
+                ],
+                "summary": "Update a salary rule for a company",
+                "operationId": "39e0d7cba8af40cf261d03c46599ed2a",
+                "parameters": [
+                    {
+                        "name": "company",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    },
+                    {
+                        "name": "rule",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "rule_type": {
+                                        "type": "string",
+                                        "example": "late"
+                                    },
+                                    "time_unit": {
+                                        "type": "string",
+                                        "example": "day"
+                                    },
+                                    "operation": {
+                                        "type": "string",
+                                        "example": "deduction"
+                                    },
+                                    "value_type": {
+                                        "type": "string",
+                                        "example": "fixed"
+                                    },
+                                    "value": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 50
+                                    },
+                                    "is_active": {
+                                        "type": "boolean",
+                                        "example": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Salary rule updated successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/companies/{company}/salary-rules/{rule}/toggle": {
+            "post": {
+                "tags": [
+                    "Company Policies"
+                ],
+                "summary": "Toggle salary rule active state",
+                "operationId": "559f916aa00323d6f3fa682b12fe8a81",
+                "parameters": [
+                    {
+                        "name": "company",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    },
+                    {
+                        "name": "rule",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Salary rule toggled successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/companies/{company}/payroll-currency": {
+            "put": {
+                "tags": [
+                    "Company Policies"
+                ],
+                "summary": "Update company payroll currency",
+                "operationId": "a0ce102d5b0bb30e4bd5ad84a33d0697",
+                "parameters": [
+                    {
+                        "name": "company",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "payroll_currency"
+                                ],
+                                "properties": {
+                                    "payroll_currency": {
+                                        "type": "string",
+                                        "example": "USD"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Payroll currency updated successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/companies/register": {
+            "post": {
+                "tags": [
+                    "Companies"
+                ],
+                "summary": "Register a new company and create its initial subscription",
+                "operationId": "07492aefe5e7e08d3f7d3c79201cab2e",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "name",
+                                    "email",
+                                    "address",
+                                    "contact_name",
+                                    "phone",
+                                    "plan_id",
+                                    "payment_status"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "example": "Acme Company"
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "example": "hr@acme.com"
+                                    },
+                                    "address": {
+                                        "type": "string",
+                                        "example": "Damascus"
+                                    },
+                                    "contact_name": {
+                                        "type": "string",
+                                        "example": "Ahmad"
+                                    },
+                                    "phone": {
+                                        "type": "string",
+                                        "example": "+963999999999"
+                                    },
+                                    "plan_id": {
+                                        "type": "string",
+                                        "example": "00000000-0000-0000-0000-000000000000"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Company registered successfully"
+                    }
+                }
+            }
+        },
+        "/api/companies/{company}/attendance-policy": {
+            "put": {
+                "tags": [
+                    "Companies"
+                ],
+                "summary": "تحديث سياسة الحضور والإعدادات الجغرافية للبصمة",
+                "description": "يقوم هذا الـ API بحفظ سياسات أوقات العمل للشركة بالإضافة إلى إحداثيات المقر الجغرافي ونصف قطر نطاق التواجد المسموح به للموظفين لتسجيل الحضور.",
+                "operationId": "6128e14a9c1d912a118d16e7bea2d378",
+                "parameters": [
+                    {
+                        "name": "company",
+                        "in": "path",
+                        "description": "معرف الشركة",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "work_start_time",
+                                    "work_end_time",
+                                    "allowed_late_minutes",
+                                    "allowed_early_leave_minutes",
+                                    "work_days",
+                                    "minimum_daily_hours",
+                                    "allows_overtime",
+                                    "allowed_perimeter",
+                                    "latitude",
+                                    "longitude"
+                                ],
+                                "properties": {
+                                    "work_start_time": {
+                                        "type": "string",
+                                        "example": "08:00:00"
+                                    },
+                                    "work_end_time": {
+                                        "type": "string",
+                                        "example": "17:00:00"
+                                    },
+                                    "allowed_late_minutes": {
+                                        "type": "integer",
+                                        "example": 15
+                                    },
+                                    "allowed_early_leave_minutes": {
+                                        "type": "integer",
+                                        "example": 15
+                                    },
+                                    "work_days": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string",
+                                            "example": "monday"
+                                        }
+                                    },
+                                    "minimum_daily_hours": {
+                                        "type": "integer",
+                                        "example": 8
+                                    },
+                                    "allows_overtime": {
+                                        "type": "boolean",
+                                        "example": true
+                                    },
+                                    "allowed_perimeter": {
+                                        "type": "integer",
+                                        "example": 150
+                                    },
+                                    "latitude": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 33.5138
+                                    },
+                                    "longitude": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 36.2765
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Attendance policy updated successfully"
+                    },
+                    "422": {
+                        "description": "Validation Error"
+                    }
+                }
+            }
+        },
+        "/api/companies/{company}/holidays": {
+            "get": {
+                "tags": [
+                    "Holiday Policies"
+                ],
+                "summary": "List holidays for a company",
+                "operationId": "1e45098f9d27337a700429c4f33396eb",
+                "parameters": [
+                    {
+                        "name": "company",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Holidays retrieved successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Holiday Policies"
+                ],
+                "summary": "Create a holiday for a company",
+                "operationId": "efe1ce2061513d2d7a6d6668ea231f96",
+                "parameters": [
+                    {
+                        "name": "company",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "name",
+                                    "holiday_type",
+                                    "start_date",
+                                    "repeats_annually"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "example": "عيد الاستقلال"
+                                    },
+                                    "holiday_type": {
+                                        "type": "string",
+                                        "example": "single_day"
+                                    },
+                                    "start_date": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "2026-10-01"
+                                    },
+                                    "end_date": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "2026-10-02"
+                                    },
+                                    "repeats_annually": {
+                                        "type": "boolean",
+                                        "example": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Holiday created successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/companies/{company}/holidays/{holiday}": {
+            "put": {
+                "tags": [
+                    "Holiday Policies"
+                ],
+                "summary": "Update a holiday for a company",
+                "operationId": "c10f4ee24831aed1ff37df08d5fca17a",
+                "parameters": [
+                    {
+                        "name": "company",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    },
+                    {
+                        "name": "holiday",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "name",
+                                    "holiday_type",
+                                    "start_date",
+                                    "repeats_annually"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "example": "عيد الاستقلال"
+                                    },
+                                    "holiday_type": {
+                                        "type": "string",
+                                        "example": "single_day"
+                                    },
+                                    "start_date": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "2026-10-01"
+                                    },
+                                    "end_date": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "2026-10-02"
+                                    },
+                                    "repeats_annually": {
+                                        "type": "boolean",
+                                        "example": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Holiday updated successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Holiday Policies"
+                ],
+                "summary": "Delete a holiday for a company",
+                "operationId": "e538fae3d1a5dece6e85ba2cb001ee26",
+                "parameters": [
+                    {
+                        "name": "company",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    },
+                    {
+                        "name": "holiday",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Holiday deleted successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Holiday deleted successfully."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/companies/{company}/holidays/defaults": {
+            "post": {
+                "tags": [
+                    "Holiday Policies"
+                ],
+                "summary": "Add default Syrian holidays for a company",
+                "operationId": "e424d78362e21aab3a2f984971031238",
+                "parameters": [
+                    {
+                        "name": "company",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Default Syrian holidays added successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Default Syrian holidays added successfully."
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Holiday Policies"
+                ],
+                "summary": "Remove default Syrian holidays for a company",
+                "operationId": "2948fc640cb6b5c4892d0b2e9157e988",
+                "parameters": [
+                    {
+                        "name": "company",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Default Syrian holidays removed successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Default Syrian holidays removed successfully."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/companies/{company}/weekly-holidays": {
+            "get": {
+                "tags": [
+                    "Holiday Policies"
+                ],
+                "summary": "Get weekly holiday settings for a company",
+                "operationId": "f26ccaa94d0cadff9d52ac7dc9692cd5",
+                "parameters": [
+                    {
+                        "name": "company",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Weekly holiday settings retrieved successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Holiday Policies"
+                ],
+                "summary": "Update weekly holidays for a company",
+                "operationId": "ec0e203e500ec6450701649f80d85dea",
+                "parameters": [
+                    {
+                        "name": "company",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "weekly_holidays"
+                                ],
+                                "properties": {
+                                    "weekly_holidays": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string",
+                                            "example": "friday"
+                                        }
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Weekly holidays updated successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/companies/{company}/evaluation-policy": {
+            "put": {
+                "tags": [
+                    "Holiday Policies"
+                ],
+                "summary": "Update evaluation policy for a company",
+                "operationId": "15c8bb5ff399a3299de2986bd2946bcd",
+                "parameters": [
+                    {
+                        "name": "company",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "apply_review_to_salary"
+                                ],
+                                "properties": {
+                                    "weekly_review_period": {
+                                        "type": "string",
+                                        "example": "monthly"
+                                    },
+                                    "apply_review_to_salary": {
+                                        "type": "boolean",
+                                        "example": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Evaluation policy updated successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/companies/{company}/hr-managers": {
+            "get": {
+                "tags": [
+                    "HR Managers"
+                ],
+                "summary": "List HR managers for a company",
+                "operationId": "e02140525938c18f8c8dd51df87c2aad",
+                "parameters": [
+                    {
+                        "name": "company",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of HR managers",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "HR Managers"
+                ],
+                "summary": "Create a new HR manager for a company",
+                "operationId": "e8d4293b28ae39e42ff3c442de73fe78",
+                "parameters": [
+                    {
+                        "name": "company",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "full_name",
+                                    "email",
+                                    "department_id",
+                                    "job_title",
+                                    "base_salary",
+                                    "hire_date"
+                                ],
+                                "properties": {
+                                    "full_name": {
+                                        "type": "string",
+                                        "example": "Sarah Ahmed"
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "example": "sarah@company.com"
+                                    },
+                                    "phone": {
+                                        "type": "string",
+                                        "example": "+963999888777"
+                                    },
+                                    "department_id": {
+                                        "type": "string",
+                                        "format": "uuid",
+                                        "example": "123e4567-e89b-12d3-a456-426614174000"
+                                    },
+                                    "employee_code": {
+                                        "type": "string",
+                                        "example": "HRM-001"
+                                    },
+                                    "education": {
+                                        "type": "string",
+                                        "example": "Bachelor of Business Administration"
+                                    },
+                                    "job_title": {
+                                        "type": "string",
+                                        "example": "HR Manager"
+                                    },
+                                    "base_salary": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 1200.5
+                                    },
+                                    "hire_date": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "2026-07-01"
+                                    },
+                                    "employment_type": {
+                                        "type": "string",
+                                        "example": "full-time"
+                                    },
+                                    "is_active": {
+                                        "type": "boolean",
+                                        "example": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "HR manager created successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "HR manager created successfully."
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "hr_manager": {
+                                                    "type": "object"
+                                                },
+                                                "temporary_password": {
+                                                    "type": "string",
+                                                    "example": "XyZ123!abc"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/companies/{company}/hr-managers/{hr_manager}": {
+            "get": {
+                "tags": [
+                    "HR Managers"
+                ],
+                "summary": "Get HR manager details",
+                "operationId": "2bdf6b7d11fc504d3f6bb270360c0b68",
+                "parameters": [
+                    {
+                        "name": "company",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    },
+                    {
+                        "name": "hr_manager",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "HR manager details",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "HR Managers"
+                ],
+                "summary": "Update an existing HR manager",
+                "operationId": "24aa33c3d498057f191ce81e6a3938b1",
+                "parameters": [
+                    {
+                        "name": "company",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    },
+                    {
+                        "name": "hr_manager",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "full_name": {
+                                        "type": "string",
+                                        "example": "Sarah Ahmed"
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "example": "sarah@company.com"
+                                    },
+                                    "phone": {
+                                        "type": "string",
+                                        "example": "+963999888777"
+                                    },
+                                    "department_id": {
+                                        "type": "string",
+                                        "format": "uuid",
+                                        "example": "123e4567-e89b-12d3-a456-426614174000"
+                                    },
+                                    "employee_code": {
+                                        "type": "string",
+                                        "example": "HRM-001"
+                                    },
+                                    "education": {
+                                        "type": "string",
+                                        "example": "Bachelor of Business Administration"
+                                    },
+                                    "job_title": {
+                                        "type": "string",
+                                        "example": "HR Manager"
+                                    },
+                                    "base_salary": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 1200.5
+                                    },
+                                    "hire_date": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "2026-07-01"
+                                    },
+                                    "employment_type": {
+                                        "type": "string",
+                                        "example": "full-time"
+                                    },
+                                    "is_active": {
+                                        "type": "boolean",
+                                        "example": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "HR manager updated successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "HR manager updated successfully."
+                                        },
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "HR Managers"
+                ],
+                "summary": "Delete an HR manager",
+                "operationId": "d1cfade904f402f80b88dd18d62c5714",
+                "parameters": [
+                    {
+                        "name": "company",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    },
+                    {
+                        "name": "hr_manager",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "HR manager deleted successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "HR manager deleted successfully."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/companies/{company}/hr-managers/{hr_manager}/activate": {
+            "post": {
+                "tags": [
+                    "HR Managers"
+                ],
+                "summary": "Activate an HR manager account",
+                "operationId": "d8fa2d34c789eb055de3b71df7974529",
+                "parameters": [
+                    {
+                        "name": "company",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    },
+                    {
+                        "name": "hr_manager",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "HR manager activated successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "HR manager activated successfully."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/companies/{company}/hr-managers/{hr_manager}/deactivate": {
+            "post": {
+                "tags": [
+                    "HR Managers"
+                ],
+                "summary": "Deactivate an HR manager account",
+                "operationId": "c1c1880bbc9e27fff6a1fcabd9de9723",
+                "parameters": [
+                    {
+                        "name": "company",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    },
+                    {
+                        "name": "hr_manager",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "HR manager deactivated successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "HR manager deactivated successfully."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/payments/callback": {
+            "post": {
+                "tags": [
+                    "بوابات الدفع والاشتراكات (Payments & Subscriptions)"
+                ],
+                "summary": "استقبال إشعارات بوابات الدفع (Webhook Callback)",
+                "description": "هذا الـ API مخصص لاستقبال التحديثات الفورية والآلية من بوابة الدفع الخارجية (مثل شام كاش) عند نجاح أو فشل عملية الدفع لتحديث حالة الشركة واشتراكها تلقائياً.",
+                "operationId": "b9ca607b6f8b14a8ab4532dbe1ab4b2c",
+                "requestBody": {
+                    "description": "بيانات المعاملة المالية المرسلة من سيرفر بوابة الدفع",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "transaction_reference",
+                                    "success"
+                                ],
+                                "properties": {
+                                    "transaction_reference": {
+                                        "description": "الرقم المرجعي الفريد للمعاملة المالية",
+                                        "type": "string",
+                                        "format": "uuid",
+                                        "example": "e17a3ba2-04cd-4d06-806b-46d10bc28dd1"
+                                    },
+                                    "success": {
+                                        "description": "حالة نجاح عملية الدفع (true للنجاح، false للفشل)",
+                                        "type": "boolean",
+                                        "example": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "تم معالجة الإشعار بنجاح وتفعيل حساب الشركة والمستخدم الإداري",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "company": {
+                                            "description": "بيانات الشركة التي تم تفعيلها",
+                                            "type": "object"
+                                        },
+                                        "user": {
+                                            "description": "بيانات حساب مدير الشركة الذي تم إنشاؤه",
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "طلب خاطئ - نقص في البيانات المرسلة أو فشل في معالجة الدفع",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": false
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Missing transaction_reference أو Payment failed."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/subscription-plans": {
+            "get": {
+                "tags": [
+                    "Subscription Plans"
+                ],
+                "summary": "List all subscription plans",
+                "operationId": "f56f7013fc998d9b420f047795955c82",
+                "responses": {
+                    "200": {
+                        "description": "Successful operation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Subscription Plans"
+                ],
+                "summary": "Create a new subscription plan",
+                "operationId": "787db67bdac5f9ffcc40a79359d9c7e1",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "name",
+                                    "plan_type",
+                                    "billing_period",
+                                    "max_employees",
+                                    "price",
+                                    "max_uses_per_company"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "example": "Standard"
+                                    },
+                                    "plan_type": {
+                                        "type": "string",
+                                        "example": "paid"
+                                    },
+                                    "billing_period": {
+                                        "type": "string",
+                                        "example": "month"
+                                    },
+                                    "max_employees": {
+                                        "type": "integer",
+                                        "example": 100
+                                    },
+                                    "price": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 49.99
+                                    },
+                                    "is_active": {
+                                        "type": "boolean",
+                                        "example": true
+                                    },
+                                    "max_uses_per_company": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "example": "Premium subscription plan"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Plan created successfully"
+                    }
+                }
+            }
+        },
+        "/api/subscription-plans/{plan}": {
+            "get": {
+                "tags": [
+                    "Subscription Plans"
+                ],
+                "summary": "Retrieve a subscription plan",
+                "operationId": "fe201cfdf8883677522b417ac052a18c",
+                "parameters": [
+                    {
+                        "name": "plan",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful operation"
+                    }
+                }
+            },
+            "put": {
+                "tags": [
+                    "Subscription Plans"
+                ],
+                "summary": "Update a subscription plan",
+                "operationId": "c114cb8793f3e52326e4ae11a1d89fbf",
+                "parameters": [
+                    {
+                        "name": "plan",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "name",
+                                    "plan_type",
+                                    "billing_period",
+                                    "max_employees",
+                                    "price",
+                                    "max_uses_per_company"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "example": "Standard"
+                                    },
+                                    "plan_type": {
+                                        "type": "string",
+                                        "example": "paid"
+                                    },
+                                    "billing_period": {
+                                        "type": "string",
+                                        "example": "month"
+                                    },
+                                    "max_employees": {
+                                        "type": "integer",
+                                        "example": 100
+                                    },
+                                    "price": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 49.99
+                                    },
+                                    "is_active": {
+                                        "type": "boolean",
+                                        "example": true
+                                    },
+                                    "max_uses_per_company": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "example": "Premium subscription plan"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Plan updated successfully"
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "Subscription Plans"
+                ],
+                "summary": "Delete a subscription plan",
+                "operationId": "61c5c41b4f41e7eb62234e8138b878ca",
+                "parameters": [
+                    {
+                        "name": "plan",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Plan deleted successfully"
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "securitySchemes": {
+            "sanctum": {
+                "type": "http",
+                "description": "أدخلي الـ Token الذي حصلتِ عليه من الـ Login هنا لتفعيل الصلاحيات",
+                "bearerFormat": "JWT",
+                "scheme": "bearer"
+            }
+        }
+    },
+    "tags": [
+        {
+            "name": "Companies",
+            "description": "API endpoints for managing tenant companies and subscriptions"
+        },
+        {
+            "name": "Company Policies",
+            "description": "Endpoints for leave types, salary rules and payroll settings for a tenant company"
+        },
+        {
+            "name": "Holiday Policies",
+            "description": "Endpoints for company holiday and evaluation policy management"
+        },
+        {
+            "name": "HR Managers",
+            "description": "Endpoints for managing HR manager accounts within a tenant company"
+        },
+        {
+            "name": "Subscription Plans",
+            "description": "API endpoints for managing subscription plans"
+        },
+        {
+            "name": "المصادقة (Authentication)",
+            "description": "المصادقة (Authentication)"
+        },
+        {
+            "name": "الشركات والاشتراكات (Companies & Subscriptions)",
+            "description": "الشركات والاشتراكات (Companies & Subscriptions)"
+        },
+        {
+            "name": "بوابات الدفع والاشتراكات (Payments & Subscriptions)",
+            "description": "بوابات الدفع والاشتراكات (Payments & Subscriptions)"
+        }
+    ]
+}

@@ -1,0 +1,53 @@
+<?php
+
+namespace App\Http\Requests;
+
+use Illuminate\Contracts\Validation\Validator;
+use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Http\Exceptions\HttpResponseException;
+use Illuminate\Validation\Rule;
+
+class UpdateHrManagerRequest extends FormRequest
+{
+    public function authorize(): bool
+    {
+        return true;
+    }
+
+    public function rules(): array
+    {
+        return [
+            'full_name' => ['sometimes', 'string', 'max:255'],
+            'email' => [
+                'sometimes',
+                'email',
+                'max:255',
+                Rule::unique('users', 'email')->ignore($this->route('hr_manager')->id),
+            ],
+            'phone' => ['sometimes', 'string', 'max:50'],
+            'department_id' => ['sometimes', 'string', 'exists:departments,id'],
+            'job_title' => ['sometimes', 'string', 'max:255'],
+            'base_salary' => ['sometimes', 'numeric', 'min:0'],
+            'hire_date' => ['sometimes', 'date'],
+            'employment_type' => ['sometimes', 'string', 'max:100'],
+            'employee_code' => [
+                'sometimes',
+                'nullable',
+                'string',
+                'max:100',
+                Rule::unique('employees', 'employee_code')->ignore(optional($this->route('hr_manager')->employee)->id),
+            ],
+            'education' => ['sometimes', 'string', 'max:255'],
+            'is_active' => ['sometimes', 'boolean'],
+        ];
+    }
+
+    protected function failedValidation(Validator $validator): void
+    {
+        throw new HttpResponseException(response()->json([
+            'success' => false,
+            'message' => 'Validation failed.',
+            'errors' => $validator->errors(),
+        ], 422));
+    }
+}

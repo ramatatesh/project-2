@@ -1,0 +1,318 @@
+﻿models:
+  Company:
+    id: uuid primary
+    name: string
+    address: string
+    phone: string nullable
+    email: string nullable
+    domain: string nullable
+    payroll_currency: string default:SYP
+    timestamps: true
+
+  Subscription:
+    id: uuid primary
+    company_id: uuid foreign:companies
+    plan_type: enum:trial,basic,pro
+    monthly_price: decimal nullable
+    start_date: date
+    end_date: date nullable
+    status: string default:active
+    timestamps: true
+
+  PaymentTransaction:
+    id: uuid primary
+    company_id: uuid foreign:companies
+    subscription_id: uuid foreign:subscriptions
+    amount: decimal
+    gateway: string default:Palmyra
+    transaction_reference: string unique
+    status: string default:pending
+    timestamps: true
+
+  Department:
+    id: uuid primary
+    company_id: uuid foreign:companies
+    name: string
+    manager_id: uuid foreign:employees nullable
+    is_active: boolean default:true
+    timestamps: true
+
+  WorkSchedule:
+    id: uuid primary
+    company_id: uuid foreign:companies
+    work_start: time
+    work_end: time
+    grace_minutes: integer default:0
+    early_leave_minutes: integer default:0
+    min_hours_per_day: integer nullable
+    overtime_allowed: boolean default:true
+    is_default: boolean default:false
+
+  AttendancePolicy:
+    id: uuid primary
+    company_id: uuid foreign:companies
+    monthly_late_threshold_min: integer default:60
+    consecutive_absent_alert: integer default:3
+    enable_gps_verification: boolean default:true
+    company_latitude: decimal nullable
+    company_longitude: decimal nullable
+    allowed_radius: integer nullable
+
+  User:
+    id: uuid primary
+    company_id: uuid foreign:companies
+    full_name: string
+    father_name: string nullable
+    birth_date: date nullable
+    birth_place: string nullable
+    email: string unique
+    password_hash: string
+    phone: string nullable
+    address: string nullable
+    role: enum:super_admin,general_manager,hr_manager,dept_manager,employee
+    status: string default:active
+    device_id: string nullable
+    is_first_login: boolean default:true
+    last_login: timestamp nullable
+    fcm_token: string nullable
+    timestamps: true
+
+  Employee:
+    id: uuid primary
+    user_id: uuid foreign:users unique
+    company_id: uuid foreign:companies
+    department_id: uuid foreign:departments
+    employee_code: string unique nullable
+    education: string nullable
+    job_title: string
+    base_salary: decimal
+    hire_date: date
+    employment_type: string nullable
+    is_active: boolean default:true
+
+  AttendanceRecord:
+    id: uuid primary
+    company_id: uuid foreign:companies
+    employee_id: uuid foreign:employees
+    work_date: date
+    check_in_time: timestamp nullable
+    check_out_time: timestamp nullable
+    check_in_lat: decimal nullable
+    check_in_lng: decimal nullable
+    check_out_lat: decimal nullable
+    check_out_lng: decimal nullable
+    check_in_device_id: string nullable
+    qr_token_used: string nullable
+    late_minutes: integer default:0
+    early_leave_minutes: integer default:0
+    total_work_minutes: integer nullable
+    status: string
+    attendance_type: string nullable
+    notes: text nullable
+    timestamps: true
+    indexes:
+      - columns: company_id, employee_id, work_date
+        unique: true
+
+  AttendanceAdjustment:
+    id: uuid primary
+    company_id: uuid foreign:companies
+    attendance_record_id: uuid foreign:attendance_records
+    adjusted_by: uuid foreign:users
+    old_check_in: timestamp nullable
+    new_check_in: timestamp nullable
+    old_check_out: timestamp nullable
+    new_check_out: timestamp nullable
+    reason: text
+    timestamps: true
+
+  AuditLog:
+    id: uuid primary
+    company_id: uuid foreign:companies
+    actor_id: uuid foreign:users
+    actor_role: string
+    action_type: string
+    target_table: string
+    target_id: uuid nullable
+    old_values: json nullable
+    new_values: json nullable
+    timestamps: true
+
+  AttendanceLocationLog:
+    id: uuid primary
+    attendance_record_id: uuid foreign:attendance_records nullable
+    latitude: decimal nullable
+    longitude: decimal nullable
+    distance_from_company: decimal nullable
+    is_within_radius: boolean nullable
+    checked_at: timestamp nullable
+
+  LeaveType:
+    id: uuid primary
+    company_id: uuid foreign:companies
+    name: string
+    allocation_value: integer
+    allocation_unit: string
+    is_paid: boolean default:true
+    requires_proof: boolean default:false
+    is_active: boolean default:true
+
+  LeaveBalance:
+    id: uuid primary
+    company_id: uuid foreign:companies
+    employee_id: uuid foreign:employees
+    leave_type_id: uuid foreign:leave_types
+    year: integer
+    total_days: decimal
+    used_days: decimal default:0
+    remaining_days: decimal nullable
+    indexes:
+      - columns: employee_id, leave_type_id, year
+        unique: true
+
+  LeaveRequest:
+    id: uuid primary
+    company_id: uuid foreign:companies
+    employee_id: uuid foreign:employees
+    leave_type_id: uuid foreign:leave_types
+    start_date: date nullable
+    end_date: date nullable
+    start_time: time nullable
+    end_time: time nullable
+    requested_value: decimal
+    attachment_url: string nullable
+    status: string default:pending
+    rejection_reason: text nullable
+    reviewed_by: uuid foreign:users nullable
+    reviewed_at: timestamp nullable
+    timestamps: true
+
+  SalaryRule:
+    id: uuid primary
+    company_id: uuid foreign:companies
+    rule_type: string
+    time_unit: string nullable
+    operation: string
+    value_type: string
+    value: decimal
+    is_active: boolean default:true
+
+  SalaryRecord:
+    id: uuid primary
+    company_id: uuid foreign:companies
+    employee_id: uuid foreign:employees
+    month: integer
+    year: integer
+    base_salary: decimal
+    overtime_amount: decimal default:0
+    bonus_amount: decimal default:0
+    late_deduction: decimal default:0
+    absent_deduction: decimal default:0
+    loan_deduction: decimal default:0
+    manual_bonus: decimal default:0
+    manual_deduction: decimal default:0
+    net_salary: decimal
+    status: string default:draft
+    closed_by: uuid foreign:users nullable
+    closed_at: timestamp nullable
+    indexes:
+      - columns: company_id, employee_id, month, year
+        unique: true
+
+  SalaryAdjustment:
+    id: uuid primary
+    company_id: uuid foreign:companies
+    salary_record_id: uuid foreign:salary_records
+    type: string
+    description: string
+    amount: decimal
+    created_by: uuid foreign:users
+    timestamps: true
+
+  OvertimeRequest:
+    id: uuid primary
+    company_id: uuid foreign:companies
+    employee_id: uuid foreign:employees
+    request_date: date
+    hours_requested: integer
+    reason: text nullable
+    status: string default:pending
+    review_notes: text nullable
+    dept_manager_approval: uuid foreign:users nullable
+    dept_approved_at: timestamp nullable
+    hours_approved: integer nullable
+    hr_registered_by: uuid foreign:users nullable
+    hr_registered_at: timestamp nullable
+    timestamps: true
+
+  LoanRequest:
+    id: uuid primary
+    company_id: uuid foreign:companies
+    employee_id: uuid foreign:employees
+    amount: decimal
+    remaining_amount: decimal nullable
+    status: string default:pending
+    rejection_reason: text nullable
+    hr_reviewed_by: uuid foreign:users nullable
+    gm_approved_by: uuid foreign:users nullable
+    approved_at: timestamp nullable
+    timestamps: true
+
+  PerformanceReview:
+    id: uuid primary
+    company_id: uuid foreign:companies
+    employee_id: uuid foreign:employees
+    reviewer_id: uuid foreign:users
+    review_period: string
+    period_start: date
+    period_end: date
+    score: integer nullable
+    notes: text nullable
+    recommend_for_promotion: boolean nullable
+    status: string default:draft
+    hr_reviewed_by: uuid foreign:users nullable
+    hr_reviewed_at: timestamp nullable
+    timestamps: true
+    indexes:
+      - columns: employee_id, period_start, period_end
+        unique: true
+
+  PromotionRequest:
+    id: uuid primary
+    company_id: uuid foreign:companies
+    employee_id: uuid foreign:employees
+    proposed_by: uuid foreign:users
+    current_job_title: string
+    proposed_job_title: string
+    current_salary: decimal
+    proposed_salary: decimal
+    justification: text nullable
+    status: string default:pending
+    hr_reviewed_by: uuid foreign:users nullable
+    gm_approved_by: uuid foreign:users nullable
+    approved_at: timestamp nullable
+    timestamps: true
+
+  Notification:
+    id: uuid primary
+    company_id: uuid foreign:companies
+    user_id: uuid foreign:users
+    type: string
+    title: string
+    body: text nullable
+    related_id: uuid nullable
+    related_table: string nullable
+    is_read: boolean default:false
+    delivery_channel: string
+    push_sent: boolean default:false
+    push_sent_at: timestamp nullable
+    timestamps: true
+
+  UserDevice:
+    id: uuid primary
+    user_id: uuid foreign:users nullable
+    fcm_token: string nullable
+    device_name: string nullable
+    platform: string nullable
+    is_active: boolean nullable
+    timestamps: true
