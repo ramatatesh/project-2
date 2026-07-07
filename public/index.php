@@ -1,13 +1,5 @@
 <?php
 
-header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With, Accept, Ngrok-Skip-Browser-Warning');
-
-if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
-    header('HTTP/1.1 200 OK');
-    exit();
-}
 use Illuminate\Http\Request;
 
 define('LARAVEL_START', microtime(true));
