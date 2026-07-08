@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Services\SubscriptionService;
 use App\Http\Requests\CompanyRegistrationRequest;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 
 class CompanyRegistrationController extends Controller
 {
@@ -52,10 +51,9 @@ class CompanyRegistrationController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Company registered successfully.',
+            'message' => 'Company registered successfully. Credentials were sent to the registered email.',
             'data' => [
                 'company_id' => $result['company']->id,
-                'temporary_password' => $result['temporary_password'],
             ],
         ], 201);
     }

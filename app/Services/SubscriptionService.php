@@ -47,12 +47,13 @@ class SubscriptionService
                 'is_first_login' => true,
             ]);
 
+            dispatch(new \App\Jobs\SendRegistrationEmailJob($company->email, $tempPassword));
+
             return [
                 'success' => true,
                 'company' => $company,
                 'subscription' => $subscription,
                 'user' => $user,
-                'temporary_password' => $tempPassword,
             ];
         }
 
