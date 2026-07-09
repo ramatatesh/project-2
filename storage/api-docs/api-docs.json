@@ -7,7 +7,7 @@
     },
     "servers": [
         {
-            "url": "https://web-production-f32da.up.railway.app/",
+            "url": "https://web-production-f32da.up.railway.app",
             "description": "سيرفر التطوير المحلي"
         }
     ],
