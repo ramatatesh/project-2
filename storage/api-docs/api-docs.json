@@ -7,7 +7,7 @@
     },
     "servers": [
         {
-            "url": "http://127.0.0.1:8000",
+            "url": "https://web-production-f32da.up.railway.app/",
             "description": "سيرفر التطوير المحلي"
         }
     ],
@@ -2039,10 +2039,6 @@
                                             "properties": {
                                                 "hr_manager": {
                                                     "type": "object"
-                                                },
-                                                "temporary_password": {
-                                                    "type": "string",
-                                                    "example": "XyZ123!abc"
                                                 }
                                             },
                                             "type": "object"
@@ -2686,6 +2682,54 @@
                 "responses": {
                     "200": {
                         "description": "Plan deleted successfully"
+                    }
+                }
+            }
+        },
+        "/api/subscription-plans/{plan}/freeze": {
+            "post": {
+                "tags": [
+                    "Subscription Plans"
+                ],
+                "summary": "Freeze a subscription plan",
+                "operationId": "3cf5c26a168ce404783eefc9427cf793",
+                "parameters": [
+                    {
+                        "name": "plan",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Plan frozen successfully"
+                    }
+                }
+            }
+        },
+        "/api/subscription-plans/{plan}/activate": {
+            "post": {
+                "tags": [
+                    "Subscription Plans"
+                ],
+                "summary": "Activate a subscription plan",
+                "operationId": "e062686f09ccb49d84a8d2e6072d88b2",
+                "parameters": [
+                    {
+                        "name": "plan",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Plan activated successfully"
                     }
                 }
             }
