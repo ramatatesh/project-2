@@ -131,6 +131,56 @@ class SubscriptionPlanController extends Controller
     }
 
     /**
+     * @OA\Post(
+     *   path="/api/subscription-plans/{plan}/freeze",
+     *   summary="Freeze a subscription plan",
+     *   tags={"Subscription Plans"},
+     *   @OA\Parameter(
+     *     name="plan",
+     *     in="path",
+     *     required=true,
+     *     @OA\Schema(type="string")
+     *   ),
+     *   @OA\Response(response=200, description="Plan frozen successfully")
+     * )
+     */
+    public function freeze(SubscriptionPlan $plan): JsonResponse
+    {
+        $plan->update(['is_active' => false]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Subscription plan frozen successfully.',
+            'data' => $plan,
+        ]);
+    }
+
+    /**
+     * @OA\Post(
+     *   path="/api/subscription-plans/{plan}/activate",
+     *   summary="Activate a subscription plan",
+     *   tags={"Subscription Plans"},
+     *   @OA\Parameter(
+     *     name="plan",
+     *     in="path",
+     *     required=true,
+     *     @OA\Schema(type="string")
+     *   ),
+     *   @OA\Response(response=200, description="Plan activated successfully")
+     * )
+     */
+    public function activate(SubscriptionPlan $plan): JsonResponse
+    {
+        $plan->update(['is_active' => true]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Subscription plan activated successfully.',
+            'data' => $plan,
+        ]);
+    }
+
+    /**
      * @OA\Delete(
      *   path="/api/subscription-plans/{plan}",
      *   summary="Delete a subscription plan",

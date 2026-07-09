@@ -97,6 +97,7 @@ class CompanyAdminController extends Controller
      */
     public function freeze(Company $company): JsonResponse
     {
+        $this->authorizeCompanyAdminForCompany($company);
         $this->subscriptionService->suspendCompany($company);
 
         return response()->json([
@@ -121,6 +122,7 @@ class CompanyAdminController extends Controller
      */
     public function activate(Company $company): JsonResponse
     {
+        $this->authorizeCompanyAdminForCompany($company);
         $this->subscriptionService->activateCompany($company);
 
         return response()->json([
@@ -290,4 +292,12 @@ class CompanyAdminController extends Controller
     ]);
 }
 
+    protected function authorizeCompanyAdminForCompany(Company $company): void
+    {
+        $user = auth()->user();
+
+        if (! $user || $user->company_id !== $company->id || $user->role !== 'company_admin') {
+            abort(403, 'Only company administrators can manage this company.');
+        }
+    }
 }
