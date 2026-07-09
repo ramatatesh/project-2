@@ -3,6 +3,10 @@ FROM php:8.2-apache
 RUN apt-get update && apt-get install -y libpq-dev zip unzip git \
     && docker-php-ext-install pdo pdo_pgsql
 
+# تعطيل mpm_event وتفعيل mpm_prefork فقط (مطلوب لـ mod_php)
+RUN a2dismod mpm_event || true
+RUN a2enmod mpm_prefork
+
 RUN a2enmod rewrite
 
 COPY . /var/www/html
@@ -21,4 +25,7 @@ RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local
 
 RUN composer install --no-dev --optimize-autoloader
 
-CMD php artisan storage:link || true; php artisan l5-swagger:generate; apache2-foreground
+COPY apache-ports.sh /usr/local/bin/apache-ports.sh
+RUN chmod +x /usr/local/bin/apache-ports.sh
+
+CMD ["/usr/local/bin/apache-ports.sh"]
