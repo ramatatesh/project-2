@@ -19,9 +19,9 @@ use Illuminate\Support\Facades\Log;
  * version="1.0.0",
  * description="التوثيق الرسمي لكافة واجهات برمجة التطبيقات (APIs) لمنصة خبرات لإدارة الموارد البشرية"
  * )
- * @OA\Server(
- * url="https://web-production-f32da.up.railway.app",
- * description="سيرفر التطوير المحلي"
+ * * @OA\Server(
+ * url="http://127.0.0.1:8000",
+ * description="سيرفر التطوير المحلي (Localhost)"
  * )
  * @OA\SecurityScheme(
  * securityScheme="sanctum",

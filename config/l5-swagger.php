@@ -54,7 +54,7 @@ return [
             /*
              * Route for accessing parsed swagger annotations.
              */
-            'docs' => 'api/docs',
+            'docs' => 'docs',
 
             /*
              * Route for Oauth2 authentication callback.
@@ -248,7 +248,7 @@ return [
          * Edit to trust the proxy's ip address - needed for AWS Load Balancer
          * string[]
          */
-        'proxy' => true,
+        'proxy' => false,
 
         /*
          * Configs plugin allows to fetch external configs instead of passing them to SwaggerUIBundle.
