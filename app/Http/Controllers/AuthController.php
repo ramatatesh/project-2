@@ -20,10 +20,10 @@ use Illuminate\Support\Facades\Log;
  * description="التوثيق الرسمي لكافة واجهات برمجة التطبيقات (APIs) لمنصة خبرات لإدارة الموارد البشرية"
  * )
  * * @OA\Server(
- * url="http://127.0.0.1:8000",
- * description="سيرفر التطوير المحلي (Localhost)"
+ * url="/",
+ * description="السيرفر الافتراضي الحالي المباشر (الديناميكي)"
  * )
- * @OA\SecurityScheme(
+ * * @OA\SecurityScheme(
  * securityScheme="sanctum",
  * type="http",
  * scheme="bearer",
