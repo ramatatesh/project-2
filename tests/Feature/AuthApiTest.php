@@ -24,7 +24,7 @@ class AuthApiTest extends TestCase
             'full_name' => 'Test User',
             'email' => 'test@example.com',
             'password_hash' => Hash::make('password123'),
-            'role' => 'admin',
+            'role' => 'general_manager',
             'status' => 'active',
         ]);
 
@@ -53,7 +53,7 @@ class AuthApiTest extends TestCase
             'full_name' => 'Reset User',
             'email' => 'reset@example.com',
             'password_hash' => Hash::make('password123'),
-            'role' => 'admin',
+            'role' => 'general_manager',
             'status' => 'active',
         ]);
 
@@ -82,7 +82,7 @@ class AuthApiTest extends TestCase
             'full_name' => 'Reset User',
             'email' => 'reset2@example.com',
             'password_hash' => Hash::make('old-password'),
-            'role' => 'admin',
+            'role' => 'general_manager',
             'status' => 'active',
         ]);
 

@@ -311,7 +311,12 @@
                     "200": {
                         "description": "Successful operation"
                     }
-                }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
             }
         },
         "/api/companies/{company}": {
@@ -335,7 +340,12 @@
                     "200": {
                         "description": "Successful operation"
                     }
-                }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
             },
             "delete": {
                 "tags": [
@@ -357,7 +367,12 @@
                     "200": {
                         "description": "Company deleted successfully"
                     }
-                }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
             }
         },
         "/api/companies/{company}/freeze": {
@@ -381,7 +396,12 @@
                     "200": {
                         "description": "Company frozen successfully"
                     }
-                }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
             }
         },
         "/api/companies/{company}/activate": {
@@ -405,7 +425,12 @@
                     "200": {
                         "description": "Company reactivated successfully"
                     }
-                }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
             }
         },
         "/api/companies/stats": {
@@ -536,7 +561,12 @@
                     "500": {
                         "description": "خطأ داخلي في السيرفر أثناء احتساب الإحصائيات"
                     }
-                }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
             }
         },
         "/api/companies/{company}/leave-types": {
@@ -2562,7 +2592,12 @@
                     "201": {
                         "description": "Plan created successfully"
                     }
-                }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
             }
         },
         "/api/subscription-plans/{plan}": {
@@ -2661,7 +2696,12 @@
                     "200": {
                         "description": "Plan updated successfully"
                     }
-                }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
             },
             "delete": {
                 "tags": [
@@ -2683,7 +2723,12 @@
                     "200": {
                         "description": "Plan deleted successfully"
                     }
-                }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
             }
         },
         "/api/subscription-plans/{plan}/freeze": {
@@ -2707,7 +2752,12 @@
                     "200": {
                         "description": "Plan frozen successfully"
                     }
-                }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
             }
         },
         "/api/subscription-plans/{plan}/activate": {
@@ -2731,7 +2781,12 @@
                     "200": {
                         "description": "Plan activated successfully"
                     }
-                }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
             }
         }
     },

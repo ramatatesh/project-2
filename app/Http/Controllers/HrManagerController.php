@@ -46,8 +46,6 @@ class HrManagerController extends Controller
      */
     public function index(Company $company): JsonResponse
     {
-        $this->authorizeCompanyAdminForCompany($company);
-
         $hrManagers = $company->users()
             ->where('role', 'hr_manager')
             ->with('employee')
@@ -105,7 +103,6 @@ class HrManagerController extends Controller
     public function store(HrManagerRequest $request, Company $company): JsonResponse
     {
         try {
-            $this->authorizeCompanyAdminForCompany($company);
             $data = $request->validated();
             $tempPassword = Str::random(10);
 
@@ -190,8 +187,6 @@ class HrManagerController extends Controller
      */
     public function show(Company $company, User $hrManager): JsonResponse
     {
-        $this->authorizeCompanyAdminForCompany($company);
-
         $hrManager = $this->ensureHrManagerBelongsToCompany($company, $hrManager);
         $hrManager->load('employee');
 
@@ -249,7 +244,6 @@ class HrManagerController extends Controller
     public function update(UpdateHrManagerRequest $request, Company $company, User $hrManager): JsonResponse
     {
         try {
-            $this->authorizeCompanyAdminForCompany($company);
             $hrManager = $this->ensureHrManagerBelongsToCompany($company, $hrManager);
             $data = $request->validated();
 
@@ -340,7 +334,6 @@ class HrManagerController extends Controller
     public function activate(Company $company, User $hrManager): JsonResponse
     {
         try {
-            $this->authorizeCompanyAdminForCompany($company);
             $hrManager = $this->ensureHrManagerBelongsToCompany($company, $hrManager);
             $hrManager->update(['status' => 'active']);
             $hrManager->employee()->update(['is_active' => true]);
@@ -390,7 +383,6 @@ class HrManagerController extends Controller
     public function deactivate(Company $company, User $hrManager): JsonResponse
     {
         try {
-            $this->authorizeCompanyAdminForCompany($company);
             $hrManager = $this->ensureHrManagerBelongsToCompany($company, $hrManager);
             $hrManager->update(['status' => 'inactive']);
             $hrManager->employee()->update(['is_active' => false]);
@@ -440,7 +432,6 @@ class HrManagerController extends Controller
     public function destroy(Company $company, User $hrManager): JsonResponse
     {
         try {
-            $this->authorizeCompanyAdminForCompany($company);
             $hrManager = $this->ensureHrManagerBelongsToCompany($company, $hrManager);
 
             DB::transaction(function () use ($hrManager) {
@@ -472,15 +463,6 @@ class HrManagerController extends Controller
         }
 
         return $hrManager;
-    }
-
-    protected function authorizeCompanyAdminForCompany(Company $company): void
-    {
-        $user = auth()->user();
-
-        if (! $user || $user->company_id !== $company->id || $user->role !== 'company_admin') {
-            abort(403, 'Only company administrators can manage HR manager accounts for this company.');
-        }
     }
 
     protected function serializeHrManager(User $hrManager): array

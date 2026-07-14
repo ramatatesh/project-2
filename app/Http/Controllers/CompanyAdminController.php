@@ -25,6 +25,7 @@ class CompanyAdminController extends Controller
      *   path="/api/companies",
      *   summary="List all tenant companies",
      *   tags={"Companies"},
+     *   security={{"sanctum":{}}},
      *   @OA\Response(response=200, description="Successful operation")
      * )
      */
@@ -60,6 +61,7 @@ class CompanyAdminController extends Controller
      *   path="/api/companies/{company}",
      *   summary="Retrieve company details with subscription info",
      *   tags={"Companies"},
+     *   security={{"sanctum":{}}},
      *   @OA\Parameter(
      *     name="company",
      *     in="path",
@@ -86,6 +88,7 @@ class CompanyAdminController extends Controller
      *   path="/api/companies/{company}/freeze",
      *   summary="Freeze a company's account",
      *   tags={"Companies"},
+     *   security={{"sanctum":{}}},
      *   @OA\Parameter(
      *     name="company",
      *     in="path",
@@ -97,7 +100,6 @@ class CompanyAdminController extends Controller
      */
     public function freeze(Company $company): JsonResponse
     {
-        $this->authorizeCompanyAdminForCompany($company);
         $this->subscriptionService->suspendCompany($company);
 
         return response()->json([
@@ -111,6 +113,7 @@ class CompanyAdminController extends Controller
      *   path="/api/companies/{company}/activate",
      *   summary="Reactivate a company's account",
      *   tags={"Companies"},
+     *   security={{"sanctum":{}}},
      *   @OA\Parameter(
      *     name="company",
      *     in="path",
@@ -122,7 +125,6 @@ class CompanyAdminController extends Controller
      */
     public function activate(Company $company): JsonResponse
     {
-        $this->authorizeCompanyAdminForCompany($company);
         $this->subscriptionService->activateCompany($company);
 
         return response()->json([
@@ -136,6 +138,7 @@ class CompanyAdminController extends Controller
      *   path="/api/companies/{company}",
      *   summary="Delete a company permanently",
      *   tags={"Companies"},
+     *   security={{"sanctum":{}}},
      *   @OA\Parameter(
      *     name="company",
      *     in="path",
@@ -160,6 +163,7 @@ class CompanyAdminController extends Controller
      * summary="جلب الإحصائيات الشاملة والمالية للوحة التحكم (Dashboard Stats)",
      * description="يعيد هذا الـ API كافة الأرقام المالية، توزيع حالات الشركات للمخطط الدائري، البيانات الزمنية لآخر 6 أشهر للمخطط الخطي، وقائمة بآخر المنصات المسجلة لتغذية الـ Dashboard بالكامل.",
      * tags={"الشركات والاشتراكات (Companies & Subscriptions)"},
+     * security={{"sanctum":{}}},
      * @OA\Response(
      * response=200,
      * description="تم جلب بيانات لوحة التحكم بنجاح",
@@ -292,12 +296,4 @@ class CompanyAdminController extends Controller
     ]);
 }
 
-    protected function authorizeCompanyAdminForCompany(Company $company): void
-    {
-        $user = auth()->user();
-
-        if (! $user || $user->company_id !== $company->id || $user->role !== 'company_admin') {
-            abort(403, 'Only company administrators can manage this company.');
-        }
-    }
 }

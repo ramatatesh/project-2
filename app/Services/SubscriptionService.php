@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\Role;
 use App\Models\Company;
 use App\Models\Subscription;
 use App\Models\SubscriptionPlan;
@@ -42,7 +43,7 @@ class SubscriptionService
                 'full_name' => $data['contact_name'] ?? $data['name'],
                 'email' => $data['email'],
                 'password_hash' => bcrypt($tempPassword),
-                'role' => 'company_admin', // مسمى الدور الموحد للمشروع
+                'role' => Role::GeneralManager->value,
                 'status' => 'active', // أحرف صغيرة ليمر الـ Login بنجاح
                 'is_first_login' => true,
             ]);
@@ -128,13 +129,13 @@ class SubscriptionService
                 'full_name' => $company->name,
                 'email' => $company->email,
                 'password_hash' => bcrypt($tempPassword),
-                'role' => 'company_admin', // مسمى الدور الموحد للمشروع
+                'role' => Role::GeneralManager->value,
                 'status' => 'active', // أحرف صغيرة لتفادي مشكلة الحساب غير النشط بعد الدفع
                 'is_first_login' => true,
             ]);
 
-            // إطلاق الـ Job لإرسال الإيميل
-            dispatch(new \App\Jobs\SendPasswordResetEmailJob($user->email, $tempPassword));
+            // إطلاق الـ Job لإرسال بيانات الدخول (Welcome) للمدير العام
+            dispatch(new \App\Jobs\SendRegistrationEmailJob($user->email, $tempPassword));
 
             return ['success' => true, 'company' => $company, 'user' => $user];
         }

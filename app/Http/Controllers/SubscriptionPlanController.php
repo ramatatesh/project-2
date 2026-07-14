@@ -28,7 +28,9 @@ class SubscriptionPlanController extends Controller
      */
     public function index(): JsonResponse
     {
-        $plans = SubscriptionPlan::orderBy('price')->get();
+        $plans = SubscriptionPlan::where('is_active', true)
+        ->orderBy('price')
+        ->get();
 
         return response()->json([
             'success' => true,
@@ -36,28 +38,29 @@ class SubscriptionPlanController extends Controller
         ]);
     }
 
-    /**
-     * @OA\Post(
-     *   path="/api/subscription-plans",
-     *   summary="Create a new subscription plan",
-     *   tags={"Subscription Plans"},
-     *   @OA\RequestBody(
-     *     required=true,
-     *     @OA\JsonContent(
-     *       required={"name","plan_type","billing_period","max_employees","price","max_uses_per_company"},
-     *       @OA\Property(property="name", type="string", example="Standard"),
-     *       @OA\Property(property="plan_type", type="string", example="paid"),
-     *       @OA\Property(property="billing_period", type="string", example="month"),
-     *       @OA\Property(property="max_employees", type="integer", example=100),
-     *       @OA\Property(property="price", type="number", format="float", example=49.99),
-     *       @OA\Property(property="is_active", type="boolean", example=true),
-     *       @OA\Property(property="max_uses_per_company", type="integer", example=1),
-     *       @OA\Property(property="description", type="string", example="Premium subscription plan")
-     *     )
-     *   ),
-     *   @OA\Response(response=201, description="Plan created successfully")
-     * )
-     */
+/**
+ * @OA\Post(
+ *   path="/api/subscription-plans",
+ *   summary="Create a new subscription plan",
+ *   tags={"Subscription Plans"},
+ *   security={{"sanctum":{}}},
+ *   @OA\RequestBody(
+ *     required=true,
+ *     @OA\JsonContent(
+ *       required={"name","plan_type","billing_period","max_employees","price","max_uses_per_company"},
+ *       @OA\Property(property="name", type="string", example="Standard"),
+ *       @OA\Property(property="plan_type", type="string", example="paid"),
+ *       @OA\Property(property="billing_period", type="string", example="month"),
+ *       @OA\Property(property="max_employees", type="integer", example=100),
+ *       @OA\Property(property="price", type="number", format="float", example=49.99),
+ *       @OA\Property(property="is_active", type="boolean", example=true),
+ *       @OA\Property(property="max_uses_per_company", type="integer", example=1),
+ *       @OA\Property(property="description", type="string", example="Premium subscription plan")
+ *     )
+ *   ),
+ *   @OA\Response(response=201, description="Plan created successfully")
+ * )
+ */
     public function store(SubscriptionPlanRequest $request): JsonResponse
     {
         $plan = SubscriptionPlan::create($request->validated());
@@ -84,18 +87,26 @@ class SubscriptionPlanController extends Controller
      * )
      */
     public function show(SubscriptionPlan $plan): JsonResponse
-    {
+{
+    if (!$plan->is_active) {
         return response()->json([
-            'success' => true,
-            'data' => $plan,
-        ]);
+            'success' => false,
+            'message' => 'Subscription plan not available'
+        ], 404);
     }
+
+    return response()->json([
+        'success' => true,
+        'data' => $plan,
+    ]);
+}
 
     /**
      * @OA\Put(
      *   path="/api/subscription-plans/{plan}",
      *   summary="Update a subscription plan",
      *   tags={"Subscription Plans"},
+     *   security={{"sanctum":{}}},
      *   @OA\Parameter(
      *     name="plan",
      *     in="path",
@@ -135,6 +146,7 @@ class SubscriptionPlanController extends Controller
      *   path="/api/subscription-plans/{plan}/freeze",
      *   summary="Freeze a subscription plan",
      *   tags={"Subscription Plans"},
+     *   security={{"sanctum":{}}},
      *   @OA\Parameter(
      *     name="plan",
      *     in="path",
@@ -160,6 +172,7 @@ class SubscriptionPlanController extends Controller
      *   path="/api/subscription-plans/{plan}/activate",
      *   summary="Activate a subscription plan",
      *   tags={"Subscription Plans"},
+     *   security={{"sanctum":{}}},
      *   @OA\Parameter(
      *     name="plan",
      *     in="path",
@@ -185,6 +198,7 @@ class SubscriptionPlanController extends Controller
      *   path="/api/subscription-plans/{plan}",
      *   summary="Delete a subscription plan",
      *   tags={"Subscription Plans"},
+     *   security={{"sanctum":{}}},
      *   @OA\Parameter(
      *     name="plan",
      *     in="path",

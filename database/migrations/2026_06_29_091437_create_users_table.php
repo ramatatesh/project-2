@@ -28,7 +28,7 @@ return new class extends Migration
             $table->boolean('is_first_login')->nullable()->default(true);
             $table->timestamp('last_login')->nullable();
             $table->string('fcm_token')->nullable();
-            $table->string('role', 50)->default('company_admin');
+            $table->string('role', 50)->default('general_manager');
             $table->timestamp('created_at')->nullable()->default(DB::raw("now()"));
         });
        // DB::statement("alter table \"users\" add column \"role\" role_enum not null");

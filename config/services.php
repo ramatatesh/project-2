@@ -35,4 +35,10 @@ return [
         ],
     ],
 
+    'payment' => [
+        'webhook_secret' => env('PAYMENT_WEBHOOK_SECRET'),
+        'gateway' => env('PAYMENT_GATEWAY', 'simulated'),
+        'checkout_url' => env('PAYMENT_CHECKOUT_URL'),
+    ],
+
 ];

@@ -20,7 +20,7 @@ class ForgotPasswordQueueTest extends TestCase
             'full_name' => 'Test User',
             'email' => 'hr@khibrat.com',
             'password_hash' => bcrypt('secret123'),
-            'role' => 'admin',
+            'role' => 'general_manager',
             'status' => 'active',
         ]);
 

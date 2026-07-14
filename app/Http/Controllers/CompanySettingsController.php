@@ -15,6 +15,7 @@ class CompanySettingsController extends Controller
      * summary="تحديث سياسة الحضور والإعدادات الجغرافية للبصمة",
      * description="يقوم هذا الـ API بحفظ سياسات أوقات العمل للشركة بالإضافة إلى إحداثيات المقر الجغرافي ونصف قطر نطاق التواجد المسموح به للموظفين لتسجيل الحضور.",
      * tags={"Companies"},
+     * security={{"sanctum":{}}},
      * @OA\Parameter(
      * name="company",
      * in="path",
