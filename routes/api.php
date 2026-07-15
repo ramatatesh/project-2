@@ -5,6 +5,8 @@ use App\Http\Controllers\CompanyAdminController;
 use App\Http\Controllers\CompanyPolicyController;
 use App\Http\Controllers\CompanyRegistrationController;
 use App\Http\Controllers\CompanySettingsController;
+use App\Http\Controllers\DepartmentController;
+use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\HolidayPolicyController;
 use App\Http\Controllers\HrManagerController;
 use App\Http\Controllers\PaymentWebhookController;
@@ -25,7 +27,7 @@ Route::middleware('auth:sanctum')->prefix('auth')->group(function () {
 Route::post('/companies/register', [CompanyRegistrationController::class, 'register'])
     ->name('companies.register')
     ->middleware('throttle:5,1');
-    
+
 Route::prefix('subscription-plans')->group(function () {
     Route::get('/', [SubscriptionPlanController::class, 'index']);
     Route::get('/{plan}', [SubscriptionPlanController::class, 'show']);
@@ -38,7 +40,6 @@ Route::middleware(['auth:sanctum', 'role:super_admin'])->group(function () {
         Route::post('/{plan}/freeze', [SubscriptionPlanController::class, 'freeze']);
         Route::post('/{plan}/activate', [SubscriptionPlanController::class, 'activate']);
     });
-
 
     // Tenant companies management
     Route::prefix('companies')->group(function () {
@@ -90,3 +91,24 @@ Route::middleware(['auth:sanctum', 'tenant', 'role:general_manager'])->prefix('c
 Route::post('/payments/callback', [PaymentWebhookController::class, 'callback'])
     ->name('payments.callback')
     ->middleware('webhook');
+
+// HR Dashboard area: Departments & Employees management (HR Manager only).
+// Company isolation is enforced per-request from the authenticated user's company_id
+// (no company_id is accepted from the client).
+Route::middleware(['auth:sanctum', 'role:hr_manager'])->prefix('hr')->group(function () {
+    // Departments
+    Route::get('/departments', [DepartmentController::class, 'index']);
+    Route::post('/departments', [DepartmentController::class, 'store']);
+    Route::get('/departments/{department}', [DepartmentController::class, 'show']);
+    Route::put('/departments/{department}', [DepartmentController::class, 'update']);
+    Route::delete('/departments/{department}', [DepartmentController::class, 'destroy']);
+
+    // Employees
+    Route::get('/employees/import/template', [EmployeeController::class, 'downloadTemplate']);
+    Route::get('/employees', [EmployeeController::class, 'index']);
+    Route::post('/employees', [EmployeeController::class, 'store']);
+    Route::get('/employees/{employee}', [EmployeeController::class, 'show']);
+    Route::put('/employees/{employee}', [EmployeeController::class, 'update']);
+    Route::delete('/employees/{employee}', [EmployeeController::class, 'destroy']);
+    Route::post('/employees/import', [EmployeeController::class, 'import']);
+});

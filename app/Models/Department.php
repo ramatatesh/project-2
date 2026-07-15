@@ -11,6 +11,7 @@ class Department extends Model
     protected $fillable = ['id', 'company_id', 'name', 'manager_id', 'is_active'];
     protected $keyType = 'string';
     public $incrementing = false;
+    public $timestamps = false;
 
     public function company(): BelongsTo { return $this->belongsTo(Company::class); }
     public function manager(): BelongsTo { return $this->belongsTo(Employee::class, 'manager_id'); }
