@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class LeaveType extends Model
 {
-    protected $fillable = ['id', 'company_id', 'name', 'allocation_value', 'allocation_unit', 'is_paid', 'requires_proof', 'is_active'];
+    protected $fillable = ['id', 'company_id', 'name', 'allocation_value', 'allocation_unit', 'requires_proof', 'is_active'];
     protected $keyType = 'string';
     public $incrementing = false;
     public $timestamps = false;

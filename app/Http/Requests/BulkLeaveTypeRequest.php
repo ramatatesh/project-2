@@ -6,7 +6,7 @@ use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
 
-class LeaveTypeRequest extends FormRequest
+class BulkLeaveTypeRequest extends FormRequest
 {
     public function authorize(): bool
     {
@@ -16,11 +16,13 @@ class LeaveTypeRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => ['required', 'string', 'max:255'],
-            'allocation_value' => ['required', 'integer', 'min:0'],
-            'allocation_unit' => ['required', 'string', 'in:days,hours'],
-            'requires_proof' => ['sometimes', 'boolean'],
-            'is_active' => ['sometimes', 'boolean'],
+            'leave_types' => ['required', 'array', 'min:1'],
+            'leave_types.*.id' => ['sometimes', 'string', 'uuid'],
+            'leave_types.*.name' => ['required', 'string', 'max:255'],
+            'leave_types.*.allocation_value' => ['required', 'integer', 'min:0'],
+            'leave_types.*.allocation_unit' => ['required', 'string', 'in:days,hours'],
+            'leave_types.*.requires_proof' => ['sometimes', 'boolean'],
+            'leave_types.*.is_active' => ['sometimes', 'boolean'],
         ];
     }
 

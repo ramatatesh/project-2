@@ -56,8 +56,8 @@ Route::middleware(['auth:sanctum', 'role:super_admin'])->group(function () {
 // Tenant area: company-scoped policy & setup (General Manager only, must belong to the company).
 Route::middleware(['auth:sanctum', 'tenant', 'role:general_manager'])->prefix('companies')->group(function () {
     Route::get('/{company}/leave-types', [CompanyPolicyController::class, 'indexLeaveTypes']);
-    Route::post('/{company}/leave-types', [CompanyPolicyController::class, 'storeLeaveType']);
-    Route::put('/{company}/leave-types/{leaveType}', [CompanyPolicyController::class, 'updateLeaveType']);
+    Route::post('/{company}/leave-types', [CompanyPolicyController::class, 'storeLeaveTypes']);
+    Route::put('/{company}/leave-types', [CompanyPolicyController::class, 'updateLeaveTypes']);
     Route::post('/{company}/leave-types/{leaveType}/toggle', [CompanyPolicyController::class, 'toggleLeaveType']);
     Route::get('/{company}/salary-rules', [CompanyPolicyController::class, 'indexSalaryRules']);
     Route::post('/{company}/salary-rules', [CompanyPolicyController::class, 'storeSalaryRule']);
@@ -77,6 +77,7 @@ Route::middleware(['auth:sanctum', 'tenant', 'role:general_manager'])->prefix('c
     Route::put('/{company}/evaluation-policy', [HolidayPolicyController::class, 'updateEvaluationPolicy']);
 
     Route::put('/{company}/attendance-policy', [CompanySettingsController::class, 'updateAttendancePolicy'])->name('companies.attendance-policy');
+    Route::put('/{company}/attendance-location', [CompanySettingsController::class, 'updateAttendanceLocation'])->name('companies.attendance-location');
 
     Route::get('/{company}/hr-managers', [HrManagerController::class, 'index']);
     Route::post('/{company}/hr-managers', [HrManagerController::class, 'store']);

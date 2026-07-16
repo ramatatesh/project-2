@@ -10,7 +10,7 @@ class AttendancePolicy extends Model
 {
     use HasUuids;
 
-    protected $fillable = ['id', 'company_id', 'monthly_late_threshold_min', 'consecutive_absent_alert', 'enable_gps_verification', 'company_latitude', 'company_longitude', 'allowed_radius', 'work_start_time', 'work_end_time', 'allowed_late_minutes', 'allowed_early_leave_minutes', 'work_days', 'minimum_daily_hours', 'allows_overtime'];
+    protected $fillable = ['id', 'company_id', 'monthly_late_threshold_min', 'consecutive_absent_alert', 'enable_gps_verification', 'company_latitude', 'company_longitude', 'allowed_radius', 'allowed_perimeter', 'latitude', 'longitude', 'work_start_time', 'work_end_time', 'allowed_late_minutes', 'allowed_early_leave_minutes', 'work_days', 'minimum_daily_hours', 'allows_overtime'];
     protected $keyType = 'string';
     public $incrementing = false;
     public $timestamps = false;
