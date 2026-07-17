@@ -920,7 +920,7 @@
                 "tags": [
                     "Company Policies"
                 ],
-                "summary": "Create a salary rule for a company",
+                "summary": "Bulk configure salary rules for a company",
                 "operationId": "6908411773608538f6fb3a356ee88042",
                 "parameters": [
                     {
@@ -939,36 +939,48 @@
                         "application/json": {
                             "schema": {
                                 "required": [
-                                    "rule_type",
-                                    "operation",
-                                    "value_type",
-                                    "value"
+                                    "base_currency",
+                                    "absence_day_deduction_percent",
+                                    "unpaid_leave_day_percent",
+                                    "late_arrival_deduction_percent",
+                                    "early_departure_deduction_percent",
+                                    "overtime_hour_rate_percent",
+                                    "overtime_day_rate_percent"
                                 ],
                                 "properties": {
-                                    "rule_type": {
+                                    "base_currency": {
                                         "type": "string",
-                                        "example": "late"
+                                        "example": "USD"
                                     },
-                                    "time_unit": {
-                                        "type": "string",
-                                        "example": "day"
-                                    },
-                                    "operation": {
-                                        "type": "string",
-                                        "example": "deduction"
-                                    },
-                                    "value_type": {
-                                        "type": "string",
-                                        "example": "fixed"
-                                    },
-                                    "value": {
+                                    "absence_day_deduction_percent": {
                                         "type": "number",
                                         "format": "float",
-                                        "example": 50
+                                        "example": 4
                                     },
-                                    "is_active": {
-                                        "type": "boolean",
-                                        "example": true
+                                    "unpaid_leave_day_percent": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 4
+                                    },
+                                    "late_arrival_deduction_percent": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 2
+                                    },
+                                    "early_departure_deduction_percent": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 2
+                                    },
+                                    "overtime_hour_rate_percent": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 25
+                                    },
+                                    "overtime_day_rate_percent": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 150
                                     }
                                 },
                                 "type": "object"
@@ -978,7 +990,7 @@
                 },
                 "responses": {
                     "201": {
-                        "description": "Salary rule created successfully",
+                        "description": "Salary rules configured successfully",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -988,7 +1000,10 @@
                                             "example": true
                                         },
                                         "data": {
-                                            "type": "object"
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object"
+                                            }
                                         }
                                     },
                                     "type": "object"
