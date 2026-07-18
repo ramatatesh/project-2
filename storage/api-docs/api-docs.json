@@ -1249,8 +1249,7 @@
                                     "address",
                                     "contact_name",
                                     "phone",
-                                    "plan_id",
-                                    "payment_status"
+                                    "plan_id"
                                 ],
                                 "properties": {
                                     "name": {
@@ -1261,6 +1260,11 @@
                                         "type": "string",
                                         "format": "email",
                                         "example": "hr@acme.com"
+                                    },
+                                    "domain": {
+                                        "type": "string",
+                                        "example": "acme.example.com",
+                                        "nullable": true
                                     },
                                     "address": {
                                         "type": "string",
@@ -1276,6 +1280,7 @@
                                     },
                                     "plan_id": {
                                         "type": "string",
+                                        "format": "uuid",
                                         "example": "00000000-0000-0000-0000-000000000000"
                                     }
                                 },
@@ -1292,6 +1297,39 @@
             }
         },
         "/api/companies/{company}/attendance-policy": {
+            "get": {
+                "tags": [
+                    "Companies"
+                ],
+                "summary": "عرض سياسة الحضور للشركة",
+                "description": "يعرض سياسات أوقات العمل والموقع الجغرافي المسجلة للشركة.",
+                "operationId": "9056a8c10af2093f30cc2fc28cc00876",
+                "parameters": [
+                    {
+                        "name": "company",
+                        "in": "path",
+                        "description": "معرف الشركة",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Attendance policy retrieved successfully"
+                    },
+                    "403": {
+                        "description": "Unauthorized"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
             "put": {
                 "tags": [
                     "Companies"
@@ -1306,7 +1344,8 @@
                         "description": "معرف الشركة",
                         "required": true,
                         "schema": {
-                            "type": "string"
+                            "type": "string",
+                            "format": "uuid"
                         }
                     }
                 ],

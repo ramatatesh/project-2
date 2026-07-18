@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\Role;
 use App\Models\Company;
 use App\Models\PaymentTransaction;
 use App\Services\SubscriptionService;
@@ -31,22 +32,17 @@ class CompanyAdminController extends Controller
      */
     public function index(): JsonResponse
     {
-        $companies = Company::with(['subscriptions' => function ($query) {
-            $query->orderByDesc('end_date')->limit(1);
-        }])->get()->map(function (Company $company) {
-            $currentSubscription = $company->subscriptions->first();
+        $companies = Company::with(['subscriptions.plan'])->get()->map(function (Company $company) {
+            $currentSubscription = $company->subscriptions->sortByDesc('end_date')->first();
 
             return [
                 'id' => $company->id,
                 'name' => $company->name,
                 'email' => $company->email,
-                'status' => $company->status,
-                'current_subscription' => $currentSubscription ? [
-                    'plan_type' => $currentSubscription->plan_type,
-                    'start_date' => $currentSubscription->start_date->toDateString(),
-                    'end_date' => optional($currentSubscription->end_date)->toDateString(),
-                    'status' => $currentSubscription->status,
-                ] : null,
+                'domain' => $company->domain,
+                'plan' => $currentSubscription?->plan?->name,
+                'plan_end_date' => optional($currentSubscription?->end_date)->toDateString(),
+                'is_active' => $company->status === 'active',
             ];
         });
 
@@ -73,13 +69,26 @@ class CompanyAdminController extends Controller
      */
     public function show(Company $company): JsonResponse
     {
-        $company->load(['subscriptions' => function ($query) {
-            $query->orderByDesc('end_date');
-        }]);
+        $company->load(['subscriptions.plan', 'users']);
+
+        $currentSubscription = $company->subscriptions->sortByDesc('end_date')->first();
+        $manager = $company->users->firstWhere('role', Role::GeneralManager->value);
 
         return response()->json([
             'success' => true,
-            'data' => $company,
+            'data' => [
+                'id' => $company->id,
+                'name' => $company->name,
+                'email' => $company->email,
+                'domain' => $company->domain,
+                'manager_full_name' => $manager?->full_name,
+                'phone' => $company->phone,
+                'address' => $company->address,
+                'plan_price' => $currentSubscription?->monthly_price,
+                'start_date' => optional($currentSubscription?->start_date)->toDateString(),
+                'end_date' => optional($currentSubscription?->end_date)->toDateString(),
+                'status' => $company->status,
+            ],
         ]);
     }
 

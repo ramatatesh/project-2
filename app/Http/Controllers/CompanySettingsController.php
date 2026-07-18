@@ -10,6 +10,40 @@ use Illuminate\Http\Request;
 class CompanySettingsController extends Controller
 {
     /**
+     * @OA\Get(
+     * path="/api/companies/{company}/attendance-policy",
+     * summary="عرض سياسة الحضور للشركة",
+     * description="يعرض سياسات أوقات العمل والموقع الجغرافي المسجلة للشركة.",
+     * tags={"Companies"},
+     * security={{"sanctum":{}}},
+     * @OA\Parameter(
+     * name="company",
+     * in="path",
+     * required=true,
+     * description="معرف الشركة",
+     * @OA\Schema(type="string", format="uuid")
+     * ),
+     * @OA\Response(
+     * response=200,
+     * description="Attendance policy retrieved successfully"
+     * ),
+     * @OA\Response(
+     * response=403,
+     * description="Unauthorized"
+     * )
+     * )
+     */
+    public function showAttendancePolicy(Company $company): JsonResponse
+    {
+        $policy = AttendancePolicy::where('company_id', $company->id)->first();
+
+        return response()->json([
+            'success' => true,
+            'data'    => $policy,
+        ]);
+    }
+
+    /**
      * @OA\Put(
      * path="/api/companies/{company}/attendance-policy",
      * summary="تحديث سياسة الحضور",
@@ -21,7 +55,7 @@ class CompanySettingsController extends Controller
      * in="path",
      * required=true,
      * description="معرف الشركة",
-     * @OA\Schema(type="string")
+     * @OA\Schema(type="string", format="uuid")
      * ),
      * @OA\RequestBody(
      * required=true,

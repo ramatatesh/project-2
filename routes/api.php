@@ -76,6 +76,7 @@ Route::middleware(['auth:sanctum', 'tenant', 'role:general_manager'])->prefix('c
     Route::get('/{company}/evaluation-policy', [HolidayPolicyController::class, 'indexEvaluationPolicy']);
     Route::put('/{company}/evaluation-policy', [HolidayPolicyController::class, 'updateEvaluationPolicy']);
 
+    Route::get('/{company}/attendance-policy', [CompanySettingsController::class, 'showAttendancePolicy'])->name('companies.attendance-policy.show');
     Route::put('/{company}/attendance-policy', [CompanySettingsController::class, 'updateAttendancePolicy'])->name('companies.attendance-policy');
     Route::put('/{company}/attendance-location', [CompanySettingsController::class, 'updateAttendanceLocation'])->name('companies.attendance-location');
 
@@ -93,14 +94,20 @@ Route::post('/payments/callback', [PaymentWebhookController::class, 'callback'])
     ->name('payments.callback')
     ->middleware('webhook');
 
+// Departments view (HR Manager & General Manager).
+// Company isolation is enforced per-request from the authenticated user's company_id
+// (no company_id is accepted from the client).
+Route::middleware(['auth:sanctum', 'role:hr_manager,general_manager'])->prefix('hr')->group(function () {
+    Route::get('/departments', [DepartmentController::class, 'index']);
+    Route::get('/departments/{department}', [DepartmentController::class, 'show']);
+});
+
 // HR Dashboard area: Departments & Employees management (HR Manager only).
 // Company isolation is enforced per-request from the authenticated user's company_id
 // (no company_id is accepted from the client).
 Route::middleware(['auth:sanctum', 'role:hr_manager'])->prefix('hr')->group(function () {
     // Departments
-    Route::get('/departments', [DepartmentController::class, 'index']);
     Route::post('/departments', [DepartmentController::class, 'store']);
-    Route::get('/departments/{department}', [DepartmentController::class, 'show']);
     Route::put('/departments/{department}', [DepartmentController::class, 'update']);
     Route::delete('/departments/{department}', [DepartmentController::class, 'destroy']);
 

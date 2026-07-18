@@ -16,13 +16,14 @@ class CompanyRegistrationController extends Controller
      *   @OA\RequestBody(
      *     required=true,
      *     @OA\JsonContent(
-     *       required={"name","email","address","contact_name","phone","plan_id","payment_status"},
+     *       required={"name","email","address","contact_name","phone","plan_id"},
      *       @OA\Property(property="name", type="string", example="Acme Company"),
      *       @OA\Property(property="email", type="string", format="email", example="hr@acme.com"),
+     *       @OA\Property(property="domain", type="string", nullable=true, example="acme.example.com"),
      *       @OA\Property(property="address", type="string", example="Damascus"),
      *       @OA\Property(property="contact_name", type="string", example="Ahmad"),
      *       @OA\Property(property="phone", type="string", example="+963999999999"),
-     *       @OA\Property(property="plan_id", type="string", example="00000000-0000-0000-0000-000000000000"),
+     *       @OA\Property(property="plan_id", type="string", format="uuid", example="00000000-0000-0000-0000-000000000000"),
      *     )
      *   ),
      *   @OA\Response(response=201, description="Company registered successfully")
