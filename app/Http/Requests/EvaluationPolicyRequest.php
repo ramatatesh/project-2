@@ -20,6 +20,10 @@ class EvaluationPolicyRequest extends FormRequest
             'excellent_bonus_percent' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'good_bonus_percent' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'poor_deduction_percent' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'manager_weight' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'self_weight' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'peer_weight' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'peer_reviews_count' => ['nullable', 'integer', 'min:0'],
         ];
     }
 

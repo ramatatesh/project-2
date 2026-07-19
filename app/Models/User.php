@@ -15,6 +15,7 @@ class User extends Authenticatable
     protected $keyType = 'string';
 
     public $incrementing = false;
+
     public $timestamps = false;
 
     protected $fillable = [
@@ -50,6 +51,11 @@ class User extends Authenticatable
     public function employee()
     {
         return $this->hasOne(Employee::class, 'user_id');
+    }
+
+    public function evaluationReviews()
+    {
+        return $this->hasMany(EvaluationReview::class, 'reviewer_id');
     }
 
     public function getAuthPassword(): string
