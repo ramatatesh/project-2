@@ -13,6 +13,12 @@ class LeaveType extends Model
     public $incrementing = false;
     public $timestamps = false;
 
+    protected $casts = [
+        'allocation_value' => 'integer',
+        'requires_proof' => 'boolean',
+        'is_active' => 'boolean',
+    ];
+
     public function company(): BelongsTo { return $this->belongsTo(Company::class); }
     public function leaveBalances(): HasMany { return $this->hasMany(LeaveBalance::class); }
     public function leaveRequests(): HasMany { return $this->hasMany(LeaveRequest::class); }

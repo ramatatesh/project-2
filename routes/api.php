@@ -7,7 +7,9 @@ use App\Http\Controllers\CompanyRegistrationController;
 use App\Http\Controllers\CompanySettingsController;
 use App\Http\Controllers\DepartmentController;
 use App\Http\Controllers\EmployeeController;
+use App\Http\Controllers\EmployeeLeaveController;
 use App\Http\Controllers\HolidayPolicyController;
+use App\Http\Controllers\ManagementLeaveController;
 use App\Http\Controllers\HrManagerController;
 use App\Http\Controllers\PaymentWebhookController;
 use App\Http\Controllers\SubscriptionPlanController;
@@ -119,4 +121,17 @@ Route::middleware(['auth:sanctum', 'role:hr_manager'])->prefix('hr')->group(func
     Route::put('/employees/{employee}', [EmployeeController::class, 'update']);
     Route::delete('/employees/{employee}', [EmployeeController::class, 'destroy']);
     Route::post('/employees/import', [EmployeeController::class, 'import']);
+});
+
+// Employee self-service: leave management (tenant-specific dynamic leave types).
+Route::middleware(['auth:sanctum', 'role:employee'])->prefix('employee/leaves')->group(function () {
+    Route::get('/types', [EmployeeLeaveController::class, 'types']);
+    Route::get('/dashboard', [EmployeeLeaveController::class, 'dashboard']);
+    Route::post('/apply', [EmployeeLeaveController::class, 'apply']);
+});
+
+// Management approval workflow for leave requests.
+Route::middleware(['auth:sanctum', 'role:department_manager,hr_manager'])->prefix('management/leaves')->group(function () {
+    Route::get('/inbox', [ManagementLeaveController::class, 'inbox']);
+    Route::post('/{id}/action', [ManagementLeaveController::class, 'action']);
 });

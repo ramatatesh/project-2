@@ -2191,6 +2191,244 @@
                 ]
             }
         },
+        "/api/employee/leaves/dashboard": {
+            "get": {
+                "tags": [
+                    "Employee Leaves"
+                ],
+                "summary": "Leave balance and history for the current employee",
+                "operationId": "8a9043ea9db28a56b37d7433b580c136",
+                "responses": {
+                    "200": {
+                        "description": "Current year leave dashboard",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "total_allowed_days": {
+                                                    "type": "integer"
+                                                },
+                                                "total_used_days": {
+                                                    "type": "integer"
+                                                },
+                                                "remaining_days": {
+                                                    "type": "integer"
+                                                },
+                                                "balances": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "properties": {
+                                                            "id": {
+                                                                "type": "string",
+                                                                "format": "uuid"
+                                                            },
+                                                            "name": {
+                                                                "type": "string"
+                                                            },
+                                                            "allocation_value": {
+                                                                "type": "integer"
+                                                            },
+                                                            "used_value": {
+                                                                "type": "integer"
+                                                            },
+                                                            "remaining_value": {
+                                                                "type": "integer"
+                                                            }
+                                                        },
+                                                        "type": "object"
+                                                    }
+                                                },
+                                                "leave_history": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "properties": {
+                                                            "id": {
+                                                                "type": "string",
+                                                                "format": "uuid"
+                                                            },
+                                                            "leave_type_name": {
+                                                                "type": "string"
+                                                            },
+                                                            "start_date": {
+                                                                "type": "string",
+                                                                "format": "date"
+                                                            },
+                                                            "duration_days": {
+                                                                "type": "integer"
+                                                            },
+                                                            "status": {
+                                                                "type": "string"
+                                                            }
+                                                        },
+                                                        "type": "object"
+                                                    }
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "403": {
+                        "description": "No employee record found"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/employee/leaves/types": {
+            "get": {
+                "tags": [
+                    "Employee Leaves"
+                ],
+                "summary": "Fetch dynamic leave types for the current employee's company",
+                "operationId": "eedd3b40a7f816d49f977b0312b5d2d2",
+                "responses": {
+                    "200": {
+                        "description": "Active leave types for the company",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "properties": {
+                                                    "id": {
+                                                        "type": "string",
+                                                        "format": "uuid"
+                                                    },
+                                                    "name": {
+                                                        "type": "string"
+                                                    },
+                                                    "allocation_value": {
+                                                        "type": "integer"
+                                                    },
+                                                    "allocation_unit": {
+                                                        "type": "string"
+                                                    },
+                                                    "requires_proof": {
+                                                        "type": "boolean"
+                                                    }
+                                                },
+                                                "type": "object"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/employee/leaves/apply": {
+            "post": {
+                "tags": [
+                    "Employee Leaves"
+                ],
+                "summary": "Submit a leave request",
+                "operationId": "cddb5d059f3cdd977d2cf7b7571f9832",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "required": [
+                                    "leave_type_id",
+                                    "duration_type",
+                                    "start_date"
+                                ],
+                                "properties": {
+                                    "leave_type_id": {
+                                        "type": "string",
+                                        "format": "uuid"
+                                    },
+                                    "duration_type": {
+                                        "type": "string",
+                                        "enum": [
+                                            "single_day",
+                                            "multiple_days"
+                                        ]
+                                    },
+                                    "start_date": {
+                                        "type": "string",
+                                        "format": "date"
+                                    },
+                                    "end_date": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "nullable": true
+                                    },
+                                    "start_time": {
+                                        "type": "string",
+                                        "format": "time",
+                                        "nullable": true
+                                    },
+                                    "end_time": {
+                                        "type": "string",
+                                        "format": "time",
+                                        "nullable": true
+                                    },
+                                    "reason": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "attachment": {
+                                        "type": "string",
+                                        "format": "binary",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Leave request submitted successfully"
+                    },
+                    "422": {
+                        "description": "Validation failed or insufficient balance"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
         "/api/companies/{company}/holidays": {
             "get": {
                 "tags": [
@@ -3260,6 +3498,148 @@
                 ]
             }
         },
+        "/api/management/leaves/inbox": {
+            "get": {
+                "tags": [
+                    "Management Leaves"
+                ],
+                "summary": "HR inbox for leave requests awaiting HR decision",
+                "operationId": "2a47b0ce1da92ef181e81b52024e36e0",
+                "responses": {
+                    "200": {
+                        "description": "Pending HR leave requests",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "properties": {
+                                                    "id": {
+                                                        "type": "string",
+                                                        "format": "uuid"
+                                                    },
+                                                    "employee_name": {
+                                                        "type": "string"
+                                                    },
+                                                    "leave_type_name": {
+                                                        "type": "string"
+                                                    },
+                                                    "start_date": {
+                                                        "type": "string",
+                                                        "format": "date"
+                                                    },
+                                                    "end_date": {
+                                                        "type": "string",
+                                                        "format": "date"
+                                                    },
+                                                    "duration_days": {
+                                                        "type": "integer"
+                                                    },
+                                                    "reason": {
+                                                        "type": "string",
+                                                        "nullable": true
+                                                    },
+                                                    "remaining_balance_days": {
+                                                        "type": "integer"
+                                                    }
+                                                },
+                                                "type": "object"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden (HR only)"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/management/leaves/{id}/action": {
+            "post": {
+                "tags": [
+                    "Management Leaves"
+                ],
+                "summary": "Execute a workflow action on a leave request",
+                "operationId": "3f51fcf7b35f902d3dba4a4bd080845f",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "action",
+                                    "role_context"
+                                ],
+                                "properties": {
+                                    "action": {
+                                        "type": "string",
+                                        "enum": [
+                                            "approve",
+                                            "reject"
+                                        ]
+                                    },
+                                    "role_context": {
+                                        "type": "string",
+                                        "enum": [
+                                            "manager",
+                                            "hr"
+                                        ]
+                                    },
+                                    "rejection_reason": {
+                                        "type": "string",
+                                        "example": "Insufficient coverage",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Action executed successfully"
+                    },
+                    "403": {
+                        "description": "Unauthorized role or company mismatch"
+                    },
+                    "422": {
+                        "description": "Invalid workflow state"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
         "/api/payments/callback": {
             "post": {
                 "tags": [
@@ -3653,12 +4033,20 @@
             "description": "إدارة موظفي الشركة الحالية (متاح فقط لمدير الموارد البشرية HR Manager)"
         },
         {
+            "name": "Employee Leaves",
+            "description": "Employee leave management endpoints"
+        },
+        {
             "name": "Holiday Policies",
             "description": "Endpoints for company holiday and evaluation policy management"
         },
         {
             "name": "HR Managers",
             "description": "Endpoints for managing HR manager accounts within a tenant company"
+        },
+        {
+            "name": "Management Leaves",
+            "description": "Leave request approval workflow for department managers and HR"
         },
         {
             "name": "Subscription Plans",
