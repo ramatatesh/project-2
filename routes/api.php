@@ -8,6 +8,13 @@ use App\Http\Controllers\CompanySettingsController;
 use App\Http\Controllers\DepartmentController;
 use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\EmployeeLeaveController;
+use App\Http\Controllers\EvaluationCycleController;
+use App\Http\Controllers\EvaluationProgressController;
+use App\Http\Controllers\EvaluationQuestionController;
+use App\Http\Controllers\EvaluationResultController;
+use App\Http\Controllers\EvaluationReviewController;
+use App\Http\Controllers\EvaluationScoringController;
+use App\Http\Controllers\EvaluationTemplateController;
 use App\Http\Controllers\HolidayPolicyController;
 use App\Http\Controllers\ManagementLeaveController;
 use App\Http\Controllers\HrManagerController;
@@ -121,6 +128,48 @@ Route::middleware(['auth:sanctum', 'role:hr_manager'])->prefix('hr')->group(func
     Route::put('/employees/{employee}', [EmployeeController::class, 'update']);
     Route::delete('/employees/{employee}', [EmployeeController::class, 'destroy']);
     Route::post('/employees/import', [EmployeeController::class, 'import']);
+
+    // Evaluation Templates & Criteria
+    Route::get('/evaluation-templates', [EvaluationTemplateController::class, 'index']);
+    Route::post('/evaluation-templates', [EvaluationTemplateController::class, 'store']);
+    Route::get('/evaluation-templates/{template}', [EvaluationTemplateController::class, 'show']);
+    Route::put('/evaluation-templates/{template}', [EvaluationTemplateController::class, 'update']);
+    Route::delete('/evaluation-templates/{template}', [EvaluationTemplateController::class, 'destroy']);
+    Route::post('/evaluation-templates/{template}/duplicate', [EvaluationTemplateController::class, 'duplicate']);
+
+    Route::post('/evaluation-templates/{template}/questions', [EvaluationQuestionController::class, 'store']);
+    Route::put('/evaluation-templates/{template}/questions/{question}', [EvaluationQuestionController::class, 'update']);
+    Route::delete('/evaluation-templates/{template}/questions/{question}', [EvaluationQuestionController::class, 'destroy']);
+
+    // Evaluation Cycles
+    Route::get('/evaluation-cycles', [EvaluationCycleController::class, 'index']);
+    Route::post('/evaluation-cycles', [EvaluationCycleController::class, 'store']);
+    Route::get('/evaluation-cycles/{cycle}', [EvaluationCycleController::class, 'show']);
+    Route::put('/evaluation-cycles/{cycle}', [EvaluationCycleController::class, 'update']);
+    Route::delete('/evaluation-cycles/{cycle}', [EvaluationCycleController::class, 'destroy']);
+    Route::post('/evaluation-cycles/{cycle}/launch', [EvaluationCycleController::class, 'launch']);
+    Route::post('/evaluation-cycles/{cycle}/close', [EvaluationCycleController::class, 'close']);
+
+    // Progress & Reminders
+    Route::get('/evaluation-cycles/{cycle}/progress', [EvaluationProgressController::class, 'progress']);
+    Route::post('/evaluation-cycles/{cycle}/employees/{employee}/reminder', [EvaluationProgressController::class, 'sendReminder']);
+
+    // Scoring
+    Route::get('/evaluation-cycles/{cycle}/scorable-employees', [EvaluationScoringController::class, 'scorableEmployees']);
+    Route::get('/evaluation-cycles/{cycle}/scoring', [EvaluationScoringController::class, 'scoringDetails']);
+    Route::post('/evaluation-cycles/{cycle}/reviews/{review}/score', [EvaluationScoringController::class, 'storeScores']);
+
+    // Final Results
+    Route::get('/evaluation-cycles/{cycle}/final-results', [EvaluationResultController::class, 'index']);
+    Route::get('/evaluation-cycles/{cycle}/final-results/{employee}', [EvaluationResultController::class, 'show']);
+    Route::post('/evaluation-cycles/{cycle}/final-results/{employee}/finalize', [EvaluationResultController::class, 'finalize']);
+});
+
+// Reviewer-facing endpoints (self/manager/peer reviews)
+Route::middleware(['auth:sanctum'])->prefix('evaluations')->group(function () {
+    Route::get('/my-reviews', [EvaluationReviewController::class, 'myReviews']);
+    Route::get('/my-reviews/{review}', [EvaluationReviewController::class, 'show']);
+    Route::post('/my-reviews/{review}/submit', [EvaluationReviewController::class, 'submit']);
 });
 
 // Employee self-service: leave management (tenant-specific dynamic leave types).

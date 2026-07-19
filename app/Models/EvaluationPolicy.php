@@ -17,10 +17,16 @@ class EvaluationPolicy extends Model
         'excellent_bonus_percent',
         'good_bonus_percent',
         'poor_deduction_percent',
+        'manager_weight',
+        'self_weight',
+        'peer_weight',
+        'peer_reviews_count',
     ];
 
     protected $keyType = 'string';
+
     public $incrementing = false;
+
     public $timestamps = false;
 
     protected $casts = [
@@ -28,6 +34,10 @@ class EvaluationPolicy extends Model
         'excellent_bonus_percent' => 'decimal:2',
         'good_bonus_percent' => 'decimal:2',
         'poor_deduction_percent' => 'decimal:2',
+        'manager_weight' => 'decimal:2',
+        'self_weight' => 'decimal:2',
+        'peer_weight' => 'decimal:2',
+        'peer_reviews_count' => 'integer',
     ];
 
     public function company(): BelongsTo
