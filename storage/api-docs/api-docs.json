@@ -617,12 +617,12 @@
                     }
                 ]
             },
-            "post": {
+            "put": {
                 "tags": [
                     "Company Policies"
                 ],
-                "summary": "Create a leave type for a company",
-                "operationId": "3d3dd9735ac812b4671535d88be80d51",
+                "summary": "Update multiple leave types for a company",
+                "operationId": "68b39872635b42a89af0776952de5e4b",
                 "parameters": [
                     {
                         "name": "company",
@@ -640,35 +640,46 @@
                         "application/json": {
                             "schema": {
                                 "required": [
-                                    "name",
-                                    "allocation_value",
-                                    "allocation_unit",
-                                    "is_paid"
+                                    "leave_types"
                                 ],
                                 "properties": {
-                                    "name": {
-                                        "type": "string",
-                                        "example": "Annual Leave"
-                                    },
-                                    "allocation_value": {
-                                        "type": "integer",
-                                        "example": 21
-                                    },
-                                    "allocation_unit": {
-                                        "type": "string",
-                                        "example": "days"
-                                    },
-                                    "is_paid": {
-                                        "type": "boolean",
-                                        "example": true
-                                    },
-                                    "requires_proof": {
-                                        "type": "boolean",
-                                        "example": false
-                                    },
-                                    "is_active": {
-                                        "type": "boolean",
-                                        "example": true
+                                    "leave_types": {
+                                        "type": "array",
+                                        "items": {
+                                            "required": [
+                                                "name",
+                                                "allocation_value",
+                                                "allocation_unit"
+                                            ],
+                                            "properties": {
+                                                "id": {
+                                                    "type": "string",
+                                                    "format": "uuid",
+                                                    "example": "00000000-0000-0000-0000-000000000000"
+                                                },
+                                                "name": {
+                                                    "type": "string",
+                                                    "example": "Annual Leave"
+                                                },
+                                                "allocation_value": {
+                                                    "type": "integer",
+                                                    "example": 21
+                                                },
+                                                "allocation_unit": {
+                                                    "type": "string",
+                                                    "example": "days"
+                                                },
+                                                "requires_proof": {
+                                                    "type": "boolean",
+                                                    "example": false
+                                                },
+                                                "is_active": {
+                                                    "type": "boolean",
+                                                    "example": true
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
                                     }
                                 },
                                 "type": "object"
@@ -677,8 +688,8 @@
                     }
                 },
                 "responses": {
-                    "201": {
-                        "description": "Leave type created successfully",
+                    "200": {
+                        "description": "Leave types updated successfully",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -688,7 +699,10 @@
                                             "example": true
                                         },
                                         "data": {
-                                            "type": "object"
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object"
+                                            }
                                         }
                                     },
                                     "type": "object"
@@ -702,27 +716,16 @@
                         "sanctum": []
                     }
                 ]
-            }
-        },
-        "/api/companies/{company}/leave-types/{leaveType}": {
-            "put": {
+            },
+            "post": {
                 "tags": [
                     "Company Policies"
                 ],
-                "summary": "Update a leave type for a company",
-                "operationId": "abfc6485a954e64695047e34aa396f15",
+                "summary": "Create multiple leave types for a company",
+                "operationId": "6b9d1a167568cbab0b8720d491285ee6",
                 "parameters": [
                     {
                         "name": "company",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "string",
-                            "format": "uuid"
-                        }
-                    },
-                    {
-                        "name": "leaveType",
                         "in": "path",
                         "required": true,
                         "schema": {
@@ -736,30 +739,42 @@
                     "content": {
                         "application/json": {
                             "schema": {
+                                "required": [
+                                    "leave_types"
+                                ],
                                 "properties": {
-                                    "name": {
-                                        "type": "string",
-                                        "example": "Annual Leave"
-                                    },
-                                    "allocation_value": {
-                                        "type": "integer",
-                                        "example": 21
-                                    },
-                                    "allocation_unit": {
-                                        "type": "string",
-                                        "example": "days"
-                                    },
-                                    "is_paid": {
-                                        "type": "boolean",
-                                        "example": true
-                                    },
-                                    "requires_proof": {
-                                        "type": "boolean",
-                                        "example": false
-                                    },
-                                    "is_active": {
-                                        "type": "boolean",
-                                        "example": true
+                                    "leave_types": {
+                                        "type": "array",
+                                        "items": {
+                                            "required": [
+                                                "name",
+                                                "allocation_value",
+                                                "allocation_unit"
+                                            ],
+                                            "properties": {
+                                                "name": {
+                                                    "type": "string",
+                                                    "example": "Annual Leave"
+                                                },
+                                                "allocation_value": {
+                                                    "type": "integer",
+                                                    "example": 21
+                                                },
+                                                "allocation_unit": {
+                                                    "type": "string",
+                                                    "example": "days"
+                                                },
+                                                "requires_proof": {
+                                                    "type": "boolean",
+                                                    "example": false
+                                                },
+                                                "is_active": {
+                                                    "type": "boolean",
+                                                    "example": true
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
                                     }
                                 },
                                 "type": "object"
@@ -768,8 +783,8 @@
                     }
                 },
                 "responses": {
-                    "200": {
-                        "description": "Leave type updated successfully",
+                    "201": {
+                        "description": "Leave types created successfully",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -779,7 +794,10 @@
                                             "example": true
                                         },
                                         "data": {
-                                            "type": "object"
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object"
+                                            }
                                         }
                                     },
                                     "type": "object"
@@ -902,7 +920,7 @@
                 "tags": [
                     "Company Policies"
                 ],
-                "summary": "Create a salary rule for a company",
+                "summary": "Bulk configure salary rules for a company",
                 "operationId": "6908411773608538f6fb3a356ee88042",
                 "parameters": [
                     {
@@ -921,36 +939,48 @@
                         "application/json": {
                             "schema": {
                                 "required": [
-                                    "rule_type",
-                                    "operation",
-                                    "value_type",
-                                    "value"
+                                    "base_currency",
+                                    "absence_day_deduction_percent",
+                                    "unpaid_leave_day_percent",
+                                    "late_arrival_deduction_percent",
+                                    "early_departure_deduction_percent",
+                                    "overtime_hour_rate_percent",
+                                    "overtime_day_rate_percent"
                                 ],
                                 "properties": {
-                                    "rule_type": {
+                                    "base_currency": {
                                         "type": "string",
-                                        "example": "late"
+                                        "example": "USD"
                                     },
-                                    "time_unit": {
-                                        "type": "string",
-                                        "example": "day"
-                                    },
-                                    "operation": {
-                                        "type": "string",
-                                        "example": "deduction"
-                                    },
-                                    "value_type": {
-                                        "type": "string",
-                                        "example": "fixed"
-                                    },
-                                    "value": {
+                                    "absence_day_deduction_percent": {
                                         "type": "number",
                                         "format": "float",
-                                        "example": 50
+                                        "example": 4
                                     },
-                                    "is_active": {
-                                        "type": "boolean",
-                                        "example": true
+                                    "unpaid_leave_day_percent": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 4
+                                    },
+                                    "late_arrival_deduction_percent": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 2
+                                    },
+                                    "early_departure_deduction_percent": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 2
+                                    },
+                                    "overtime_hour_rate_percent": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 25
+                                    },
+                                    "overtime_day_rate_percent": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 150
                                     }
                                 },
                                 "type": "object"
@@ -960,7 +990,7 @@
                 },
                 "responses": {
                     "201": {
-                        "description": "Salary rule created successfully",
+                        "description": "Salary rules configured successfully",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -970,7 +1000,10 @@
                                             "example": true
                                         },
                                         "data": {
-                                            "type": "object"
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object"
+                                            }
                                         }
                                     },
                                     "type": "object"
@@ -1216,8 +1249,7 @@
                                     "address",
                                     "contact_name",
                                     "phone",
-                                    "plan_id",
-                                    "payment_status"
+                                    "plan_id"
                                 ],
                                 "properties": {
                                     "name": {
@@ -1228,6 +1260,11 @@
                                         "type": "string",
                                         "format": "email",
                                         "example": "hr@acme.com"
+                                    },
+                                    "domain": {
+                                        "type": "string",
+                                        "example": "acme.example.com",
+                                        "nullable": true
                                     },
                                     "address": {
                                         "type": "string",
@@ -1243,6 +1280,7 @@
                                     },
                                     "plan_id": {
                                         "type": "string",
+                                        "format": "uuid",
                                         "example": "00000000-0000-0000-0000-000000000000"
                                     }
                                 },
@@ -1259,12 +1297,45 @@
             }
         },
         "/api/companies/{company}/attendance-policy": {
+            "get": {
+                "tags": [
+                    "Companies"
+                ],
+                "summary": "عرض سياسة الحضور للشركة",
+                "description": "يعرض سياسات أوقات العمل والموقع الجغرافي المسجلة للشركة.",
+                "operationId": "9056a8c10af2093f30cc2fc28cc00876",
+                "parameters": [
+                    {
+                        "name": "company",
+                        "in": "path",
+                        "description": "معرف الشركة",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Attendance policy retrieved successfully"
+                    },
+                    "403": {
+                        "description": "Unauthorized"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
             "put": {
                 "tags": [
                     "Companies"
                 ],
-                "summary": "تحديث سياسة الحضور والإعدادات الجغرافية للبصمة",
-                "description": "يقوم هذا الـ API بحفظ سياسات أوقات العمل للشركة بالإضافة إلى إحداثيات المقر الجغرافي ونصف قطر نطاق التواجد المسموح به للموظفين لتسجيل الحضور.",
+                "summary": "تحديث سياسة الحضور",
+                "description": "يقوم هذا الـ API بحفظ سياسات أوقات العمل للشركة.",
                 "operationId": "6128e14a9c1d912a118d16e7bea2d378",
                 "parameters": [
                     {
@@ -1273,7 +1344,8 @@
                         "description": "معرف الشركة",
                         "required": true,
                         "schema": {
-                            "type": "string"
+                            "type": "string",
+                            "format": "uuid"
                         }
                     }
                 ],
@@ -1287,12 +1359,7 @@
                                     "work_end_time",
                                     "allowed_late_minutes",
                                     "allowed_early_leave_minutes",
-                                    "work_days",
-                                    "minimum_daily_hours",
-                                    "allows_overtime",
-                                    "allowed_perimeter",
-                                    "latitude",
-                                    "longitude"
+                                    "allows_overtime"
                                 ],
                                 "properties": {
                                     "work_start_time": {
@@ -1311,21 +1378,61 @@
                                         "type": "integer",
                                         "example": 15
                                     },
-                                    "work_days": {
-                                        "type": "array",
-                                        "items": {
-                                            "type": "string",
-                                            "example": "monday"
-                                        }
-                                    },
-                                    "minimum_daily_hours": {
-                                        "type": "integer",
-                                        "example": 8
-                                    },
                                     "allows_overtime": {
                                         "type": "boolean",
                                         "example": true
-                                    },
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Attendance policy updated successfully"
+                    },
+                    "422": {
+                        "description": "Validation Error"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/companies/{company}/attendance-location": {
+            "put": {
+                "tags": [
+                    "Companies"
+                ],
+                "summary": "تحديث إعدادات موقع البصمة",
+                "description": "يقوم هذا الـ API بحفظ إحداثيات المقر الجغرافي ونصف قطر نطاق التواجد المسموح به للموظفين لتسجيل الحضور.",
+                "operationId": "30369277834538be82887f8f757dd738",
+                "parameters": [
+                    {
+                        "name": "company",
+                        "in": "path",
+                        "description": "معرف الشركة",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "allowed_perimeter",
+                                    "latitude",
+                                    "longitude"
+                                ],
+                                "properties": {
                                     "allowed_perimeter": {
                                         "type": "integer",
                                         "example": 150
@@ -1348,7 +1455,7 @@
                 },
                 "responses": {
                     "200": {
-                        "description": "Attendance policy updated successfully"
+                        "description": "Attendance location updated successfully"
                     },
                     "422": {
                         "description": "Validation Error"

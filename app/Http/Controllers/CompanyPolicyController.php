@@ -2,13 +2,15 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\LeaveTypeRequest;
+use App\Http\Requests\BulkLeaveTypeRequest;
 use App\Http\Requests\PayrollSettingsRequest;
 use App\Http\Requests\SalaryRuleRequest;
+use App\Http\Requests\StoreSalaryRulesRequest;
 use App\Models\Company;
 use App\Models\LeaveType;
 use App\Models\SalaryRule;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 /**
@@ -25,16 +27,21 @@ class CompanyPolicyController extends Controller
      *   summary="List leave types for a company",
      *   tags={"Company Policies"},
      *   security={{"sanctum":{}}},
+     *
      *   @OA\Parameter(
      *     name="company",
      *     in="path",
      *     required=true,
+     *
      *     @OA\Schema(type="string", format="uuid")
      *   ),
+     *
      *   @OA\Response(
      *     response=200,
      *     description="Leave types retrieved successfully",
+     *
      *     @OA\JsonContent(
+     *
      *       @OA\Property(property="success", type="boolean", example=true),
      *       @OA\Property(property="data", type="array", @OA\Items(type="object"))
      *     )
@@ -54,101 +61,167 @@ class CompanyPolicyController extends Controller
     /**
      * @OA\Post(
      *   path="/api/companies/{company}/leave-types",
-     *   summary="Create a leave type for a company",
+     *   summary="Create multiple leave types for a company",
      *   tags={"Company Policies"},
      *   security={{"sanctum":{}}},
+     *
      *   @OA\Parameter(
      *     name="company",
      *     in="path",
      *     required=true,
+     *
      *     @OA\Schema(type="string", format="uuid")
      *   ),
+     *
      *   @OA\RequestBody(
      *     required=true,
+     *
      *     @OA\JsonContent(
-     *       required={"name","allocation_value","allocation_unit","is_paid"},
-     *       @OA\Property(property="name", type="string", example="Annual Leave"),
-     *       @OA\Property(property="allocation_value", type="integer", example=21),
-     *       @OA\Property(property="allocation_unit", type="string", example="days"),
-     *       @OA\Property(property="is_paid", type="boolean", example=true),
-     *       @OA\Property(property="requires_proof", type="boolean", example=false),
-     *       @OA\Property(property="is_active", type="boolean", example=true)
+     *       required={"leave_types"},
+     *
+     *       @OA\Property(
+     *         property="leave_types",
+     *         type="array",
+     *
+     *         @OA\Items(
+     *           type="object",
+     *           required={"name","allocation_value","allocation_unit"},
+     *
+     *           @OA\Property(property="name", type="string", example="Annual Leave"),
+     *           @OA\Property(property="allocation_value", type="integer", example=21),
+     *           @OA\Property(property="allocation_unit", type="string", example="days"),
+     *           @OA\Property(property="requires_proof", type="boolean", example=false),
+     *           @OA\Property(property="is_active", type="boolean", example=true)
+     *         )
+     *       )
      *     )
      *   ),
+     *
      *   @OA\Response(
      *     response=201,
-     *     description="Leave type created successfully",
+     *     description="Leave types created successfully",
+     *
      *     @OA\JsonContent(
+     *
      *       @OA\Property(property="success", type="boolean", example=true),
-     *       @OA\Property(property="data", type="object")
+     *       @OA\Property(property="data", type="array", @OA\Items(type="object"))
      *     )
      *   )
      * )
      */
-    public function storeLeaveType(LeaveTypeRequest $request, Company $company): JsonResponse
+    public function storeLeaveTypes(BulkLeaveTypeRequest $request, Company $company): JsonResponse
     {
-        $data = $request->validated();
+        $items = $request->validated()['leave_types'];
+        $leaveTypes = [];
 
-        $leaveType = LeaveType::create(array_merge($data, [
-            'id' => Str::uuid()->toString(),
-            'company_id' => $company->id,
-            'is_active' => $data['is_active'] ?? true,
-        ]));
+        DB::transaction(function () use ($items, $company, &$leaveTypes) {
+            foreach ($items as $item) {
+                $leaveTypes[] = LeaveType::create([
+                    'id' => Str::uuid()->toString(),
+                    'company_id' => $company->id,
+                    'name' => $item['name'],
+                    'allocation_value' => $item['allocation_value'],
+                    'allocation_unit' => $item['allocation_unit'],
+                    'requires_proof' => $item['requires_proof'] ?? false,
+                    'is_active' => $item['is_active'] ?? true,
+                ]);
+            }
+        });
 
         return response()->json([
             'success' => true,
-            'data' => $leaveType,
+            'data' => $leaveTypes,
         ], 201);
     }
 
     /**
      * @OA\Put(
-     *   path="/api/companies/{company}/leave-types/{leaveType}",
-     *   summary="Update a leave type for a company",
+     *   path="/api/companies/{company}/leave-types",
+     *   summary="Update multiple leave types for a company",
      *   tags={"Company Policies"},
      *   security={{"sanctum":{}}},
+     *
      *   @OA\Parameter(
      *     name="company",
      *     in="path",
      *     required=true,
+     *
      *     @OA\Schema(type="string", format="uuid")
      *   ),
-     *   @OA\Parameter(
-     *     name="leaveType",
-     *     in="path",
-     *     required=true,
-     *     @OA\Schema(type="string", format="uuid")
-     *   ),
+     *
      *   @OA\RequestBody(
      *     required=true,
+     *
      *     @OA\JsonContent(
-     *       @OA\Property(property="name", type="string", example="Annual Leave"),
-     *       @OA\Property(property="allocation_value", type="integer", example=21),
-     *       @OA\Property(property="allocation_unit", type="string", example="days"),
-     *       @OA\Property(property="is_paid", type="boolean", example=true),
-     *       @OA\Property(property="requires_proof", type="boolean", example=false),
-     *       @OA\Property(property="is_active", type="boolean", example=true)
+     *       required={"leave_types"},
+     *
+     *       @OA\Property(
+     *         property="leave_types",
+     *         type="array",
+     *
+     *         @OA\Items(
+     *           type="object",
+     *           required={"name","allocation_value","allocation_unit"},
+     *
+     *           @OA\Property(property="id", type="string", format="uuid", example="00000000-0000-0000-0000-000000000000"),
+     *           @OA\Property(property="name", type="string", example="Annual Leave"),
+     *           @OA\Property(property="allocation_value", type="integer", example=21),
+     *           @OA\Property(property="allocation_unit", type="string", example="days"),
+     *           @OA\Property(property="requires_proof", type="boolean", example=false),
+     *           @OA\Property(property="is_active", type="boolean", example=true)
+     *         )
+     *       )
      *     )
      *   ),
+     *
      *   @OA\Response(
      *     response=200,
-     *     description="Leave type updated successfully",
+     *     description="Leave types updated successfully",
+     *
      *     @OA\JsonContent(
+     *
      *       @OA\Property(property="success", type="boolean", example=true),
-     *       @OA\Property(property="data", type="object")
+     *       @OA\Property(property="data", type="array", @OA\Items(type="object"))
      *     )
      *   )
      * )
      */
-    public function updateLeaveType(LeaveTypeRequest $request, Company $company, LeaveType $leaveType): JsonResponse
+    public function updateLeaveTypes(BulkLeaveTypeRequest $request, Company $company): JsonResponse
     {
-        if ($leaveType->company_id !== $company->id) {
-            return response()->json(['success' => false, 'message' => 'Leave type not found for this company.'], 404);
-        }
+        $items = $request->validated()['leave_types'];
+        $leaveTypes = [];
 
-        $leaveType->update($request->validated());
+        DB::transaction(function () use ($items, $company, &$leaveTypes) {
+            foreach ($items as $item) {
+                $data = [
+                    'name' => $item['name'],
+                    'allocation_value' => $item['allocation_value'],
+                    'allocation_unit' => $item['allocation_unit'],
+                    'requires_proof' => $item['requires_proof'] ?? false,
+                    'is_active' => $item['is_active'] ?? true,
+                ];
 
-        return response()->json(['success' => true, 'data' => $leaveType]);
+                if (! empty($item['id'])) {
+                    $leaveType = LeaveType::where('id', $item['id'])
+                        ->where('company_id', $company->id)
+                        ->first();
+
+                    if ($leaveType) {
+                        $leaveType->update($data);
+                        $leaveTypes[] = $leaveType->fresh();
+
+                        continue;
+                    }
+                }
+
+                $leaveTypes[] = LeaveType::create(array_merge($data, [
+                    'id' => Str::uuid()->toString(),
+                    'company_id' => $company->id,
+                ]));
+            }
+        });
+
+        return response()->json(['success' => true, 'data' => $leaveTypes]);
     }
 
     /**
@@ -157,22 +230,29 @@ class CompanyPolicyController extends Controller
      *   summary="Toggle leave type active state",
      *   tags={"Company Policies"},
      *   security={{"sanctum":{}}},
+     *
      *   @OA\Parameter(
      *     name="company",
      *     in="path",
      *     required=true,
+     *
      *     @OA\Schema(type="string", format="uuid")
      *   ),
+     *
      *   @OA\Parameter(
      *     name="leaveType",
      *     in="path",
      *     required=true,
+     *
      *     @OA\Schema(type="string", format="uuid")
      *   ),
+     *
      *   @OA\Response(
      *     response=200,
      *     description="Leave type toggled successfully",
+     *
      *     @OA\JsonContent(
+     *
      *       @OA\Property(property="success", type="boolean", example=true),
      *       @OA\Property(property="data", type="object")
      *     )
@@ -196,16 +276,21 @@ class CompanyPolicyController extends Controller
      *   summary="List salary rules for a company",
      *   tags={"Company Policies"},
      *   security={{"sanctum":{}}},
+     *
      *   @OA\Parameter(
      *     name="company",
      *     in="path",
      *     required=true,
+     *
      *     @OA\Schema(type="string", format="uuid")
      *   ),
+     *
      *   @OA\Response(
      *     response=200,
      *     description="Salary rules retrieved successfully",
+     *
      *     @OA\JsonContent(
+     *
      *       @OA\Property(property="success", type="boolean", example=true),
      *       @OA\Property(property="data", type="array", @OA\Items(type="object"))
      *     )
@@ -222,47 +307,117 @@ class CompanyPolicyController extends Controller
     /**
      * @OA\Post(
      *   path="/api/companies/{company}/salary-rules",
-     *   summary="Create a salary rule for a company",
+     *   summary="Bulk configure salary rules for a company",
      *   tags={"Company Policies"},
      *   security={{"sanctum":{}}},
+     *
      *   @OA\Parameter(
      *     name="company",
      *     in="path",
      *     required=true,
+     *
      *     @OA\Schema(type="string", format="uuid")
      *   ),
+     *
      *   @OA\RequestBody(
      *     required=true,
+     *
      *     @OA\JsonContent(
-     *       required={"rule_type","operation","value_type","value"},
-     *       @OA\Property(property="rule_type", type="string", example="late"),
-     *       @OA\Property(property="time_unit", type="string", example="day"),
-     *       @OA\Property(property="operation", type="string", example="deduction"),
-     *       @OA\Property(property="value_type", type="string", example="fixed"),
-     *       @OA\Property(property="value", type="number", format="float", example=50),
-     *       @OA\Property(property="is_active", type="boolean", example=true)
+     *       required={"base_currency","absence_day_deduction_percent","unpaid_leave_day_percent","late_arrival_deduction_percent","early_departure_deduction_percent","overtime_hour_rate_percent","overtime_day_rate_percent"},
+     *
+     *       @OA\Property(property="base_currency", type="string", example="USD"),
+     *       @OA\Property(property="absence_day_deduction_percent", type="number", format="float", example=4),
+     *       @OA\Property(property="unpaid_leave_day_percent", type="number", format="float", example=4),
+     *       @OA\Property(property="late_arrival_deduction_percent", type="number", format="float", example=2),
+     *       @OA\Property(property="early_departure_deduction_percent", type="number", format="float", example=2),
+     *       @OA\Property(property="overtime_hour_rate_percent", type="number", format="float", example=25),
+     *       @OA\Property(property="overtime_day_rate_percent", type="number", format="float", example=150)
      *     )
      *   ),
+     *
      *   @OA\Response(
      *     response=201,
-     *     description="Salary rule created successfully",
+     *     description="Salary rules configured successfully",
+     *
      *     @OA\JsonContent(
+     *
      *       @OA\Property(property="success", type="boolean", example=true),
-     *       @OA\Property(property="data", type="object")
+     *       @OA\Property(property="data", type="array", @OA\Items(type="object"))
      *     )
      *   )
      * )
      */
-    public function storeSalaryRule(SalaryRuleRequest $request, Company $company): JsonResponse
+    public function storeSalaryRule(StoreSalaryRulesRequest $request, Company $company): JsonResponse
     {
-        $data = $request->validated();
-        $rule = SalaryRule::create(array_merge($data, [
-            'id' => Str::uuid()->toString(),
-            'company_id' => $company->id,
-            'is_active' => $data['is_active'] ?? true,
-        ]));
+        $validated = $request->validated();
 
-        return response()->json(['success' => true, 'data' => $rule], 201);
+        $rulesConfig = [
+            'absence' => [
+                'field' => 'absence_day_deduction_percent',
+                'operation' => 'deduction',
+                'time_unit' => 'day',
+                'value_type' => 'percent',
+            ],
+            'unpaid_leave' => [
+                'field' => 'unpaid_leave_day_percent',
+                'operation' => 'deduction',
+                'time_unit' => 'day',
+                'value_type' => 'percent',
+            ],
+            'late' => [
+                'field' => 'late_arrival_deduction_percent',
+                'operation' => 'deduction',
+                'time_unit' => 'day',
+                'value_type' => 'percent',
+            ],
+            'early' => [
+                'field' => 'early_departure_deduction_percent',
+                'operation' => 'deduction',
+                'time_unit' => 'day',
+                'value_type' => 'percent',
+            ],
+            'overtime_hour' => [
+                'field' => 'overtime_hour_rate_percent',
+                'operation' => 'addition',
+                'time_unit' => 'hour',
+                'value_type' => 'percent',
+            ],
+            'overtime_day' => [
+                'field' => 'overtime_day_rate_percent',
+                'operation' => 'addition',
+                'time_unit' => 'day',
+                'value_type' => 'percent',
+            ],
+        ];
+
+        $salaryRules = [];
+
+        DB::transaction(function () use ($company, $validated, $rulesConfig, &$salaryRules) {
+            $company->update(['payroll_currency' => $validated['base_currency']]);
+
+            foreach ($rulesConfig as $ruleType => $config) {
+                $rule = SalaryRule::updateOrCreate(
+                    [
+                        'company_id' => $company->id,
+                        'rule_type' => $ruleType,
+                    ],
+                    [
+                        'operation' => $config['operation'],
+                        'value_type' => $config['value_type'],
+                        'time_unit' => $config['time_unit'],
+                        'value' => $validated[$config['field']],
+                        'is_active' => true,
+                    ]
+                );
+
+                $salaryRules[] = $rule->fresh();
+            }
+        });
+
+        return response()->json([
+            'success' => true,
+            'data' => $salaryRules,
+        ], 201);
     }
 
     /**
@@ -271,21 +426,28 @@ class CompanyPolicyController extends Controller
      *   summary="Update a salary rule for a company",
      *   tags={"Company Policies"},
      *   security={{"sanctum":{}}},
+     *
      *   @OA\Parameter(
      *     name="company",
      *     in="path",
      *     required=true,
+     *
      *     @OA\Schema(type="string", format="uuid")
      *   ),
+     *
      *   @OA\Parameter(
      *     name="rule",
      *     in="path",
      *     required=true,
+     *
      *     @OA\Schema(type="string", format="uuid")
      *   ),
+     *
      *   @OA\RequestBody(
      *     required=true,
+     *
      *     @OA\JsonContent(
+     *
      *       @OA\Property(property="rule_type", type="string", example="late"),
      *       @OA\Property(property="time_unit", type="string", example="day"),
      *       @OA\Property(property="operation", type="string", example="deduction"),
@@ -294,10 +456,13 @@ class CompanyPolicyController extends Controller
      *       @OA\Property(property="is_active", type="boolean", example=true)
      *     )
      *   ),
+     *
      *   @OA\Response(
      *     response=200,
      *     description="Salary rule updated successfully",
+     *
      *     @OA\JsonContent(
+     *
      *       @OA\Property(property="success", type="boolean", example=true),
      *       @OA\Property(property="data", type="object")
      *     )
@@ -321,22 +486,29 @@ class CompanyPolicyController extends Controller
      *   summary="Toggle salary rule active state",
      *   tags={"Company Policies"},
      *   security={{"sanctum":{}}},
+     *
      *   @OA\Parameter(
      *     name="company",
      *     in="path",
      *     required=true,
+     *
      *     @OA\Schema(type="string", format="uuid")
      *   ),
+     *
      *   @OA\Parameter(
      *     name="rule",
      *     in="path",
      *     required=true,
+     *
      *     @OA\Schema(type="string", format="uuid")
      *   ),
+     *
      *   @OA\Response(
      *     response=200,
      *     description="Salary rule toggled successfully",
+     *
      *     @OA\JsonContent(
+     *
      *       @OA\Property(property="success", type="boolean", example=true),
      *       @OA\Property(property="data", type="object")
      *     )
@@ -360,23 +532,31 @@ class CompanyPolicyController extends Controller
      *   summary="Update company payroll currency",
      *   tags={"Company Policies"},
      *   security={{"sanctum":{}}},
+     *
      *   @OA\Parameter(
      *     name="company",
      *     in="path",
      *     required=true,
+     *
      *     @OA\Schema(type="string", format="uuid")
      *   ),
+     *
      *   @OA\RequestBody(
      *     required=true,
+     *
      *     @OA\JsonContent(
      *       required={"payroll_currency"},
+     *
      *       @OA\Property(property="payroll_currency", type="string", example="USD")
      *     )
      *   ),
+     *
      *   @OA\Response(
      *     response=200,
      *     description="Payroll currency updated successfully",
+     *
      *     @OA\JsonContent(
+     *
      *       @OA\Property(property="success", type="boolean", example=true),
      *       @OA\Property(property="data", type="object")
      *     )

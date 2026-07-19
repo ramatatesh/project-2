@@ -18,6 +18,7 @@ class CompanyRegistrationRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255'],
+            'domain' => ['nullable', 'string', 'max:255', 'unique:companies,domain'],
             'address' => ['required', 'string', 'max:255'],
             'contact_name' => ['required', 'string', 'max:255'],
             'phone' => ['required', 'string', 'max:50'],

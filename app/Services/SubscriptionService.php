@@ -21,6 +21,7 @@ class SubscriptionService
                 'id' => Str::uuid()->toString(),
                 'name' => $data['name'],
                 'email' => $data['email'],
+                'domain' => $data['domain'] ?? null,
                 'address' => $data['address'],
                 'phone' => $data['phone'],
                 'status' => 'active',
@@ -63,6 +64,7 @@ class SubscriptionService
             'id' => Str::uuid()->toString(),
             'name' => $data['name'],
             'email' => $data['email'],
+            'domain' => $data['domain'] ?? null,
             'address' => $data['address'],
             'phone' => $data['phone'],
             'status' => 'pending', // أحرف صغيرة

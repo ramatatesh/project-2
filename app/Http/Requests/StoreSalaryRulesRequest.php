@@ -6,7 +6,7 @@ use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
 
-class LeaveTypeRequest extends FormRequest
+class StoreSalaryRulesRequest extends FormRequest
 {
     public function authorize(): bool
     {
@@ -16,11 +16,13 @@ class LeaveTypeRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => ['required', 'string', 'max:255'],
-            'allocation_value' => ['required', 'integer', 'min:0'],
-            'allocation_unit' => ['required', 'string', 'in:days,hours'],
-            'requires_proof' => ['sometimes', 'boolean'],
-            'is_active' => ['sometimes', 'boolean'],
+            'base_currency' => ['required', 'string', 'max:3'],
+            'absence_day_deduction_percent' => ['required', 'numeric', 'min:0'],
+            'unpaid_leave_day_percent' => ['required', 'numeric', 'min:0'],
+            'late_arrival_deduction_percent' => ['required', 'numeric', 'min:0'],
+            'early_departure_deduction_percent' => ['required', 'numeric', 'min:0'],
+            'overtime_hour_rate_percent' => ['required', 'numeric', 'min:0'],
+            'overtime_day_rate_percent' => ['required', 'numeric', 'min:0'],
         ];
     }
 

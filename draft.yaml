@@ -153,7 +153,6 @@
     name: string
     allocation_value: integer
     allocation_unit: string
-    is_paid: boolean default:true
     requires_proof: boolean default:false
     is_active: boolean default:true
 

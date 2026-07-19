@@ -18,7 +18,6 @@ return new class extends Migration
             $table->string('name');
             $table->integer('allocation_value');
             $table->string('allocation_unit', 50);
-            $table->boolean('is_paid')->nullable()->default(true);
             $table->boolean('requires_proof')->nullable()->default(false);
             $table->boolean('is_active')->nullable()->default(true);
             $table->timestamp('created_at')->nullable()->default(DB::raw("now()"));
