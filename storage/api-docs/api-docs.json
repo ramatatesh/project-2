@@ -2190,1067 +2190,6 @@
                 ]
             }
         },
-        "/api/hr/evaluation-cycles": {
-            "get": {
-                "tags": [
-                    "Evaluation Cycles"
-                ],
-                "summary": "List evaluation cycles",
-                "operationId": "33867b9779201b3de5ab392cf72ccdb3",
-                "responses": {
-                    "200": {
-                        "description": "Cycles retrieved successfully"
-                    }
-                },
-                "security": [
-                    {
-                        "sanctum": []
-                    }
-                ]
-            },
-            "post": {
-                "tags": [
-                    "Evaluation Cycles"
-                ],
-                "summary": "Create an evaluation cycle",
-                "operationId": "d4d0d17fc8c56e6e75d6891b470c2736",
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "required": [
-                                    "name",
-                                    "evaluation_template_id",
-                                    "start_date",
-                                    "end_date"
-                                ],
-                                "properties": {
-                                    "name": {
-                                        "type": "string"
-                                    },
-                                    "evaluation_template_id": {
-                                        "type": "string",
-                                        "format": "uuid"
-                                    },
-                                    "start_date": {
-                                        "type": "string",
-                                        "format": "date"
-                                    },
-                                    "end_date": {
-                                        "type": "string",
-                                        "format": "date"
-                                    }
-                                },
-                                "type": "object"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "201": {
-                        "description": "Cycle created successfully"
-                    }
-                },
-                "security": [
-                    {
-                        "sanctum": []
-                    }
-                ]
-            }
-        },
-        "/api/hr/evaluation-cycles/{cycle}": {
-            "get": {
-                "tags": [
-                    "Evaluation Cycles"
-                ],
-                "summary": "Get an evaluation cycle",
-                "operationId": "de44a3bdeb842f8bb27920e6c13c498b",
-                "parameters": [
-                    {
-                        "name": "cycle",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "string",
-                            "format": "uuid"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Cycle retrieved successfully"
-                    }
-                },
-                "security": [
-                    {
-                        "sanctum": []
-                    }
-                ]
-            },
-            "put": {
-                "tags": [
-                    "Evaluation Cycles"
-                ],
-                "summary": "Update an evaluation cycle",
-                "operationId": "917e87d0afa2bfd95ab2f62831bd1d73",
-                "parameters": [
-                    {
-                        "name": "cycle",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "string",
-                            "format": "uuid"
-                        }
-                    }
-                ],
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "type": "object"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "200": {
-                        "description": "Cycle updated successfully"
-                    }
-                },
-                "security": [
-                    {
-                        "sanctum": []
-                    }
-                ]
-            },
-            "delete": {
-                "tags": [
-                    "Evaluation Cycles"
-                ],
-                "summary": "Delete an evaluation cycle",
-                "operationId": "e95d8f499a92798e75d1204b62855121",
-                "parameters": [
-                    {
-                        "name": "cycle",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "string",
-                            "format": "uuid"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Cycle deleted successfully"
-                    }
-                },
-                "security": [
-                    {
-                        "sanctum": []
-                    }
-                ]
-            }
-        },
-        "/api/hr/evaluation-cycles/{cycle}/launch": {
-            "post": {
-                "tags": [
-                    "Evaluation Cycles"
-                ],
-                "summary": "Launch an evaluation cycle",
-                "operationId": "6d7db19b2cdad7c04b37bfe25e098ea3",
-                "parameters": [
-                    {
-                        "name": "cycle",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "string",
-                            "format": "uuid"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Cycle launched successfully"
-                    }
-                },
-                "security": [
-                    {
-                        "sanctum": []
-                    }
-                ]
-            }
-        },
-        "/api/hr/evaluation-cycles/{cycle}/close": {
-            "post": {
-                "tags": [
-                    "Evaluation Cycles"
-                ],
-                "summary": "Close an evaluation cycle",
-                "operationId": "58e987facecb325c3f8936244095d19c",
-                "parameters": [
-                    {
-                        "name": "cycle",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "string",
-                            "format": "uuid"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Cycle closed successfully"
-                    }
-                },
-                "security": [
-                    {
-                        "sanctum": []
-                    }
-                ]
-            }
-        },
-        "/api/hr/evaluation-cycles/{cycle}/progress": {
-            "get": {
-                "tags": [
-                    "Evaluation Progress"
-                ],
-                "summary": "Get progress for every employee in a cycle",
-                "operationId": "72fbfa1bb1450d2a52137b849cd8104a",
-                "parameters": [
-                    {
-                        "name": "cycle",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "string",
-                            "format": "uuid"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Progress retrieved successfully"
-                    }
-                },
-                "security": [
-                    {
-                        "sanctum": []
-                    }
-                ]
-            }
-        },
-        "/api/hr/evaluation-cycles/{cycle}/employees/{employee}/reminder": {
-            "post": {
-                "tags": [
-                    "Evaluation Progress"
-                ],
-                "summary": "Send a reminder to an employee about pending reviews",
-                "operationId": "1a404a25d04764493be53d753538487a",
-                "parameters": [
-                    {
-                        "name": "cycle",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "string",
-                            "format": "uuid"
-                        }
-                    },
-                    {
-                        "name": "employee",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "string",
-                            "format": "uuid"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Reminder queued successfully"
-                    }
-                },
-                "security": [
-                    {
-                        "sanctum": []
-                    }
-                ]
-            }
-        },
-        "/api/hr/evaluation-templates/{template}/questions": {
-            "post": {
-                "tags": [
-                    "Evaluation Questions"
-                ],
-                "summary": "Add a question to a template",
-                "operationId": "3c112aa657695d635048bd4fd34cf8a1",
-                "parameters": [
-                    {
-                        "name": "template",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "string",
-                            "format": "uuid"
-                        }
-                    }
-                ],
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "required": [
-                                    "question",
-                                    "response_type"
-                                ],
-                                "properties": {
-                                    "question": {
-                                        "type": "string"
-                                    },
-                                    "response_type": {
-                                        "type": "string"
-                                    },
-                                    "sort_order": {
-                                        "type": "integer"
-                                    },
-                                    "weight": {
-                                        "type": "number"
-                                    }
-                                },
-                                "type": "object"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "201": {
-                        "description": "Question added successfully"
-                    }
-                },
-                "security": [
-                    {
-                        "sanctum": []
-                    }
-                ]
-            }
-        },
-        "/api/hr/evaluation-templates/{template}/questions/{question}": {
-            "put": {
-                "tags": [
-                    "Evaluation Questions"
-                ],
-                "summary": "Update a template question",
-                "operationId": "4593a7b131635bad033698ebd6650e52",
-                "parameters": [
-                    {
-                        "name": "template",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "string",
-                            "format": "uuid"
-                        }
-                    },
-                    {
-                        "name": "question",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "string",
-                            "format": "uuid"
-                        }
-                    }
-                ],
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "type": "object"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "200": {
-                        "description": "Question updated successfully"
-                    }
-                },
-                "security": [
-                    {
-                        "sanctum": []
-                    }
-                ]
-            },
-            "delete": {
-                "tags": [
-                    "Evaluation Questions"
-                ],
-                "summary": "Delete a template question",
-                "operationId": "c37bf4dc92a9a3d6084abf1dfdcd487c",
-                "parameters": [
-                    {
-                        "name": "template",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "string",
-                            "format": "uuid"
-                        }
-                    },
-                    {
-                        "name": "question",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "string",
-                            "format": "uuid"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Question deleted successfully"
-                    }
-                },
-                "security": [
-                    {
-                        "sanctum": []
-                    }
-                ]
-            }
-        },
-        "/api/hr/evaluation-cycles/{cycle}/final-results": {
-            "get": {
-                "tags": [
-                    "Evaluation Results"
-                ],
-                "summary": "List final scores for all employees in a cycle",
-                "operationId": "68cb9aaab705d7ba93e7bbd3977486e2",
-                "parameters": [
-                    {
-                        "name": "cycle",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "string",
-                            "format": "uuid"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Results retrieved successfully"
-                    }
-                },
-                "security": [
-                    {
-                        "sanctum": []
-                    }
-                ]
-            }
-        },
-        "/api/hr/evaluation-cycles/{cycle}/final-results/{employee}": {
-            "get": {
-                "tags": [
-                    "Evaluation Results"
-                ],
-                "summary": "Get final score for a specific employee",
-                "operationId": "2615e38ac2e59bd79eded9b46cc8bb2e",
-                "parameters": [
-                    {
-                        "name": "cycle",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "string",
-                            "format": "uuid"
-                        }
-                    },
-                    {
-                        "name": "employee",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "string",
-                            "format": "uuid"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Result retrieved successfully"
-                    }
-                },
-                "security": [
-                    {
-                        "sanctum": []
-                    }
-                ]
-            }
-        },
-        "/api/hr/evaluation-cycles/{cycle}/final-results/{employee}/finalize": {
-            "post": {
-                "tags": [
-                    "Evaluation Results"
-                ],
-                "summary": "Finalize an employee's evaluation score",
-                "operationId": "f9f8afa6eeaebb9c18818b26c8660686",
-                "parameters": [
-                    {
-                        "name": "cycle",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "string",
-                            "format": "uuid"
-                        }
-                    },
-                    {
-                        "name": "employee",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "string",
-                            "format": "uuid"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Score finalized successfully"
-                    }
-                },
-                "security": [
-                    {
-                        "sanctum": []
-                    }
-                ]
-            }
-        },
-        "/api/evaluations/my-reviews": {
-            "get": {
-                "tags": [
-                    "My Evaluations"
-                ],
-                "summary": "Get pending/completed reviews assigned to the authenticated user",
-                "operationId": "84d76ebf4312a5d5670f29c43024c612",
-                "parameters": [
-                    {
-                        "name": "status",
-                        "in": "query",
-                        "schema": {
-                            "type": "string",
-                            "enum": [
-                                "pending",
-                                "completed"
-                            ]
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Reviews retrieved successfully"
-                    }
-                },
-                "security": [
-                    {
-                        "sanctum": []
-                    }
-                ]
-            }
-        },
-        "/api/evaluations/my-reviews/{review}": {
-            "get": {
-                "tags": [
-                    "My Evaluations"
-                ],
-                "summary": "Get review details including questions",
-                "operationId": "2ef0f203b212e7eb5ed97040a63041b1",
-                "parameters": [
-                    {
-                        "name": "review",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "string",
-                            "format": "uuid"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Review retrieved successfully"
-                    }
-                },
-                "security": [
-                    {
-                        "sanctum": []
-                    }
-                ]
-            }
-        },
-        "/api/evaluations/my-reviews/{review}/submit": {
-            "post": {
-                "tags": [
-                    "My Evaluations"
-                ],
-                "summary": "Submit a review with answers",
-                "operationId": "0cdadbdd31ed6a7b382d72ae682f1860",
-                "parameters": [
-                    {
-                        "name": "review",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "string",
-                            "format": "uuid"
-                        }
-                    }
-                ],
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "required": [
-                                    "answers"
-                                ],
-                                "properties": {
-                                    "answers": {
-                                        "type": "array",
-                                        "items": {
-                                            "type": "object"
-                                        }
-                                    }
-                                },
-                                "type": "object"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "200": {
-                        "description": "Review submitted successfully"
-                    },
-                    "403": {
-                        "description": "Cycle is closed"
-                    }
-                },
-                "security": [
-                    {
-                        "sanctum": []
-                    }
-                ]
-            }
-        },
-        "/api/hr/evaluation-cycles/{cycle}/scorable-employees": {
-            "get": {
-                "tags": [
-                    "Evaluation Scoring"
-                ],
-                "summary": "List employees who completed all their reviews",
-                "operationId": "e1cb796d6e1c23c9c968f2e4ed2d9a45",
-                "parameters": [
-                    {
-                        "name": "cycle",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "string",
-                            "format": "uuid"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Employees retrieved successfully"
-                    }
-                },
-                "security": [
-                    {
-                        "sanctum": []
-                    }
-                ]
-            }
-        },
-        "/api/hr/evaluation-cycles/{cycle}/scoring": {
-            "get": {
-                "tags": [
-                    "Evaluation Scoring"
-                ],
-                "summary": "Get employee answers for scoring",
-                "operationId": "c55d6c3bb66b2da11c4da0e1ab156b36",
-                "parameters": [
-                    {
-                        "name": "cycle",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "string",
-                            "format": "uuid"
-                        }
-                    },
-                    {
-                        "name": "employee_id",
-                        "in": "query",
-                        "required": true,
-                        "schema": {
-                            "type": "string",
-                            "format": "uuid"
-                        }
-                    },
-                    {
-                        "name": "review_type",
-                        "in": "query",
-                        "schema": {
-                            "type": "string",
-                            "enum": [
-                                "manager",
-                                "self",
-                                "peer"
-                            ]
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Scoring details retrieved successfully"
-                    }
-                },
-                "security": [
-                    {
-                        "sanctum": []
-                    }
-                ]
-            }
-        },
-        "/api/hr/evaluation-cycles/{cycle}/reviews/{review}/score": {
-            "post": {
-                "tags": [
-                    "Evaluation Scoring"
-                ],
-                "summary": "Store HR scores for a completed review",
-                "operationId": "5bfe0ee64567e7de0605bbdaf99ab160",
-                "parameters": [
-                    {
-                        "name": "cycle",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "string",
-                            "format": "uuid"
-                        }
-                    },
-                    {
-                        "name": "review",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "string",
-                            "format": "uuid"
-                        }
-                    }
-                ],
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "required": [
-                                    "scores"
-                                ],
-                                "properties": {
-                                    "scores": {
-                                        "type": "array",
-                                        "items": {
-                                            "type": "object"
-                                        }
-                                    }
-                                },
-                                "type": "object"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "200": {
-                        "description": "Scores saved successfully"
-                    }
-                },
-                "security": [
-                    {
-                        "sanctum": []
-                    }
-                ]
-            }
-        },
-        "/api/hr/evaluation-templates": {
-            "get": {
-                "tags": [
-                    "Evaluation Templates"
-                ],
-                "summary": "List evaluation templates",
-                "operationId": "aab09722b2a6cda151b9cb2dada2bbef",
-                "parameters": [
-                    {
-                        "name": "archived",
-                        "in": "query",
-                        "schema": {
-                            "type": "boolean"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Templates retrieved successfully",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "success": {
-                                            "type": "boolean"
-                                        },
-                                        "data": {
-                                            "type": "array",
-                                            "items": {
-                                                "type": "object"
-                                            }
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
-                    }
-                },
-                "security": [
-                    {
-                        "sanctum": []
-                    }
-                ]
-            },
-            "post": {
-                "tags": [
-                    "Evaluation Templates"
-                ],
-                "summary": "Create an evaluation template",
-                "operationId": "f388db45886e087eedfa543dce5214b1",
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "required": [
-                                    "name"
-                                ],
-                                "properties": {
-                                    "name": {
-                                        "type": "string"
-                                    },
-                                    "description": {
-                                        "type": "string"
-                                    },
-                                    "is_active": {
-                                        "type": "boolean"
-                                    },
-                                    "is_archived": {
-                                        "type": "boolean"
-                                    },
-                                    "questions": {
-                                        "type": "array",
-                                        "items": {
-                                            "type": "object"
-                                        }
-                                    }
-                                },
-                                "type": "object"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "201": {
-                        "description": "Template created successfully",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "success": {
-                                            "type": "boolean"
-                                        },
-                                        "data": {
-                                            "type": "object"
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
-                    }
-                },
-                "security": [
-                    {
-                        "sanctum": []
-                    }
-                ]
-            }
-        },
-        "/api/hr/evaluation-templates/{template}": {
-            "get": {
-                "tags": [
-                    "Evaluation Templates"
-                ],
-                "summary": "Get a single evaluation template",
-                "operationId": "d5d12a237f04a5dc2ae21b1b6195ef78",
-                "parameters": [
-                    {
-                        "name": "template",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "string",
-                            "format": "uuid"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Template retrieved successfully"
-                    }
-                },
-                "security": [
-                    {
-                        "sanctum": []
-                    }
-                ]
-            },
-            "put": {
-                "tags": [
-                    "Evaluation Templates"
-                ],
-                "summary": "Update an evaluation template",
-                "operationId": "aa119ca2463f152638e9d815ce74da3f",
-                "parameters": [
-                    {
-                        "name": "template",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "string",
-                            "format": "uuid"
-                        }
-                    }
-                ],
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "type": "object"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "200": {
-                        "description": "Template updated successfully"
-                    }
-                },
-                "security": [
-                    {
-                        "sanctum": []
-                    }
-                ]
-            },
-            "delete": {
-                "tags": [
-                    "Evaluation Templates"
-                ],
-                "summary": "Delete an evaluation template",
-                "operationId": "3c3350da32d8977f2c72445908cc660e",
-                "parameters": [
-                    {
-                        "name": "template",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "string",
-                            "format": "uuid"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Template deleted successfully"
-                    }
-                },
-                "security": [
-                    {
-                        "sanctum": []
-                    }
-                ]
-            }
-        },
-        "/api/hr/evaluation-templates/{template}/duplicate": {
-            "post": {
-                "tags": [
-                    "Evaluation Templates"
-                ],
-                "summary": "Import/duplicate a template from archive",
-                "operationId": "cdda84bbf4a9b4798b6502d50ffa2fe3",
-                "parameters": [
-                    {
-                        "name": "template",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "string",
-                            "format": "uuid"
-                        }
-                    }
-                ],
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "required": [
-                                    "name"
-                                ],
-                                "properties": {
-                                    "name": {
-                                        "type": "string"
-                                    },
-                                    "archive_source": {
-                                        "type": "boolean"
-                                    }
-                                },
-                                "type": "object"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "201": {
-                        "description": "Template duplicated successfully"
-                    }
-                },
-                "security": [
-                    {
-                        "sanctum": []
-                    }
-                ]
-            }
-        },
         "/api/companies/{company}/holidays": {
             "get": {
                 "tags": [
@@ -4320,6 +3259,148 @@
                 ]
             }
         },
+        "/api/management/leaves/inbox": {
+            "get": {
+                "tags": [
+                    "Management Leaves"
+                ],
+                "summary": "HR inbox for leave requests awaiting HR decision",
+                "operationId": "2a47b0ce1da92ef181e81b52024e36e0",
+                "responses": {
+                    "200": {
+                        "description": "Pending HR leave requests",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "properties": {
+                                                    "id": {
+                                                        "type": "string",
+                                                        "format": "uuid"
+                                                    },
+                                                    "employee_name": {
+                                                        "type": "string"
+                                                    },
+                                                    "leave_type_name": {
+                                                        "type": "string"
+                                                    },
+                                                    "start_date": {
+                                                        "type": "string",
+                                                        "format": "date"
+                                                    },
+                                                    "end_date": {
+                                                        "type": "string",
+                                                        "format": "date"
+                                                    },
+                                                    "duration_days": {
+                                                        "type": "integer"
+                                                    },
+                                                    "reason": {
+                                                        "type": "string",
+                                                        "nullable": true
+                                                    },
+                                                    "remaining_balance_days": {
+                                                        "type": "integer"
+                                                    }
+                                                },
+                                                "type": "object"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden (HR only)"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/management/leaves/{id}/action": {
+            "post": {
+                "tags": [
+                    "Management Leaves"
+                ],
+                "summary": "Execute a workflow action on a leave request",
+                "operationId": "3f51fcf7b35f902d3dba4a4bd080845f",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "action",
+                                    "role_context"
+                                ],
+                                "properties": {
+                                    "action": {
+                                        "type": "string",
+                                        "enum": [
+                                            "approve",
+                                            "reject"
+                                        ]
+                                    },
+                                    "role_context": {
+                                        "type": "string",
+                                        "enum": [
+                                            "manager",
+                                            "hr"
+                                        ]
+                                    },
+                                    "rejection_reason": {
+                                        "type": "string",
+                                        "example": "Insufficient coverage",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Action executed successfully"
+                    },
+                    "403": {
+                        "description": "Unauthorized role or company mismatch"
+                    },
+                    "422": {
+                        "description": "Invalid workflow state"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
         "/api/payments/callback": {
             "post": {
                 "tags": [
@@ -4713,40 +3794,16 @@
             "description": "إدارة موظفي الشركة الحالية (متاح فقط لمدير الموارد البشرية HR Manager)"
         },
         {
-            "name": "Evaluation Cycles",
-            "description": "Manage evaluation cycles"
-        },
-        {
-            "name": "Evaluation Progress",
-            "description": "Monitor evaluation progress and send reminders"
-        },
-        {
-            "name": "Evaluation Questions",
-            "description": "Manage evaluation template criteria/questions"
-        },
-        {
-            "name": "Evaluation Results",
-            "description": "View and finalize evaluation results"
-        },
-        {
-            "name": "My Evaluations",
-            "description": "Endpoints for reviewers to submit self/manager/peer reviews"
-        },
-        {
-            "name": "Evaluation Scoring",
-            "description": "Score submitted reviews and calculate results"
-        },
-        {
-            "name": "Evaluation Templates",
-            "description": "Manage evaluation templates and their criteria"
-        },
-        {
             "name": "Holiday Policies",
             "description": "Endpoints for company holiday and evaluation policy management"
         },
         {
             "name": "HR Managers",
             "description": "Endpoints for managing HR manager accounts within a tenant company"
+        },
+        {
+            "name": "Management Leaves",
+            "description": "Leave request approval workflow for department managers and HR"
         },
         {
             "name": "Subscription Plans",
