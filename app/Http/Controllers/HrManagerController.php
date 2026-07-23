@@ -123,7 +123,7 @@ class HrManagerController extends Controller
                     'id' => Str::uuid()->toString(),
                     'user_id' => $user->id,
                     'company_id' => $company->id,
-                    'department_id' => $data['department_id'],
+                    'department_id' => $data['department_id'] ?? null,
                     'employee_code' => $data['employee_code'] ?? null,
                     'education' => $data['education'] ?? null,
                     'job_title' => $data['job_title'],

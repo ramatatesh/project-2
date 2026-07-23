@@ -1856,7 +1856,6 @@
                                 "required": [
                                     "full_name",
                                     "email",
-                                    "department_id",
                                     "job_title",
                                     "base_salary",
                                     "hire_date"

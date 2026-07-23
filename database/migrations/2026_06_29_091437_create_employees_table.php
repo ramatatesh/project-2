@@ -16,7 +16,7 @@ return new class extends Migration
             $table->uuid('id')->primary();
             $table->uuid('user_id')->unique('employees_user_id_key');
             $table->uuid('company_id');
-            $table->uuid('department_id');
+            $table->uuid('department_id')->nullable();
             $table->string('employee_code', 100)->nullable()->unique('employees_employee_code_key');
             $table->string('education')->nullable();
             $table->string('job_title');
