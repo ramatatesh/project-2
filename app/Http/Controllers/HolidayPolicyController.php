@@ -347,7 +347,7 @@ class HolidayPolicyController extends Controller
      * @OA\Put(
      *   path="/api/companies/{company}/evaluation-policy",
      *   summary="Update evaluation policy for a company",
-     *   tags={"Holiday Policies"},
+     *   tags={"Evaluation Policies"},
      *   security={{"sanctum":{}}},
      *   @OA\Parameter(
      *     name="company",
@@ -385,13 +385,64 @@ class HolidayPolicyController extends Controller
         return response()->json(['success' => true, 'data' => $policy]);
     }
 
-    public function indexEvaluationPolicy(Company $company): JsonResponse
-    {
-        $policy = EvaluationPolicy::firstOrCreate(
-            ['company_id' => $company->id],
-            ['company_id' => $company->id, 'apply_review_to_salary' => false]
-        );
+    /**
+ * @OA\Get(
+ *   path="/api/companies/{company}/evaluation-policy",
+ *   summary="Get evaluation policy for a company",
+ *   tags={"Evaluation Policies"},
+ *   security={{"sanctum":{}}},
+ *   @OA\Parameter(
+ *     name="company",
+ *     in="path",
+ *     required=true,
+ *     @OA\Schema(type="string", format="uuid")
+ *   ),
+ *   @OA\Response(
+ *     response=200,
+ *     description="Evaluation policy retrieved successfully",
+ *     @OA\JsonContent(
+ *    required={"apply_review_to_salary"},
+ *     @OA\Property(
+ *      property="apply_review_to_salary",
+ *  type="boolean",
+* example=true
+* ),
+* @OA\Property(
+* property="excellent_salary_increase_percentage",
+* type="number",
+*example=10
+* ),
+* @OA\Property(
+* property="good_salary_increase_percentage",
+* type="number",
+* example=5
+* ),
+* @OA\Property(
+* property="poor_salary_deduction_percentage",
+* type="number",
+* example=3
+*        )
+*       )
+ *     )
+ *   )
+ * )
+ */
+public function indexEvaluationPolicy(Company $company): JsonResponse
+{
+    $policy = EvaluationPolicy::firstOrCreate(
+        ['company_id' => $company->id],
+        [
+            'company_id' => $company->id,
+            'apply_review_to_salary' => false,
+            'excellent_salary_increase_percentage' => 0,
+            'good_salary_increase_percentage' => 0,
+            'poor_salary_deduction_percentage' => 0,
+        ]
+    );
 
-        return response()->json(['success' => true, 'data' => $policy]);
-    }
+    return response()->json([
+        'success' => true,
+        'data' => $policy
+    ]);
+}
 }

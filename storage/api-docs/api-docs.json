@@ -119,7 +119,7 @@
                 },
                 "responses": {
                     "200": {
-                        "description": "تم توليد رمز إعادة التعيين بنجاح",
+                        "description": "تم إرسال رمز OTP إلى البريد الإلكتروني.",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -158,7 +158,7 @@
                 "tags": [
                     "المصادقة (Authentication)"
                 ],
-                "summary": "Verify OTP code for password reset",
+                "summary": "التحقق من رمز OTP لإعادة تعيين كلمة المرور",
                 "operationId": "8d451369bebcf6d82f35d85565bb3e52",
                 "requestBody": {
                     "required": true,
@@ -4026,9 +4026,65 @@
             }
         },
         "/api/companies/{company}/evaluation-policy": {
+            "get": {
+                "tags": [
+                    "Evaluation Policies"
+                ],
+                "summary": "Get evaluation policy for a company",
+                "operationId": "36037acf2c7731a50f25d7dc6584d234",
+                "parameters": [
+                    {
+                        "name": "company",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Evaluation policy retrieved successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "required": [
+                                        "apply_review_to_salary"
+                                    ],
+                                    "properties": {
+                                        "apply_review_to_salary": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "excellent_salary_increase_percentage": {
+                                            "type": "number",
+                                            "example": 10
+                                        },
+                                        "good_salary_increase_percentage": {
+                                            "type": "number",
+                                            "example": 5
+                                        },
+                                        "poor_salary_deduction_percentage": {
+                                            "type": "number",
+                                            "example": 3
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
             "put": {
                 "tags": [
-                    "Holiday Policies"
+                    "Evaluation Policies"
                 ],
                 "summary": "Update evaluation policy for a company",
                 "operationId": "15c8bb5ff399a3299de2986bd2946bcd",
@@ -5218,6 +5274,10 @@
         {
             "name": "الشركات والاشتراكات (Companies & Subscriptions)",
             "description": "الشركات والاشتراكات (Companies & Subscriptions)"
+        },
+        {
+            "name": "Evaluation Policies",
+            "description": "Evaluation Policies"
         },
         {
             "name": "بوابات الدفع والاشتراكات (Payments & Subscriptions)",
