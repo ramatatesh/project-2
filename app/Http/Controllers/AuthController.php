@@ -177,7 +177,7 @@ class AuthController extends Controller
     /**
  * @OA\Post(
  *     path="/api/auth/verify-otp",
- *     summary="التحقق من رمز OTP لإعادة تعيين كلمة المرور"
+ *     summary="التحقق من رمز OTP لإعادة تعيين كلمة المرور",
  *     tags={"المصادقة (Authentication)"},
  *     @OA\RequestBody(
  *         required=true,
