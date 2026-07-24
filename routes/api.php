@@ -51,8 +51,9 @@ Route::prefix('subscription-plans')->group(function () {
         Route::post('/{plan}/freeze', [SubscriptionPlanController::class, 'freeze']);
         Route::post('/{plan}/activate', [SubscriptionPlanController::class, 'activate']);
     });
-
-    // Tenant companies management
+});
+// Tenant companies management
+Route::middleware(['auth:sanctum', 'role:super_admin'])->group(function () {
     Route::prefix('companies')->group(function () {
         Route::get('/', [CompanyAdminController::class, 'index']);
         Route::get('/stats', [CompanyAdminController::class, 'stats']);
