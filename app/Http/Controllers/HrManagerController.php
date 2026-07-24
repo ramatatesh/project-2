@@ -7,6 +7,7 @@ use App\Http\Requests\UpdateHrManagerRequest;
 use App\Jobs\SendRegistrationEmailJob;
 use App\Models\Company;
 use App\Models\Employee;
+use App\Models\Department;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
@@ -77,7 +78,6 @@ class HrManagerController extends Controller
      *       @OA\Property(property="full_name", type="string", example="Sarah Ahmed"),
      *       @OA\Property(property="email", type="string", format="email", example="sarah@company.com"),
      *       @OA\Property(property="phone", type="string", example="+963999888777"),
-     *       @OA\Property(property="department_id", type="string", format="uuid", example="123e4567-e89b-12d3-a456-426614174000"),
      *       @OA\Property(property="employee_code", type="string", example="HRM-001"),
      *       @OA\Property(property="education", type="string", example="Bachelor of Business Administration"),
      *       @OA\Property(property="job_title", type="string", example="HR Manager"),
@@ -106,7 +106,17 @@ class HrManagerController extends Controller
             $data = $request->validated();
             $tempPassword = Str::random(10);
 
-            $hrManager = DB::transaction(function () use ($company, $data, $tempPassword) {
+            $hrDepartment = Department::where('company_id', $company->id)
+                ->where('name', 'Human Resources')
+                ->first();
+
+           if (!$hrDepartment) {
+                return response()->json([
+               'success' => false,
+               'message' => 'Human Resources department not found.', ], 500);
+            }
+
+            $hrManager = DB::transaction(function () use ($company, $data, $tempPassword,$hrDepartment) {
                 $user = User::create([
                     'id' => Str::uuid()->toString(),
                     'company_id' => $company->id,
@@ -123,7 +133,7 @@ class HrManagerController extends Controller
                     'id' => Str::uuid()->toString(),
                     'user_id' => $user->id,
                     'company_id' => $company->id,
-                    'department_id' => $data['department_id'] ?? null,
+                    'department_id' => $hrDepartment->id,
                     'employee_code' => $data['employee_code'] ?? null,
                     'education' => $data['education'] ?? null,
                     'job_title' => $data['job_title'],
@@ -132,6 +142,9 @@ class HrManagerController extends Controller
                     'employment_type' => $data['employment_type'] ?? null,
                     'is_active' => $data['is_active'] ?? true,
                 ]);
+                if (!$hrDepartment->manager_id) {
+                    $hrDepartment->update([ 'manager_id' => $employee->id,]);
+                }
 
                 $user->setRelation('employee', $employee);
 

@@ -20,7 +20,7 @@ class HrManagerRequest extends FormRequest
             'full_name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')],
             'phone' => ['sometimes', 'string', 'max:50'],
-            'department_id' => ['nullable', 'string', 'exists:departments,id'],
+          //  'department_id' => ['required', 'string', 'exists:departments,id'],
             'job_title' => ['required', 'string', 'max:255'],
             'base_salary' => ['required', 'numeric', 'min:0'],
             'hire_date' => ['required', 'date'],

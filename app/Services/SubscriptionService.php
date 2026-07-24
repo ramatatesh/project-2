@@ -7,6 +7,7 @@ use App\Models\Company;
 use App\Models\Subscription;
 use App\Models\SubscriptionPlan;
 use App\Models\User;
+use App\Models\Department;
 use Illuminate\Support\Str;
 
 class SubscriptionService
@@ -49,6 +50,14 @@ class SubscriptionService
                 'is_first_login' => true,
             ]);
 
+            Department::create([
+              'id' => Str::uuid()->toString(),
+              'company_id' => $company->id,
+              'name' => 'Human Resources',
+              'is_active' => true,
+              'manager_id' => null,
+            ]);
+
             dispatch(new \App\Jobs\SendRegistrationEmailJob($company->email, $tempPassword));
 
             return [
@@ -79,6 +88,14 @@ class SubscriptionService
             'start_date' => now()->startOfDay(),
             'end_date' => now()->addMonth()->startOfDay(),
             'status' => 'pending', // أحرف صغيرة
+        ]);
+
+        Department::create([
+              'id' => Str::uuid()->toString(),
+              'company_id' => $company->id,
+              'name' => 'Human Resources',
+              'is_active' => true,
+              'manager_id' => null,
         ]);
 
         $transactionReference = Str::uuid()->toString();

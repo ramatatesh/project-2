@@ -112,7 +112,7 @@ class EmployeeController extends Controller
      *     required=true,
      *
      *     @OA\JsonContent(
-     *       required={"full_name","email","job_title","base_salary","hire_date"},
+     *       required={"full_name","email","department_id","job_title","base_salary","hire_date"},
      *
      *       @OA\Property(property="full_name", type="string", example="Ahmad Ali"),
      *       @OA\Property(property="email", type="string", format="email", example="ahmad@example.com"),
