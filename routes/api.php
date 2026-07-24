@@ -38,11 +38,13 @@ Route::post('/companies/register', [CompanyRegistrationController::class, 'regis
     ->middleware('throttle:5,1');
 
 Route::prefix('subscription-plans')->group(function () {
-    Route::get('/', [SubscriptionPlanController::class, 'index']);
-    Route::get('/{plan}', [SubscriptionPlanController::class, 'show']);
-});
-Route::middleware(['auth:sanctum', 'role:super_admin'])->group(function () {
-    Route::prefix('subscription-plans')->group(function () {
+      Route::get('/', [SubscriptionPlanController::class, 'index']);
+      Route::middleware(['auth:sanctum', 'role:super_admin'])->group(function () {
+           Route::get('/all', [SubscriptionPlanController::class, 'adminIndex']);
+        });
+      Route::get('/{plan}', [SubscriptionPlanController::class, 'show']);
+
+        Route::middleware(['auth:sanctum', 'role:super_admin'])->group(function () {
         Route::post('/', [SubscriptionPlanController::class, 'store']);
         Route::put('/{plan}', [SubscriptionPlanController::class, 'update']);
         Route::delete('/{plan}', [SubscriptionPlanController::class, 'destroy']);

@@ -39,6 +39,40 @@ class SubscriptionPlanController extends Controller
     }
 
 /**
+ * @OA\Get(
+ *   path="/api/subscription-plans/all",
+ *   summary="List all subscription plans including frozen plans (Super Admin only)",
+ *   tags={"Subscription Plans"},
+ *   security={{"sanctum":{}}},
+ *
+ *   @OA\Response(
+ *      response=200,
+ *      description="All subscription plans",
+ *      @OA\JsonContent(type="object")
+ *   ),
+ *
+ *   @OA\Response(
+ *      response=401,
+ *      description="Unauthenticated"
+ *   ),
+ *
+ *   @OA\Response(
+ *      response=403,
+ *      description="Forbidden - Super Admin only"
+ *   )
+ * )
+ */
+    public function adminIndex(): JsonResponse
+    {
+      $plans = SubscriptionPlan::orderBy('price')->get();
+
+         return response()->json([
+          'success' => true,
+          'data' => $plans,
+         ]);
+    }
+
+/**
  * @OA\Post(
  *   path="/api/subscription-plans",
  *   summary="Create a new subscription plan",
