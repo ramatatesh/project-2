@@ -95,7 +95,7 @@
                 "tags": [
                     "المصادقة (Authentication)"
                 ],
-                "summary": "طلب رابط إعادة تعيين كلمة المرور (نسيان كلمة المرور)",
+                "summary": "إرسال رمز OTP لإعادة تعيين كلمة المرور",
                 "operationId": "cff9b52a898f73f39d684747bd69c4e1",
                 "requestBody": {
                     "required": true,
@@ -130,7 +130,7 @@
                                         },
                                         "message": {
                                             "type": "string",
-                                            "example": "Password reset link has been generated."
+                                            "example": "OTP sent successfully."
                                         },
                                         "data": {
                                             "properties": {
@@ -153,12 +153,54 @@
                 }
             }
         },
+        "/api/auth/verify-otp": {
+            "post": {
+                "tags": [
+                    "المصادقة (Authentication)"
+                ],
+                "summary": "Verify OTP code for password reset",
+                "operationId": "8d451369bebcf6d82f35d85565bb3e52",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "email",
+                                    "otp"
+                                ],
+                                "properties": {
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "example": "hr@khibrat.com"
+                                    },
+                                    "otp": {
+                                        "type": "string",
+                                        "example": "1234"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "OTP verified successfully"
+                    },
+                    "400": {
+                        "description": "Invalid or expired OTP"
+                    }
+                }
+            }
+        },
         "/api/auth/reset-password": {
             "post": {
                 "tags": [
                     "المصادقة (Authentication)"
                 ],
-                "summary": "إعادة تعيين كلمة المرور الجديدة باستخدام الـ Token",
+                "summary": "إعادة تعيين كلمة المرور بعد التحقق من رمز OTP",
                 "operationId": "6af92e090f994419a2295111b391a205",
                 "requestBody": {
                     "required": true,
@@ -167,8 +209,8 @@
                             "schema": {
                                 "required": [
                                     "email",
-                                    "token",
-                                    "password"
+                                    "password",
+                                    "password_confirmation"
                                 ],
                                 "properties": {
                                     "email": {
@@ -176,14 +218,15 @@
                                         "format": "email",
                                         "example": "hr@khibrat.com"
                                     },
-                                    "token": {
-                                        "type": "string",
-                                        "example": "abcdef123456..."
-                                    },
                                     "password": {
                                         "type": "string",
                                         "format": "password",
-                                        "example": "new_password_123"
+                                        "example": "New@Pass2026"
+                                    },
+                                    "password_confirmation": {
+                                        "type": "string",
+                                        "format": "password",
+                                        "example": "New@Pass2026"
                                     }
                                 },
                                 "type": "object"
@@ -222,7 +265,7 @@
                         }
                     },
                     "400": {
-                        "description": "الـ Token غير صحيح أو منتهي الصلاحية"
+                        "description": "لم يتم التحقق من رمز OTP أو انتهت صلاحيته"
                     }
                 }
             }

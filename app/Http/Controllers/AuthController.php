@@ -5,8 +5,12 @@ namespace App\Http\Controllers;
 use App\Http\Requests\Auth\ForgotPasswordRequest;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Requests\Auth\ResetPasswordRequest;
+use App\Http\Requests\VerifyOtpRequest;
 use App\Jobs\SendPasswordResetEmailJob;
 use App\Models\User;
+use App\Models\PasswordResetOtp;
+use App\Jobs\SendPasswordResetOtpJob;
+use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -114,7 +118,7 @@ class AuthController extends Controller
     /**
      * @OA\Post(
      * path="/api/auth/forgot-password",
-     * summary="طلب رابط إعادة تعيين كلمة المرور (نسيان كلمة المرور)",
+     * summary="إرسال رمز OTP لإعادة تعيين كلمة المرور",
      * tags={"المصادقة (Authentication)"},
      * @OA\RequestBody(
      * required=true,
@@ -125,10 +129,10 @@ class AuthController extends Controller
      * ),
      * @OA\Response(
      * response=200,
-     * description="تم توليد رمز إعادة التعيين بنجاح",
+     * description="تم إرسال رمز OTP إلى البريد الإلكتروني.",
      * @OA\JsonContent(
      * @OA\Property(property="success", type="boolean", example=true),
-     * @OA\Property(property="message", type="string", example="Password reset link has been generated."),
+     * @OA\Property(property="message", type="string", example="OTP sent successfully."),
      * @OA\Property(property="data", type="object",
      * @OA\Property(property="email", type="string", example="hr@khibrat.com")
      * )
@@ -149,21 +153,20 @@ class AuthController extends Controller
                 return $this->errorResponse('No user found for the provided email address.', 404);
             }
 
-            $token = Str::random(60);
+            $otp = rand(1000,9999);
 
-            DB::table('password_reset_tokens')->updateOrInsert(
-                ['email' => $user->email],
-                [
-                    'token' => $token,
-                    'created_at' => now(),
-                ]
-            );
+            PasswordResetOtp::where('email', $user->email)->delete();
 
-            SendPasswordResetEmailJob::dispatch($user->email, $token);
-
-            return $this->successResponse('Password reset link has been generated.', [
-                'email' => $user->email,
+            PasswordResetOtp::create([
+              'email'=>$user->email,
+              'otp' => (string)$otp,
+              'expires_at'=>now()->addMinutes(10),
             ]);
+
+            SendPasswordResetOtpJob::dispatch($user->email, $otp);
+
+            return $this->successResponse( 'OTP sent successfully' );
+
         } catch (\Throwable $th) {
             Log::error('Password reset request failed', ['error' => $th->getMessage()]);
 
@@ -172,17 +175,84 @@ class AuthController extends Controller
     }
 
     /**
+ * @OA\Post(
+ *     path="/api/auth/verify-otp",
+ *     summary="التحقق من رمز OTP لإعادة تعيين كلمة المرور"
+ *     tags={"المصادقة (Authentication)"},
+ *     @OA\RequestBody(
+ *         required=true,
+ *         @OA\JsonContent(
+ *             required={"email","otp"},
+ *             @OA\Property(
+ *                 property="email",
+ *                 type="string",
+ *                 format="email",
+ *                 example="hr@khibrat.com"
+ *             ),
+ *             @OA\Property(
+ *                 property="otp",
+ *                 type="string",
+ *                 example="1234"
+ *             )
+ *         )
+ *     ),
+ *     @OA\Response(
+ *         response=200,
+ *         description="OTP verified successfully"
+ *     ),
+ *     @OA\Response(
+ *         response=400,
+ *         description="Invalid or expired OTP"
+ *     )
+ * )
+ */
+    public function verifyOtp(VerifyOtpRequest $request): JsonResponse
+    {
+
+     $otp = PasswordResetOtp::where('email',$request->email)
+        ->where('otp',$request->otp)
+        ->where('verified',false)
+        ->first();
+
+
+     if(!$otp){
+          return $this->errorResponse(
+             'Invalid OTP',
+             400
+            );
+        }
+
+
+     if($otp->expires_at < now()){
+         return $this->errorResponse(
+             'OTP expired',
+             400
+            );
+        }
+
+
+     $otp->update([
+         'verified'=>true
+        ]);
+
+
+     return $this->successResponse(
+         'OTP verified successfully'
+        );
+    }
+
+    /**
      * @OA\Post(
      * path="/api/auth/reset-password",
-     * summary="إعادة تعيين كلمة المرور الجديدة باستخدام الـ Token",
+     * summary="إعادة تعيين كلمة المرور بعد التحقق من رمز OTP",
      * tags={"المصادقة (Authentication)"},
      * @OA\RequestBody(
      * required=true,
      * @OA\JsonContent(
-     * required={"email","token","password"},
+     * required={"email","password","password_confirmation"},
      * @OA\Property(property="email", type="string", format="email", example="hr@khibrat.com"),
-     * @OA\Property(property="token", type="string", example="abcdef123456..."),
-     * @OA\Property(property="password", type="string", format="password", example="new_password_123")
+     * @OA\Property(property="password", type="string", format="password", example="New@Pass2026"),
+     * @OA\Property(property="password_confirmation", type="string", format="password", example="New@Pass2026")
      * )
      * ),
      * @OA\Response(
@@ -198,21 +268,23 @@ class AuthController extends Controller
      * ),
      * @OA\Response(
      * response=400,
-     * description="الـ Token غير صحيح أو منتهي الصلاحية"
+     * description="لم يتم التحقق من رمز OTP أو انتهت صلاحيته"
      * )
      * )
      */
     public function resetPassword(ResetPasswordRequest $request): JsonResponse
     {
         try {
-            $record = DB::table('password_reset_tokens')
-                ->where('email', $request->email)
-                ->where('token', $request->token)
-                ->first();
+            $otp = PasswordResetOtp::where('email', $request->email)
+               ->where('verified', true)
+               ->where('expires_at', '>', now())
+               ->first();
 
-            if (! $record) {
-                return $this->errorResponse('Invalid or expired password reset token.', 400);
-            }
+
+             if (!$otp) {
+                 return $this->errorResponse(
+                 'OTP verification required.', 400);
+                }
 
             $user = User::where('email', $request->email)->first();
 
@@ -224,7 +296,7 @@ class AuthController extends Controller
                 'password_hash' => Hash::make($request->password),
             ]);
 
-            DB::table('password_reset_tokens')->where('email', $request->email)->delete();
+            PasswordResetOtp::where('email', $request->email)->delete();
 
             return $this->successResponse('Password updated successfully.', [
                 'email' => $user->email,

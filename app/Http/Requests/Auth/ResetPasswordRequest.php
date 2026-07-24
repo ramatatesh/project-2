@@ -14,18 +14,24 @@ class ResetPasswordRequest extends FormRequest
     }
 
     public function rules(): array
-    {
-        return [
-            'token' => ['required', 'string'],
-            'email' => ['required', 'email', 'max:255'],
-            'password' => ['required', 'string', 'min:8', 'confirmed'],
-        ];
-    }
+{
+    return [
+        'email' => [
+            'required',
+            'email'
+        ],
+
+        'password' => [
+          'required',
+          'confirmed',
+          \Illuminate\Validation\Rules\Password::min(8)
+        ],
+    ];
+}
 
     public function messages(): array
     {
         return [
-            'token.required' => 'Reset token is required.',
             'email.required' => 'Email is required.',
             'email.email' => 'Please provide a valid email address.',
             'password.required' => 'Password is required.',
