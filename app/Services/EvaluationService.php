@@ -260,19 +260,20 @@ class EvaluationService
 
     public function updateEmployeeScores(EvaluationCycle $cycle, string $employeeId): EvaluationScore
     {
-        $policy = EvaluationPolicy::firstOrCreate(
-            ['company_id' => $cycle->company_id],
-            ['company_id' => $cycle->company_id, 'apply_review_to_salary' => false]
-        );
+        
 
         $managerScore = $this->averageReviewScores($cycle->id, $employeeId, EvaluationReview::TYPE_MANAGER);
         $selfScore = $this->averageReviewScores($cycle->id, $employeeId, EvaluationReview::TYPE_SELF);
         $peerScore = $this->averageReviewScores($cycle->id, $employeeId, EvaluationReview::TYPE_PEER);
 
-        $weights = [
-            'manager' => (float) ($policy->manager_weight ?? 0),
-            'self' => (float) ($policy->self_weight ?? 0),
-            'peer' => (float) ($policy->peer_weight ?? 0),
+        $managerWeight = 60;
+        $peerWeight = 30;
+        $selfWeight = 10;
+
+       $weights = [
+          'manager' => $managerWeight,
+          'peer' => $peerWeight,
+          'self' => $selfWeight,
         ];
 
         $weightedSum = 0;

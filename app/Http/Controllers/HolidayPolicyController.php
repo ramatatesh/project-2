@@ -408,17 +408,17 @@ class HolidayPolicyController extends Controller
 * example=true
 * ),
 * @OA\Property(
-* property="excellent_salary_increase_percentage",
+* property="excellent_bonus_percent",
 * type="number",
 *example=10
 * ),
 * @OA\Property(
-* property="good_salary_increase_percentage",
+* property="good_bonus_percent",
 * type="number",
 * example=5
 * ),
 * @OA\Property(
-* property="poor_salary_deduction_percentage",
+* property="poor_deduction_percent",
 * type="number",
 * example=3
 *        )
@@ -430,19 +430,32 @@ class HolidayPolicyController extends Controller
 public function indexEvaluationPolicy(Company $company): JsonResponse
 {
     $policy = EvaluationPolicy::firstOrCreate(
-        ['company_id' => $company->id],
-        [
-            'company_id' => $company->id,
-            'apply_review_to_salary' => false,
-            'excellent_salary_increase_percentage' => 0,
-            'good_salary_increase_percentage' => 0,
-            'poor_salary_deduction_percentage' => 0,
-        ]
+    ['company_id' => $company->id],
+    [
+        'company_id' => $company->id,
+        'apply_review_to_salary' => false,
+        'excellent_bonus_percent' => 0,
+        'good_bonus_percent' => 0,
+        'poor_deduction_percent' => 0,
+    ]
     );
 
     return response()->json([
-        'success' => true,
-        'data' => $policy
+    'success' => true,
+    'data' => [
+        'company_id' => $policy->company_id,
+
+        'apply_review_to_salary' => $policy->apply_review_to_salary,
+
+        'excellent_bonus_percent' => $policy->excellent_bonus_percent,
+        'good_bonus_percent' => $policy->good_bonus_percent,
+        'poor_deduction_percent' => $policy->poor_deduction_percent,
+
+        // ثوابت النظام
+        'manager_weight' => 60,
+        'peer_weight' => 30,
+        'self_weight' => 10,
+    ]
     ]);
 }
 }
