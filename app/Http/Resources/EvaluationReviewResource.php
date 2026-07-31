@@ -41,7 +41,17 @@ class EvaluationReviewResource extends JsonResource
                 'email' => $this->reviewer->email,
             ]),
             'answers' => EvaluationAnswerResource::collection($this->whenLoaded('answers')),
-            'cycle' => new EvaluationCycleResource($this->whenLoaded('cycle')),
+            'questions' => $this->whenLoaded('cycle', function () {
+                return EvaluationQuestionResource::collection(
+                    $this->cycle->template->questions
+               );
+            }),
+            'cycle' => [
+                'id' => $this->cycle->id,
+                'name' => $this->cycle->name,
+                'start_date' => $this->cycle->start_date,
+                'end_date' => $this->cycle->end_date,
+            ],
         ];
     }
 }

@@ -348,10 +348,16 @@ class EvaluationService
             ->get();
     }
 
-    public function getReviewDetails(EvaluationReview $review): EvaluationReview
-    {
-        return $review->load(['answers.question', 'employee.user', 'employee.department', 'reviewer']);
-    }
+   public function getReviewDetails(EvaluationReview $review): EvaluationReview
+{
+    return $review->load([
+        'answers.question',
+        'employee.user',
+        'employee.department',
+        'reviewer',
+        'cycle.template.questions',
+    ]);
+}
 
     public function getScoringDetails(EvaluationCycle $cycle, string $employeeId, ?string $reviewType = null): Collection
     {
@@ -492,7 +498,7 @@ class EvaluationService
         $excludedUserIds = array_filter([$employee->user_id, $managerUserId]);
 
         $candidates = $employees
-            ->where('department_id', $employee->department_id) 
+            ->where('department_id', $employee->department_id)
             ->where('id', '!==', $employee->id)
             ->whereNotNull('user_id')
             ->reject(fn (Employee $candidate) => in_array($candidate->user_id, $excludedUserIds, true))
