@@ -4057,15 +4057,15 @@
                                             "type": "boolean",
                                             "example": true
                                         },
-                                        "excellent_salary_increase_percentage": {
+                                        "excellent_bonus_percent": {
                                             "type": "number",
                                             "example": 10
                                         },
-                                        "good_salary_increase_percentage": {
+                                        "good_bonus_percent": {
                                             "type": "number",
                                             "example": 5
                                         },
-                                        "poor_salary_deduction_percentage": {
+                                        "poor_deduction_percent": {
                                             "type": "number",
                                             "example": 3
                                         }

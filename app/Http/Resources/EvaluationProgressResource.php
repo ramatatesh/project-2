@@ -13,24 +13,31 @@ class EvaluationProgressResource extends JsonResource
         $completed = (int) ($this->completed_reviews ?? 0);
         $percentage = $total > 0 ? round(($completed / $total) * 100, 2) : 0;
 
-        return [
-            'employee_id' => $this->employee_id,
+       return [
+           'employee_id' => $this->id,
+
             'employee' => [
-                'id' => $this->employee?->id,
-                'employee_code' => $this->employee?->employee_code,
-                'full_name' => $this->employee?->user?->full_name,
-                'email' => $this->employee?->user?->email,
-                'job_title' => $this->employee?->job_title,
-                'department' => $this->employee?->department ? [
-                    'id' => $this->employee->department->id,
-                    'name' => $this->employee->department->name,
-                ] : null,
+               'id' => $this->id,
+               'employee_code' => $this->employee_code,
+               'full_name' => $this->user?->full_name,
+               'email' => $this->user?->email,
+               'job_title' => $this->job_title,
+
+                'department' => $this->department ? [
+                 'id' => $this->department->id,
+                 'name' => $this->department->name,
+                 ] : null,
             ],
-            'department_name' => $this->employee?->department?->name,
-            'assigned_reviews' => $total,
-            'completed_reviews' => $completed,
-            'completion_percentage' => $percentage,
-            'status' => $completed >= $total && $total > 0 ? 'Completed' : 'Pending',
+
+           'department_name' => $this->department?->name,
+
+           'assigned_reviews' => $total,
+           'completed_reviews' => $completed,
+           'completion_percentage' => $percentage,
+
+           'status' => $completed >= $total && $total > 0
+            ? 'Completed'
+            : 'Pending',
         ];
     }
 }

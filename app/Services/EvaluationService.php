@@ -260,8 +260,6 @@ class EvaluationService
 
     public function updateEmployeeScores(EvaluationCycle $cycle, string $employeeId): EvaluationScore
     {
-        
-
         $managerScore = $this->averageReviewScores($cycle->id, $employeeId, EvaluationReview::TYPE_MANAGER);
         $selfScore = $this->averageReviewScores($cycle->id, $employeeId, EvaluationReview::TYPE_SELF);
         $peerScore = $this->averageReviewScores($cycle->id, $employeeId, EvaluationReview::TYPE_PEER);
@@ -494,6 +492,7 @@ class EvaluationService
         $excludedUserIds = array_filter([$employee->user_id, $managerUserId]);
 
         $candidates = $employees
+            ->where('department_id', $employee->department_id) 
             ->where('id', '!==', $employee->id)
             ->whereNotNull('user_id')
             ->reject(fn (Employee $candidate) => in_array($candidate->user_id, $excludedUserIds, true))
