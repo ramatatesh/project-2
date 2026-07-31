@@ -32,21 +32,40 @@ class EvaluationReviewController extends Controller
      * )
      */
     public function myReviews(Request $request): JsonResponse
-    {
-        $query = EvaluationReview::where('reviewer_id', auth()->id())
-            ->with(['cycle.template', 'employee.user', 'employee.department']);
+{
+    $query = EvaluationReview::where('reviewer_id', auth()->id())
+        ->with(['cycle.template.questions', 'employee.user', 'employee.department']);
 
-        if ($request->filled('status')) {
-            $query->where('status', $request->input('status'));
-        }
-
-        $reviews = $query->orderByDesc('created_at')->get();
-
-        return response()->json([
-            'success' => true,
-            'data' => EvaluationReviewResource::collection($reviews),
-        ]);
+    if ($request->filled('status')) {
+        $query->where('status', $request->input('status'));
     }
+
+    $reviews = $query->orderByDesc('created_at')->get();
+
+    $completed = $reviews
+        ->where('status', EvaluationReview::STATUS_COMPLETED)
+        ->count();
+
+    $pending = $reviews
+        ->where('status', EvaluationReview::STATUS_PENDING)
+        ->count();
+
+    $total = $reviews->count();
+
+    $completionPercentage = $total > 0
+        ? round(($completed / $total) * 100)
+        : 0;
+
+    return response()->json([
+        'success' => true,
+
+        'completed' => $completed,
+        'pending' => $pending,
+        'completion_percentage' => $completionPercentage,
+
+        'data' => EvaluationReviewResource::collection($reviews),
+    ]);
+}
 
     /**
      * @OA\Get(

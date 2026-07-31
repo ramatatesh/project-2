@@ -41,6 +41,7 @@ class EvaluationReviewResource extends JsonResource
                 'email' => $this->reviewer->email,
             ]),
             'answers' => EvaluationAnswerResource::collection($this->whenLoaded('answers')),
+            'questions_count' => $this->cycle->template->questions->count(),
             'questions' => $this->whenLoaded('cycle', function () {
                 return EvaluationQuestionResource::collection(
                     $this->cycle->template->questions
