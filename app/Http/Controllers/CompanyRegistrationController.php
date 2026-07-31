@@ -12,6 +12,7 @@ class CompanyRegistrationController extends Controller
      * @OA\Post(
      *   path="/api/companies/register",
      *   summary="Register a new company and create its initial subscription",
+     *   description="For the Free plan, the company/subscription/user are created immediately and credentials are emailed. A given email can only ever use the Free plan once - even after the company is later deleted. For a Paid plan, NOTHING is created yet: a Stripe Checkout Session is created and its URL is returned in 'payment_url'. The Company/Subscription/User are only created by the Stripe webhook (POST /api/stripe/webhook) after the payment actually succeeds; if payment fails or is abandoned, no data is created.",
      *   tags={"Companies"},
      *   @OA\RequestBody(
      *     required=true,
@@ -26,7 +27,18 @@ class CompanyRegistrationController extends Controller
      *       @OA\Property(property="plan_id", type="string", format="uuid", example="00000000-0000-0000-0000-000000000000"),
      *     )
      *   ),
-     *   @OA\Response(response=201, description="Company registered successfully")
+     *   @OA\Response(response=201, description="Free plan: company registered successfully, credentials emailed"),
+     *   @OA\Response(
+     *     response=202,
+     *     description="Paid plan: redirect the user to 'payment_url' (Stripe Checkout). Nothing is created yet.",
+     *     @OA\JsonContent(
+     *       @OA\Property(property="success", type="boolean", example=true),
+     *       @OA\Property(property="payment_required", type="boolean", example=true),
+     *       @OA\Property(property="payment_url", type="string", example="https://checkout.stripe.com/c/pay/cs_test_..."),
+     *       @OA\Property(property="transaction_reference", type="string", example="cs_test_a1b2c3")
+     *     )
+     *   ),
+     *   @OA\Response(response=422, description="Validation failed, or this email already used the Free plan before")
      * )
      */
     public function __construct(private readonly SubscriptionService $subscriptionService)
@@ -39,14 +51,19 @@ class CompanyRegistrationController extends Controller
 
         $result = $this->subscriptionService->registerCompany($data);
 
+        if (empty($result['success'])) {
+            return response()->json([
+                'success' => false,
+                'message' => $result['message'] ?? 'Registration failed.',
+            ], 422);
+        }
+
         if (! empty($result['payment_required'])) {
             return response()->json([
                 'success' => true,
                 'payment_required' => true,
                 'payment_url' => $result['payment_url'],
                 'transaction_reference' => $result['transaction_reference'],
-                'company_id' => $result['company_id'],
-                'subscription_id' => $result['subscription_id'],
             ], 202);
         }
 

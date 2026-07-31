@@ -27,7 +27,7 @@ class SaasHrWorkflowTest extends TestCase
             'max_uses_per_company' => 1,
         ]);
 
-        $service = new SubscriptionService();
+        $service = app(SubscriptionService::class);
         $result = $service->registerCompany([
             'name' => 'Acme Labs',
             'email' => 'owner@acme.test',
@@ -66,7 +66,7 @@ class SaasHrWorkflowTest extends TestCase
             'monthly_price' => 100,
         ]);
 
-        $service = new SubscriptionService();
+        $service = app(SubscriptionService::class);
         $service->refreshCompanySubscriptionStatus($company);
 
         $company->refresh();

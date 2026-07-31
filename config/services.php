@@ -41,4 +41,13 @@ return [
         'checkout_url' => env('PAYMENT_CHECKOUT_URL'),
     ],
 
+    'stripe' => [
+        'key' => env('STRIPE_KEY'),
+        'secret' => env('STRIPE_SECRET'),
+        'webhook_secret' => env('STRIPE_WEBHOOK_SECRET'),
+        'currency' => env('STRIPE_CURRENCY', 'usd'),
+        'checkout_success_url' => env('STRIPE_CHECKOUT_SUCCESS_URL'),
+        'checkout_cancel_url' => env('STRIPE_CHECKOUT_CANCEL_URL'),
+    ],
+
 ];

@@ -107,6 +107,18 @@ Route::post('/payments/callback', [PaymentWebhookController::class, 'callback'])
     ->name('payments.callback')
     ->middleware('webhook');
 
+// Stripe webhook - verified via the real Stripe-Signature header (see StripeService::constructWebhookEvent),
+// not the generic 'webhook' middleware used by the simulated gateway above.
+Route::post('/stripe/webhook', [\App\Http\Controllers\StripeWebhookController::class, 'handle'])
+    ->name('stripe.webhook')
+    ->middleware('throttle:60,1');
+
+// Public JSON status check for a Checkout Session, polled by the (separate) frontend after
+// Stripe redirects the user back to the frontend's own success/cancel pages.
+Route::get('/stripe/checkout-sessions/{session_id}', [\App\Http\Controllers\StripeCheckoutController::class, 'status'])
+    ->name('stripe.checkout-session.status')
+    ->middleware('throttle:30,1');
+
 // Departments view (HR Manager & General Manager).
 // Company isolation is enforced per-request from the authenticated user's company_id
 // (no company_id is accepted from the client).

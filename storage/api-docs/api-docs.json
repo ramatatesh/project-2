@@ -1280,6 +1280,7 @@
                     "Companies"
                 ],
                 "summary": "Register a new company and create its initial subscription",
+                "description": "For the Free plan, the company/subscription/user are created immediately and credentials are emailed. A given email can only ever use the Free plan once - even after the company is later deleted. For a Paid plan, NOTHING is created yet: a Stripe Checkout Session is created and its URL is returned in 'payment_url'. The Company/Subscription/User are only created by the Stripe webhook (POST /api/stripe/webhook) after the payment actually succeeds; if payment fails or is abandoned, no data is created.",
                 "operationId": "07492aefe5e7e08d3f7d3c79201cab2e",
                 "requestBody": {
                     "required": true,
@@ -1334,7 +1335,38 @@
                 },
                 "responses": {
                     "201": {
-                        "description": "Company registered successfully"
+                        "description": "Free plan: company registered successfully, credentials emailed"
+                    },
+                    "202": {
+                        "description": "Paid plan: redirect the user to 'payment_url' (Stripe Checkout). Nothing is created yet.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "payment_required": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "payment_url": {
+                                            "type": "string",
+                                            "example": "https://checkout.stripe.com/c/pay/cs_test_..."
+                                        },
+                                        "transaction_reference": {
+                                            "type": "string",
+                                            "example": "cs_test_a1b2c3"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation failed, or this email already used the Free plan before"
                     }
                 }
             }
@@ -4875,6 +4907,102 @@
                                 }
                             }
                         }
+                    }
+                }
+            }
+        },
+        "/api/stripe/checkout-sessions/{session_id}": {
+            "get": {
+                "tags": [
+                    "بوابات الدفع والاشتراكات (Payments & Subscriptions)"
+                ],
+                "summary": "Check the status of a Stripe Checkout Session (pure JSON, for the separate frontend)",
+                "description": "The frontend calls this after redirecting the user back from Stripe Checkout (success_url/cancel_url are frontend routes, not backend pages) to find out whether the payment succeeded and whether the company/subscription has been provisioned yet by the webhook. Provisioning always happens asynchronously via POST /api/stripe/webhook, so right after redirect the status may briefly be 'processing' before becoming 'completed'.",
+                "operationId": "a6e2f2470adb1b249c6edbfa98e469ea",
+                "parameters": [
+                    {
+                        "name": "session_id",
+                        "in": "path",
+                        "description": "The Stripe Checkout Session id (also returned as 'transaction_reference' by POST /api/companies/register)",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "example": "cs_test_a1b2c3"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Session status",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "completed",
+                                                "processing",
+                                                "not_completed"
+                                            ],
+                                            "example": "completed"
+                                        },
+                                        "company_id": {
+                                            "type": "string",
+                                            "format": "uuid",
+                                            "nullable": true
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "No such checkout session"
+                    }
+                }
+            }
+        },
+        "/api/stripe/webhook": {
+            "post": {
+                "tags": [
+                    "بوابات الدفع والاشتراكات (Payments & Subscriptions)"
+                ],
+                "summary": "Stripe webhook endpoint (Checkout Session events)",
+                "description": "Official Stripe webhook. On 'checkout.session.completed' with a successful payment, this endpoint provisions the Company/Subscription/User for a paid registration - this is the ONLY place where a paid company is created. Verified using the real Stripe-Signature header (STRIPE_WEBHOOK_SECRET), not a shared secret.",
+                "operationId": "7216e3f8a8d6062d8856a89c07fa8e62",
+                "parameters": [
+                    {
+                        "name": "Stripe-Signature",
+                        "in": "header",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "description": "Raw Stripe Event payload (sent by Stripe servers)",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Event processed (or acknowledged/ignored)"
+                    },
+                    "400": {
+                        "description": "Invalid payload or signature"
                     }
                 }
             }

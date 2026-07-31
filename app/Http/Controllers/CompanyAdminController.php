@@ -220,8 +220,9 @@ class CompanyAdminController extends Controller
 {
     // 1. الإحصائيات العامة (Summary Metrics)
     $totalCompanies = Company::count();
-    $totalSubscriptions = Subscription::whereIn('status', ['active', 'paid'])->count();
-    $newCompaniesThisMonth = Company::whereMonth('created_at', now()->month)
+    $totalSubscriptions = Subscription::count();
+    $newCompaniesThisMonth = Company::where('name', '!=', 'Khibrat (Platform Owner)')
+        ->whereMonth('created_at', now()->month)
         ->whereYear('created_at', now()->year)
         ->count();
 
@@ -249,7 +250,7 @@ class CompanyAdminController extends Controller
     // 3. تجهيز بيانات المخطط البياني لآخر 6 أشهر
     $monthlyAnalytics = [];
     for ($i = 5; $i >= 0; $i--) {
-        $monthDate = now()->subMonths($i);
+        $monthDate = now()->startOfMonth()->subMonths($i);
         $monthName = $monthDate->format('M Y');
 
         $count = Subscription::whereMonth('created_at', $monthDate->month)
@@ -263,12 +264,13 @@ class CompanyAdminController extends Controller
     }
 
     // 4. جلب آخر 5 منصات/شركات تم تسجيلها
-    $latestCompanies = Company::with(['subscriptions' => function($q) {
-            $q->latest()->first();
-        }])
-        ->latest()
-        ->take(5)
-        ->get()
+   $latestCompanies = Company::whereHas('subscriptions')
+    ->with(['subscriptions' => function($q) {
+        $q->latest();
+    }])
+    ->latest()
+    ->take(5)
+    ->get()
         ->map(function ($company) {
             return [
                 'id' => $company->id,
