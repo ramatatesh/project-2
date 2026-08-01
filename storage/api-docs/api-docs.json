@@ -1797,6 +1797,276 @@
                 ]
             }
         },
+        "/api/employee/advances": {
+            "get": {
+                "tags": [
+                    "Employee Advances"
+                ],
+                "summary": "List the logged-in employee's salary advance requests",
+                "operationId": "252f38744bdd64ae661cac4ec0352f93",
+                "parameters": [
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 15
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Paginated employee advance requests",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "current_page": {
+                                                    "type": "integer"
+                                                },
+                                                "data": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "properties": {
+                                                            "id": {
+                                                                "type": "string",
+                                                                "format": "uuid"
+                                                            },
+                                                            "requested_amount": {
+                                                                "type": "number"
+                                                            },
+                                                            "repayment_months": {
+                                                                "type": "integer"
+                                                            },
+                                                            "monthly_installment": {
+                                                                "type": "number"
+                                                            },
+                                                            "status": {
+                                                                "type": "string"
+                                                            },
+                                                            "created_at": {
+                                                                "type": "string",
+                                                                "format": "datetime"
+                                                            }
+                                                        },
+                                                        "type": "object"
+                                                    }
+                                                },
+                                                "last_page": {
+                                                    "type": "integer"
+                                                },
+                                                "per_page": {
+                                                    "type": "integer"
+                                                },
+                                                "total": {
+                                                    "type": "integer"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "403": {
+                        "description": "No employee record found"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/employee/advances/eligibility": {
+            "get": {
+                "tags": [
+                    "Employee Advances"
+                ],
+                "summary": "Check current salary advance eligibility",
+                "operationId": "039d844b1a905c89eb4ac1e76e58dad2",
+                "responses": {
+                    "200": {
+                        "description": "Eligibility details",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "basic_salary": {
+                                                    "type": "number",
+                                                    "format": "float",
+                                                    "example": 1200
+                                                },
+                                                "max_allowed_amount": {
+                                                    "type": "number",
+                                                    "format": "float",
+                                                    "example": 600
+                                                },
+                                                "has_active_advance": {
+                                                    "type": "boolean",
+                                                    "example": false
+                                                },
+                                                "active_advance_details": {
+                                                    "properties": {
+                                                        "id": {
+                                                            "type": "string",
+                                                            "format": "uuid"
+                                                        },
+                                                        "requested_amount": {
+                                                            "type": "number",
+                                                            "format": "float"
+                                                        },
+                                                        "monthly_installment": {
+                                                            "type": "number",
+                                                            "format": "float"
+                                                        },
+                                                        "repayment_months": {
+                                                            "type": "integer"
+                                                        },
+                                                        "status": {
+                                                            "type": "string"
+                                                        }
+                                                    },
+                                                    "type": "object",
+                                                    "nullable": true
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "403": {
+                        "description": "No employee record found"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/employee/advances/apply": {
+            "post": {
+                "tags": [
+                    "Employee Advances"
+                ],
+                "summary": "Submit a salary advance request",
+                "operationId": "49c0d77af7552ffd33d6aae5ebb03960",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "requested_amount",
+                                    "repayment_months"
+                                ],
+                                "properties": {
+                                    "requested_amount": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 500
+                                    },
+                                    "repayment_months": {
+                                        "type": "integer",
+                                        "example": 2
+                                    },
+                                    "reason": {
+                                        "type": "string",
+                                        "example": "Emergency medical expense",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Advance request submitted successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "id": {
+                                                    "type": "string",
+                                                    "format": "uuid"
+                                                },
+                                                "requested_amount": {
+                                                    "type": "number"
+                                                },
+                                                "repayment_months": {
+                                                    "type": "integer"
+                                                },
+                                                "monthly_installment": {
+                                                    "type": "number"
+                                                },
+                                                "status": {
+                                                    "type": "string"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation failed or business rule violation"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "403": {
+                        "description": "No employee record found"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
         "/api/hr/employees": {
             "get": {
                 "tags": [
@@ -4685,6 +4955,346 @@
                 ]
             }
         },
+        "/api/management/advances": {
+            "get": {
+                "tags": [
+                    "Management Advances"
+                ],
+                "summary": "List salary advance requests for managers and HR",
+                "operationId": "adb35fdd21822a622170726fa2b39929",
+                "parameters": [
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "pending",
+                                "pending_department_manager",
+                                "pending_hr",
+                                "approved",
+                                "rejected_by_manager",
+                                "rejected_by_hr",
+                                "paid_off"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 15
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Paginated advance requests",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "current_page": {
+                                                    "type": "integer"
+                                                },
+                                                "data": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "properties": {
+                                                            "id": {
+                                                                "type": "string",
+                                                                "format": "uuid"
+                                                            },
+                                                            "employee_name": {
+                                                                "type": "string"
+                                                            },
+                                                            "department_name": {
+                                                                "type": "string",
+                                                                "nullable": true
+                                                            },
+                                                            "requested_amount": {
+                                                                "type": "number"
+                                                            },
+                                                            "monthly_installment": {
+                                                                "type": "number"
+                                                            },
+                                                            "repayment_months": {
+                                                                "type": "integer"
+                                                            },
+                                                            "status": {
+                                                                "type": "string"
+                                                            },
+                                                            "created_at": {
+                                                                "type": "string",
+                                                                "format": "datetime"
+                                                            }
+                                                        },
+                                                        "type": "object"
+                                                    }
+                                                },
+                                                "last_page": {
+                                                    "type": "integer"
+                                                },
+                                                "per_page": {
+                                                    "type": "integer"
+                                                },
+                                                "total": {
+                                                    "type": "integer"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/management/advances/{id}": {
+            "get": {
+                "tags": [
+                    "Management Advances"
+                ],
+                "summary": "Get detailed information about a salary advance request",
+                "operationId": "94a0851ff0442948300ee3845de5062c",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Advance request details",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "id": {
+                                                    "type": "string",
+                                                    "format": "uuid"
+                                                },
+                                                "employee": {
+                                                    "properties": {
+                                                        "id": {
+                                                            "type": "string",
+                                                            "format": "uuid"
+                                                        },
+                                                        "full_name": {
+                                                            "type": "string"
+                                                        },
+                                                        "job_title": {
+                                                            "type": "string"
+                                                        },
+                                                        "department_name": {
+                                                            "type": "string",
+                                                            "nullable": true
+                                                        },
+                                                        "basic_salary": {
+                                                            "type": "number"
+                                                        }
+                                                    },
+                                                    "type": "object"
+                                                },
+                                                "requested_amount": {
+                                                    "type": "number"
+                                                },
+                                                "repayment_months": {
+                                                    "type": "integer"
+                                                },
+                                                "monthly_installment": {
+                                                    "type": "number"
+                                                },
+                                                "reason": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                },
+                                                "status": {
+                                                    "type": "string"
+                                                },
+                                                "approved_by_manager": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                },
+                                                "approved_by_hr": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                },
+                                                "created_at": {
+                                                    "type": "string",
+                                                    "format": "datetime"
+                                                },
+                                                "installments": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "properties": {
+                                                            "id": {
+                                                                "type": "string",
+                                                                "format": "uuid"
+                                                            },
+                                                            "due_date": {
+                                                                "type": "string",
+                                                                "format": "date"
+                                                            },
+                                                            "amount": {
+                                                                "type": "number"
+                                                            },
+                                                            "status": {
+                                                                "type": "string"
+                                                            }
+                                                        },
+                                                        "type": "object"
+                                                    }
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Access denied"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/management/advances/{id}/action": {
+            "post": {
+                "tags": [
+                    "Management Advances"
+                ],
+                "summary": "Execute a workflow action on a salary advance request",
+                "operationId": "c1378f6cc84dce5847a20c3bfb3e4b49",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "action",
+                                    "role_context"
+                                ],
+                                "properties": {
+                                    "action": {
+                                        "type": "string",
+                                        "enum": [
+                                            "approve",
+                                            "reject"
+                                        ]
+                                    },
+                                    "role_context": {
+                                        "type": "string",
+                                        "enum": [
+                                            "manager",
+                                            "hr"
+                                        ]
+                                    },
+                                    "rejection_reason": {
+                                        "type": "string",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Action executed successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "id": {
+                                                    "type": "string",
+                                                    "format": "uuid"
+                                                },
+                                                "status": {
+                                                    "type": "string"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Unauthorized role or company mismatch"
+                    },
+                    "422": {
+                        "description": "Invalid workflow state"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
         "/api/management/leaves/inbox": {
             "get": {
                 "tags": [
@@ -4909,6 +5519,182 @@
                         }
                     }
                 }
+            }
+        },
+        "/api/companies/{company}/advance-policy": {
+            "get": {
+                "tags": [
+                    "Salary Advance Policies"
+                ],
+                "summary": "Retrieve the current salary advance policy for a company",
+                "operationId": "b5aad711aef591feda50a24428e7d330",
+                "parameters": [
+                    {
+                        "name": "company",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Company salary advance policy",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "id": {
+                                                    "type": "string",
+                                                    "format": "uuid"
+                                                },
+                                                "company_id": {
+                                                    "type": "string",
+                                                    "format": "uuid"
+                                                },
+                                                "max_advance_percentage": {
+                                                    "type": "number",
+                                                    "format": "float",
+                                                    "example": 50
+                                                },
+                                                "max_repayment_months": {
+                                                    "type": "integer",
+                                                    "example": 6
+                                                },
+                                                "allow_multiple_active_advances": {
+                                                    "type": "boolean",
+                                                    "example": false
+                                                }
+                                            },
+                                            "type": "object",
+                                            "nullable": true
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden (not a member of this company)"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "Salary Advance Policies"
+                ],
+                "summary": "Create or update the salary advance policy for a company",
+                "operationId": "af05d721faefa5d0956880c8682bbc10",
+                "parameters": [
+                    {
+                        "name": "company",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "max_advance_percentage",
+                                    "max_repayment_months",
+                                    "allow_multiple_active_advances"
+                                ],
+                                "properties": {
+                                    "max_advance_percentage": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 50
+                                    },
+                                    "max_repayment_months": {
+                                        "type": "integer",
+                                        "example": 6
+                                    },
+                                    "allow_multiple_active_advances": {
+                                        "type": "boolean",
+                                        "example": false
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Policy created or updated successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "id": {
+                                                    "type": "string",
+                                                    "format": "uuid"
+                                                },
+                                                "company_id": {
+                                                    "type": "string",
+                                                    "format": "uuid"
+                                                },
+                                                "max_advance_percentage": {
+                                                    "type": "number",
+                                                    "format": "float"
+                                                },
+                                                "max_repayment_months": {
+                                                    "type": "integer"
+                                                },
+                                                "allow_multiple_active_advances": {
+                                                    "type": "boolean"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation failed"
+                    },
+                    "403": {
+                        "description": "Forbidden (General Manager only / not a member of this company)"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
             }
         },
         "/api/stripe/checkout-sessions/{session_id}": {
@@ -5344,6 +6130,10 @@
             "description": "إدارة أقسام الشركة الحالية (متاح فقط لمدير الموارد البشرية HR Manager)"
         },
         {
+            "name": "Employee Advances",
+            "description": "Employee salary advance (السُلف المالية) self-service endpoints"
+        },
+        {
             "name": "Employees",
             "description": "إدارة موظفي الشركة الحالية (متاح فقط لمدير الموارد البشرية HR Manager)"
         },
@@ -5388,8 +6178,16 @@
             "description": "Endpoints for managing HR manager accounts within a tenant company"
         },
         {
+            "name": "Management Advances",
+            "description": "Salary advance (السُلف المالية) approval workflow for department managers and HR"
+        },
+        {
             "name": "Management Leaves",
             "description": "Leave request approval workflow for department managers and HR"
+        },
+        {
+            "name": "Salary Advance Policies",
+            "description": "Company-level salary advance (السَّلف) policy configuration"
         },
         {
             "name": "Subscription Plans",

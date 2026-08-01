@@ -6,6 +6,7 @@ use App\Http\Controllers\CompanyPolicyController;
 use App\Http\Controllers\CompanyRegistrationController;
 use App\Http\Controllers\CompanySettingsController;
 use App\Http\Controllers\DepartmentController;
+use App\Http\Controllers\EmployeeAdvanceController;
 use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\EmployeeLeaveController;
 use App\Http\Controllers\EvaluationCycleController;
@@ -16,9 +17,11 @@ use App\Http\Controllers\EvaluationReviewController;
 use App\Http\Controllers\EvaluationScoringController;
 use App\Http\Controllers\EvaluationTemplateController;
 use App\Http\Controllers\HolidayPolicyController;
+use App\Http\Controllers\ManagementAdvanceController;
 use App\Http\Controllers\ManagementLeaveController;
 use App\Http\Controllers\HrManagerController;
 use App\Http\Controllers\PaymentWebhookController;
+use App\Http\Controllers\SalaryAdvancePolicyController;
 use App\Http\Controllers\SubscriptionPlanController;
 use Illuminate\Support\Facades\Route;
 
@@ -92,6 +95,10 @@ Route::middleware(['auth:sanctum', 'tenant', 'role:general_manager'])->prefix('c
     Route::get('/{company}/attendance-policy', [CompanySettingsController::class, 'showAttendancePolicy'])->name('companies.attendance-policy.show');
     Route::put('/{company}/attendance-policy', [CompanySettingsController::class, 'updateAttendancePolicy'])->name('companies.attendance-policy');
     Route::put('/{company}/attendance-location', [CompanySettingsController::class, 'updateAttendanceLocation'])->name('companies.attendance-location');
+
+    Route::get('/{company}/advance-policy', [SalaryAdvancePolicyController::class, 'show'])->name('companies.advance-policy.show');
+    Route::put('/{company}/advance-policy', [SalaryAdvancePolicyController::class, 'storeOrUpdate'])->name('companies.advance-policy.update');
+    Route::post('/{company}/advance-policy', [SalaryAdvancePolicyController::class, 'storeOrUpdate'])->name('companies.advance-policy.store');
 
     Route::get('/{company}/hr-managers', [HrManagerController::class, 'index']);
     Route::post('/{company}/hr-managers', [HrManagerController::class, 'store']);
@@ -199,4 +206,18 @@ Route::middleware(['auth:sanctum', 'role:employee'])->prefix('employee/leaves')-
 Route::middleware(['auth:sanctum', 'role:department_manager,hr_manager'])->prefix('management/leaves')->group(function () {
     Route::get('/inbox', [ManagementLeaveController::class, 'inbox']);
     Route::post('/{id}/action', [ManagementLeaveController::class, 'action']);
+});
+
+// Employee self-service: salary advances (السُلف المالية).
+Route::middleware(['auth:sanctum', 'role:employee'])->prefix('employee/advances')->group(function () {
+    Route::get('/', [EmployeeAdvanceController::class, 'index']);
+    Route::get('/eligibility', [EmployeeAdvanceController::class, 'eligibility']);
+    Route::post('/apply', [EmployeeAdvanceController::class, 'apply']);
+});
+
+// Management approval workflow for salary advances.
+Route::middleware(['auth:sanctum', 'role:department_manager,hr_manager'])->prefix('management/advances')->group(function () {
+    Route::get('/', [ManagementAdvanceController::class, 'index']);
+    Route::get('/{id}', [ManagementAdvanceController::class, 'show']);
+    Route::post('/{id}/action', [ManagementAdvanceController::class, 'action']);
 });
