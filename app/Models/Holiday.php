@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -42,10 +43,9 @@ class Holiday extends Model
         return $this->holiday_type === 'single_day';
     }
 
-    public function occursOn(
-        \Illuminate\Support\Carbon\Carbon|string $date
-    ): bool {
-        $date = \Illuminate\Support\Carbon\parse($date);
+    public function occursOn(Carbon|string $date): bool
+    {
+        $date = Carbon::parse($date);
 
         if ($this->repeats_annually) {
             $startMonthDay = $this->start_date->format('m-d');

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CompanyAdminController;
 use App\Http\Controllers\CompanyPolicyController;
@@ -18,6 +19,7 @@ use App\Http\Controllers\EvaluationScoringController;
 use App\Http\Controllers\EvaluationTemplateController;
 use App\Http\Controllers\HolidayPolicyController;
 use App\Http\Controllers\ManagementAdvanceController;
+use App\Http\Controllers\ManagementAttendanceController;
 use App\Http\Controllers\ManagementLeaveController;
 use App\Http\Controllers\HrManagerController;
 use App\Http\Controllers\PaymentWebhookController;
@@ -220,4 +222,26 @@ Route::middleware(['auth:sanctum', 'role:department_manager,hr_manager'])->prefi
     Route::get('/', [ManagementAdvanceController::class, 'index']);
     Route::get('/{id}', [ManagementAdvanceController::class, 'show']);
     Route::post('/{id}/action', [ManagementAdvanceController::class, 'action']);
+});
+
+// Employee self-service: attendance check-in/check-out via rotating QR code + personal dashboard.
+// Company isolation is enforced per-request from the authenticated user's company_id
+// (no company_id is accepted from the client).
+Route::middleware(['auth:sanctum', 'role:employee'])->prefix('employee/attendance')->group(function () {
+    Route::post('/check-in', [AttendanceController::class, 'checkIn']);
+    Route::post('/check-out', [AttendanceController::class, 'checkOut']);
+    Route::get('/dashboard', [AttendanceController::class, 'dashboard']);
+});
+
+// Attendance dashboard/listing: HR Manager & General Manager see the whole company,
+// Department Manager is scoped to employees in departments they manage (enforced in the controller).
+Route::middleware(['auth:sanctum', 'role:hr_manager,general_manager,department_manager'])->prefix('management/attendance')->group(function () {
+    Route::get('/', [ManagementAttendanceController::class, 'index']);
+    Route::get('/stats', [ManagementAttendanceController::class, 'stats']);
+});
+
+// QR code display and manual adjustments: HR Manager & General Manager only.
+Route::middleware(['auth:sanctum', 'role:hr_manager,general_manager'])->prefix('management/attendance')->group(function () {
+    Route::get('/qr-code', [ManagementAttendanceController::class, 'qrCode']);
+    Route::put('/{attendanceRecord}/adjust', [ManagementAttendanceController::class, 'adjust']);
 });

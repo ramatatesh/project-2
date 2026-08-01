@@ -11,6 +11,17 @@ class AttendanceAdjustment extends Model
     protected $keyType = 'string';
     public $incrementing = false;
 
+    // The table has no `updated_at` column - only `created_at` - so Eloquent's default
+    // timestamps must be disabled, otherwise any save()/update() throws a column-not-found error.
+    public $timestamps = false;
+
+    protected $casts = [
+        'old_check_in' => 'datetime',
+        'new_check_in' => 'datetime',
+        'old_check_out' => 'datetime',
+        'new_check_out' => 'datetime',
+    ];
+
     public function company(): BelongsTo { return $this->belongsTo(Company::class); }
     public function attendanceRecord(): BelongsTo { return $this->belongsTo(AttendanceRecord::class); }
     public function adjuster(): BelongsTo { return $this->belongsTo(User::class, 'adjusted_by'); }

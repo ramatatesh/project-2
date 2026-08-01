@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Auth\AuthenticationException;
+use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -13,6 +14,16 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
     )
+    ->withSchedule(function (Schedule $schedule) {
+        // Runs shortly after midnight for the PREVIOUS day rather than at a fixed
+        // "end of workday" time, because each company can configure its own
+        // work_end_time in AttendancePolicy - there is no single fixed hour that
+        // safely covers every tenant's shift before midnight. Running at 01:00 for
+        // "yesterday" guarantees every company's work day (including late shifts)
+        // has fully ended before an employee is marked absent, while still keeping
+        // attendance data ready the same day for payroll.
+        $schedule->command('attendance:mark-absent')->dailyAt('01:00');
+    })
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->append(\Illuminate\Http\Middleware\HandleCors::class);
 
