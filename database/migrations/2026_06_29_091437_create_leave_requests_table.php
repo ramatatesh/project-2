@@ -27,7 +27,7 @@ return new class extends Migration
             $table->text('rejection_reason')->nullable();
             $table->uuid('reviewed_by')->nullable();
             $table->timestamp('reviewed_at')->nullable();
-            $table->timestamp('created_at')->nullable()->default(DB::raw("now()"));
+            $table->timestamps();
         });
     }
 
