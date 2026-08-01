@@ -6,15 +6,15 @@ use App\Http\Requests\Auth\ForgotPasswordRequest;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Requests\Auth\ResetPasswordRequest;
 use App\Http\Requests\VerifyOtpRequest;
-use App\Jobs\SendPasswordResetEmailJob;
+//use App\Jobs\SendPasswordResetEmailJob;
 use App\Models\User;
 use App\Models\PasswordResetOtp;
 use App\Jobs\SendPasswordResetOtpJob;
-use Illuminate\Http\Request;
+//use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\DB;
+//use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
+//use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Log;
 
 /**
