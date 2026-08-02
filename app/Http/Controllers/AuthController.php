@@ -174,6 +174,92 @@ class AuthController extends Controller
         }
     }
 
+
+    /**
+ * @OA\Post(
+ *     path="/api/auth/resend-otp",
+ *     summary="إعادة إرسال رمز OTP",
+ *     tags={"المصادقة (Authentication)"},
+ *     @OA\RequestBody(
+ *         required=true,
+ *         @OA\JsonContent(
+ *             required={"email"},
+ *             @OA\Property(
+ *                 property="email",
+ *                 type="string",
+ *                 format="email",
+ *                 example="hr@khibrat.com"
+ *             )
+ *         )
+ *     ),
+ *     @OA\Response(
+ *         response=200,
+ *         description="OTP resent successfully"
+ *     ),
+ *     @OA\Response(
+ *         response=404,
+ *         description="User not found"
+ *     )
+ * )
+ */
+public function resendOtp(ForgotPasswordRequest $request): JsonResponse
+{
+    try {
+
+        $user = User::where('email', $request->email)->first();
+
+        if (! $user) {
+            return $this->errorResponse(
+                'No user found for the provided email address.',
+                404
+            );
+        }
+
+        // منع الإرسال المتكرر خلال دقيقة واحدة
+        $lastOtp = PasswordResetOtp::where('email', $user->email)
+            ->latest()
+            ->first();
+
+        if ($lastOtp && $lastOtp->created_at->diffInSeconds(now()) < 60) {
+            return $this->errorResponse(
+                'Please wait before requesting another OTP.',
+                429
+            );
+        }
+
+        $otp = rand(1000, 9999);
+
+        PasswordResetOtp::where('email', $user->email)->delete();
+
+        PasswordResetOtp::create([
+            'email' => $user->email,
+            'otp' => (string) $otp,
+            'expires_at' => now()->addMinutes(10),
+            'verified' => false,
+        ]);
+
+        SendPasswordResetOtpJob::dispatch(
+            $user->email,
+            $otp
+        );
+
+        return $this->successResponse(
+            'OTP resent successfully.'
+        );
+
+    } catch (\Throwable $th) {
+
+        Log::error('Resend OTP failed', [
+            'error' => $th->getMessage(),
+        ]);
+
+        return $this->errorResponse(
+            'Unable to resend OTP.',
+            500
+        );
+    }
+}
+
     /**
  * @OA\Post(
  *     path="/api/auth/verify-otp",

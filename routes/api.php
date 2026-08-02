@@ -34,6 +34,7 @@ Route::middleware('guest')->prefix('auth')->group(function () {
     Route::post('/login', [AuthController::class, 'login'])->name('auth.login')->middleware('throttle:5,1');
     Route::post('/forgot-password', [AuthController::class, 'forgotPassword'])->name('auth.forgot-password')->middleware('throttle:3,1');
     Route::post('/verify-otp',[AuthController::class,'verifyOtp']);
+    Route::post('/resend-otp', [AuthController::class, 'resendOtp']);
     Route::post('/reset-password', [AuthController::class, 'resetPassword'])->name('auth.reset-password');
 });
 

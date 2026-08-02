@@ -348,6 +348,43 @@
                 }
             }
         },
+        "/api/auth/resend-otp": {
+            "post": {
+                "tags": [
+                    "المصادقة (Authentication)"
+                ],
+                "summary": "إعادة إرسال رمز OTP",
+                "operationId": "f91fa3520b19eddf59026ccd6fdf2688",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "email"
+                                ],
+                                "properties": {
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "example": "hr@khibrat.com"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "OTP resent successfully"
+                    },
+                    "404": {
+                        "description": "User not found"
+                    }
+                }
+            }
+        },
         "/api/auth/verify-otp": {
             "post": {
                 "tags": [
