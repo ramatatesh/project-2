@@ -43,10 +43,13 @@ Route::middleware('auth:sanctum')->prefix('auth')->group(function () {
     Route::post('/complete-first-login', [AuthController::class, 'completeFirstLogin'])->name('auth.complete-first-login');
 });
 
-// Profile completion (documents upload) - available to any authenticated user with an
-// employee record (Employee, HR Manager, Department Manager). Not mandatory after login.
-Route::middleware('auth:sanctum')->post('/profile/complete', [ProfileController::class, 'complete'])
-    ->name('profile.complete');
+// Profile: view / update / documents upload.
+// Available to any authenticated user. Employee-only fields/files require an employee record.
+Route::middleware('auth:sanctum')->prefix('profile')->group(function () {
+    Route::get('/', [ProfileController::class, 'show'])->name('profile.show');
+    Route::put('/', [ProfileController::class, 'update'])->name('profile.update');
+    Route::post('/documents', [ProfileController::class, 'uploadDocuments'])->name('profile.documents');
+});
 
 // Public self-registration for tenant companies (rate-limited).
 Route::post('/companies/register', [CompanyRegistrationController::class, 'register'])

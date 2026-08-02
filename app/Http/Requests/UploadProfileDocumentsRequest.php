@@ -6,7 +6,7 @@ use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
 
-class CompleteProfileRequest extends FormRequest
+class UploadProfileDocumentsRequest extends FormRequest
 {
     public function authorize(): bool
     {
@@ -16,7 +16,6 @@ class CompleteProfileRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'profile_image' => ['required', 'file', 'image', 'max:4096'],
             'identity_image' => ['required', 'file', 'image', 'max:4096'],
             'university_certificate' => ['sometimes', 'nullable', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:8192'],
         ];

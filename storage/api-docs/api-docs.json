@@ -284,7 +284,7 @@
                                                             "type": "boolean"
                                                         },
                                                         "profile_completed": {
-                                                            "description": "If false, the frontend should redirect the user to the complete-profile screen (POST /api/profile/complete). Completing it is not mandatory right after login.",
+                                                            "description": "If false, the frontend should prompt the user to finish profile setup via PUT /api/profile (profile_image) and POST /api/profile/documents (identity_image). Completing it is not mandatory right after login.",
                                                             "type": "boolean",
                                                             "example": false
                                                         }
@@ -3938,7 +3938,7 @@
                 "tags": [
                     "My Evaluations"
                 ],
-                "summary": "Get pending/completed reviews assigned to the authenticated user",
+                "summary": "Get pending/completed/expired reviews assigned to the authenticated user",
                 "operationId": "84d76ebf4312a5d5670f29c43024c612",
                 "parameters": [
                     {
@@ -3948,7 +3948,8 @@
                             "type": "string",
                             "enum": [
                                 "pending",
-                                "completed"
+                                "completed",
+                                "expired"
                             ]
                         }
                     }
@@ -6450,29 +6451,222 @@
                 }
             }
         },
-        "/api/profile/complete": {
+        "/api/profile": {
+            "get": {
+                "tags": [
+                    "Profile"
+                ],
+                "summary": "Get the authenticated user's profile",
+                "description": "Returns personal info for the logged-in user. Employee-only fields (job title, department, hire date, documents) are included when an employee record exists; otherwise they are null without error.",
+                "operationId": "ede45b19680d6fb1319013a741a05734",
+                "responses": {
+                    "200": {
+                        "description": "Profile retrieved successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "full_name": {
+                                                    "type": "string",
+                                                    "example": "Ahmad Ali"
+                                                },
+                                                "email": {
+                                                    "type": "string",
+                                                    "example": "ahmad@company.test"
+                                                },
+                                                "phone": {
+                                                    "type": "string",
+                                                    "example": "+963999999999",
+                                                    "nullable": true
+                                                },
+                                                "date_of_birth": {
+                                                    "type": "string",
+                                                    "format": "date",
+                                                    "example": "1995-05-20",
+                                                    "nullable": true
+                                                },
+                                                "gender": {
+                                                    "type": "string",
+                                                    "example": "male",
+                                                    "nullable": true
+                                                },
+                                                "nationality": {
+                                                    "type": "string",
+                                                    "example": "Syrian",
+                                                    "nullable": true
+                                                },
+                                                "residence": {
+                                                    "type": "string",
+                                                    "example": "Damascus",
+                                                    "nullable": true
+                                                },
+                                                "job_title": {
+                                                    "type": "string",
+                                                    "example": "Backend Developer",
+                                                    "nullable": true
+                                                },
+                                                "department": {
+                                                    "properties": {
+                                                        "id": {
+                                                            "type": "string",
+                                                            "format": "uuid"
+                                                        },
+                                                        "name": {
+                                                            "type": "string",
+                                                            "example": "Engineering"
+                                                        }
+                                                    },
+                                                    "type": "object",
+                                                    "nullable": true
+                                                },
+                                                "hire_date": {
+                                                    "type": "string",
+                                                    "format": "date",
+                                                    "example": "2022-01-01",
+                                                    "nullable": true
+                                                },
+                                                "profile_image_url": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                },
+                                                "profile_completed": {
+                                                    "type": "boolean",
+                                                    "example": false
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "Profile"
+                ],
+                "summary": "Update phone, residence, and/or profile image",
+                "description": "Updates only phone, residence, and profile_image. Multipart/form-data on PUT is supported via server-side parsing (PHP does not fill $_POST/$_FILES for PUT natively). JSON PUT without files also works. profile_completed becomes true automatically when both profile_image and identity_image exist.",
+                "operationId": "b927bf00923c712a27589c6a510ebbf5",
+                "requestBody": {
+                    "required": false,
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "properties": {
+                                    "phone": {
+                                        "type": "string",
+                                        "example": "+963999999999",
+                                        "nullable": true
+                                    },
+                                    "residence": {
+                                        "type": "string",
+                                        "example": "Damascus, Syria",
+                                        "nullable": true
+                                    },
+                                    "profile_image": {
+                                        "description": "Personal profile picture (optional)",
+                                        "type": "string",
+                                        "format": "binary"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        },
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "phone": {
+                                        "type": "string",
+                                        "example": "+963999999999",
+                                        "nullable": true
+                                    },
+                                    "residence": {
+                                        "type": "string",
+                                        "example": "Damascus, Syria",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Profile updated successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Profile updated successfully."
+                                        },
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "403": {
+                        "description": "Employee record required to upload profile image"
+                    },
+                    "422": {
+                        "description": "Validation failed"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/profile/documents": {
             "post": {
                 "tags": [
                     "Profile"
                 ],
-                "summary": "Complete the logged-in employee's profile by uploading their documents",
-                "description": "Not mandatory right after first login - the employee can complete this whenever they choose. Stores profile_image, identity_image and (optionally) university_certificate, then marks the user's profile_completed flag as true.",
-                "operationId": "bb46e11804ea472681b0e928aa4fc479",
+                "summary": "Upload identity and optional university certificate documents",
+                "description": "Uploads identity_image (required) and university_certificate (optional). Creates or updates the employee_documents row. Does not change phone, residence, or other profile fields. Sets profile_completed to true when both profile_image and identity_image are present.",
+                "operationId": "c85b710ae9a190458b5e6fd057952a75",
                 "requestBody": {
                     "required": true,
                     "content": {
                         "multipart/form-data": {
                             "schema": {
                                 "required": [
-                                    "profile_image",
                                     "identity_image"
                                 ],
                                 "properties": {
-                                    "profile_image": {
-                                        "description": "Personal profile picture",
-                                        "type": "string",
-                                        "format": "binary"
-                                    },
                                     "identity_image": {
                                         "description": "Photo of the national ID / identity document",
                                         "type": "string",
@@ -6491,7 +6685,7 @@
                 },
                 "responses": {
                     "200": {
-                        "description": "Profile completed successfully",
+                        "description": "Documents uploaded successfully",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -6502,7 +6696,7 @@
                                         },
                                         "message": {
                                             "type": "string",
-                                            "example": "Profile completed successfully."
+                                            "example": "Documents uploaded successfully."
                                         },
                                         "data": {
                                             "properties": {
@@ -7239,7 +7433,7 @@
         },
         {
             "name": "Profile",
-            "description": "Employee self-service profile completion (documents upload)"
+            "description": "Employee self-service profile viewing, editing, and document upload"
         },
         {
             "name": "Salary Advance Policies",

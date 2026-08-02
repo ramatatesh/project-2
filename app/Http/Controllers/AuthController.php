@@ -65,7 +65,7 @@ class AuthController extends Controller
      *   @OA\Property(property="role", type="string"),
      *   @OA\Property(property="status", type="string"),
      *   @OA\Property(property="is_first_login", type="boolean"),
-     *   @OA\Property(property="profile_completed", type="boolean", description="If false, the frontend should redirect the user to the complete-profile screen (POST /api/profile/complete). Completing it is not mandatory right after login.", example=false)
+     *   @OA\Property(property="profile_completed", type="boolean", description="If false, the frontend should prompt the user to finish profile setup via PUT /api/profile (profile_image) and POST /api/profile/documents (identity_image). Completing it is not mandatory right after login.", example=false)
      * ),
      * @OA\Property(property="company", type="object"),
      * @OA\Property(property="token", type="string", example="1|lhA7G...")
