@@ -26,6 +26,7 @@ use App\Http\Controllers\ManagementOvertimeController;
 use App\Http\Controllers\EmployeeOvertimeController;
 use App\Http\Controllers\HrManagerController;
 use App\Http\Controllers\PaymentWebhookController;
+use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SalaryAdvancePolicyController;
 use App\Http\Controllers\SubscriptionPlanController;
 use Illuminate\Support\Facades\Route;
@@ -41,6 +42,11 @@ Route::middleware('guest')->prefix('auth')->group(function () {
 Route::middleware('auth:sanctum')->prefix('auth')->group(function () {
     Route::post('/complete-first-login', [AuthController::class, 'completeFirstLogin'])->name('auth.complete-first-login');
 });
+
+// Profile completion (documents upload) - available to any authenticated user with an
+// employee record (Employee, HR Manager, Department Manager). Not mandatory after login.
+Route::middleware('auth:sanctum')->post('/profile/complete', [ProfileController::class, 'complete'])
+    ->name('profile.complete');
 
 // Public self-registration for tenant companies (rate-limited).
 Route::post('/companies/register', [CompanyRegistrationController::class, 'register'])

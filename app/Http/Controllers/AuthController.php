@@ -57,7 +57,16 @@ class AuthController extends Controller
      * @OA\Property(property="success", type="boolean", example=true),
      * @OA\Property(property="message", type="string", example="Login successful."),
      * @OA\Property(property="data", type="object",
-     * @OA\Property(property="user", type="object"),
+     * @OA\Property(property="user", type="object",
+     *   @OA\Property(property="id", type="string", format="uuid"),
+     *   @OA\Property(property="company_id", type="string", format="uuid"),
+     *   @OA\Property(property="full_name", type="string"),
+     *   @OA\Property(property="email", type="string", format="email"),
+     *   @OA\Property(property="role", type="string"),
+     *   @OA\Property(property="status", type="string"),
+     *   @OA\Property(property="is_first_login", type="boolean"),
+     *   @OA\Property(property="profile_completed", type="boolean", description="If false, the frontend should redirect the user to the complete-profile screen (POST /api/profile/complete). Completing it is not mandatory right after login.", example=false)
+     * ),
      * @OA\Property(property="company", type="object"),
      * @OA\Property(property="token", type="string", example="1|lhA7G...")
      * )
@@ -101,6 +110,7 @@ class AuthController extends Controller
                     'role' => $user->role,
                     'status' => $user->status,
                     'is_first_login' => $user->is_first_login,
+                    'profile_completed' => $user->profile_completed,
                 ],
                 'company' => $user->company ? [
                     'id' => $user->company->id,

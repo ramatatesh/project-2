@@ -36,6 +36,11 @@ class Employee extends Model
         return $this->hasMany(AttendanceRecord::class);
     }
 
+    public function document()
+    {
+        return $this->hasOne(EmployeeDocument::class);
+    }
+
     public function leaveBalances(): HasMany
     {
         return $this->hasMany(LeaveBalance::class);

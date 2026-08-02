@@ -84,7 +84,11 @@ class HrManagerController extends Controller
      *       @OA\Property(property="base_salary", type="number", format="float", example=1200.50),
      *       @OA\Property(property="hire_date", type="string", format="date", example="2026-07-01"),
      *       @OA\Property(property="employment_type", type="string", example="full-time"),
-     *       @OA\Property(property="is_active", type="boolean", example=true)
+     *       @OA\Property(property="is_active", type="boolean", example=true),
+     *       @OA\Property(property="gender", type="string", enum={"male","female"}, nullable=true),
+     *       @OA\Property(property="marital_status", type="string", enum={"single","married","divorced","widowed"}, nullable=true),
+     *       @OA\Property(property="nationality", type="string", nullable=true, example="Syrian"),
+     *       @OA\Property(property="residence", type="string", nullable=true, example="Damascus, Syria")
      *     )
      *   ),
      *   @OA\Response(
@@ -127,6 +131,10 @@ class HrManagerController extends Controller
                     'status' => 'active',
                     'is_first_login' => true,
                     'phone' => $data['phone'] ?? null,
+                    'gender' => $data['gender'] ?? null,
+                    'marital_status' => $data['marital_status'] ?? null,
+                    'nationality' => $data['nationality'] ?? null,
+                    'residence' => $data['residence'] ?? null,
                 ]);
 
                 $employee = Employee::create([
@@ -240,7 +248,11 @@ class HrManagerController extends Controller
      *       @OA\Property(property="base_salary", type="number", format="float", example=1200.50),
      *       @OA\Property(property="hire_date", type="string", format="date", example="2026-07-01"),
      *       @OA\Property(property="employment_type", type="string", example="full-time"),
-     *       @OA\Property(property="is_active", type="boolean", example=true)
+     *       @OA\Property(property="is_active", type="boolean", example=true),
+     *       @OA\Property(property="gender", type="string", enum={"male","female"}, nullable=true),
+     *       @OA\Property(property="marital_status", type="string", enum={"single","married","divorced","widowed"}, nullable=true),
+     *       @OA\Property(property="nationality", type="string", nullable=true, example="Syrian"),
+     *       @OA\Property(property="residence", type="string", nullable=true, example="Damascus, Syria")
      *     )
      *   ),
      *   @OA\Response(
@@ -272,6 +284,11 @@ class HrManagerController extends Controller
                 }
                 if (array_key_exists('phone', $data)) {
                     $userUpdates['phone'] = $data['phone'];
+                }
+                foreach (['gender', 'marital_status', 'nationality', 'residence'] as $field) {
+                    if (array_key_exists($field, $data)) {
+                        $userUpdates[$field] = $data[$field];
+                    }
                 }
                 if (isset($data['is_active'])) {
                     $userUpdates['status'] = $data['is_active'] ? 'active' : 'inactive';
@@ -490,6 +507,11 @@ class HrManagerController extends Controller
             'phone' => $hrManager->phone,
             'status' => $hrManager->status,
             'is_first_login' => $hrManager->is_first_login,
+            'profile_completed' => $hrManager->profile_completed,
+            'gender' => $hrManager->gender,
+            'marital_status' => $hrManager->marital_status,
+            'nationality' => $hrManager->nationality,
+            'residence' => $hrManager->residence,
             'role' => $hrManager->role,
             'employee' => $hrManager->employee ? [
                 'id' => $hrManager->employee->id,

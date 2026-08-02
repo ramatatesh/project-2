@@ -71,7 +71,7 @@ class EmployeeController extends Controller
             ? strtolower($request->input('sort_dir')) : 'desc';
 
         $query = Employee::where('company_id', $companyId)
-            ->with(['user', 'department']);
+            ->with(['user', 'department', 'document']);
 
         if ($search = $request->input('search')) {
             $query->where(function ($q) use ($search) {
@@ -124,7 +124,11 @@ class EmployeeController extends Controller
      *       @OA\Property(property="base_salary", type="number", example=1500),
      *       @OA\Property(property="hire_date", type="string", format="date", example="2026-01-01"),
      *       @OA\Property(property="employment_type", type="string", example="full-time"),
-     *       @OA\Property(property="is_active", type="boolean", example=true)
+     *       @OA\Property(property="is_active", type="boolean", example=true),
+     *       @OA\Property(property="gender", type="string", enum={"male","female"}, nullable=true),
+     *       @OA\Property(property="marital_status", type="string", enum={"single","married","divorced","widowed"}, nullable=true),
+     *       @OA\Property(property="nationality", type="string", nullable=true, example="Syrian"),
+     *       @OA\Property(property="residence", type="string", nullable=true, example="Damascus, Syria")
      *     )
      *   ),
      *
@@ -175,7 +179,7 @@ class EmployeeController extends Controller
     public function show(Employee $employee): JsonResponse
     {
         $this->ensureBelongsToCurrentCompany($employee);
-        $employee->load('user', 'department');
+        $employee->load('user', 'department', 'document');
 
         return response()->json([
             'success' => true,
@@ -207,7 +211,11 @@ class EmployeeController extends Controller
      *       @OA\Property(property="base_salary", type="number"),
      *       @OA\Property(property="hire_date", type="string", format="date"),
      *       @OA\Property(property="employment_type", type="string"),
-     *       @OA\Property(property="is_active", type="boolean")
+     *       @OA\Property(property="is_active", type="boolean"),
+     *       @OA\Property(property="gender", type="string", enum={"male","female"}, nullable=true),
+     *       @OA\Property(property="marital_status", type="string", enum={"single","married","divorced","widowed"}, nullable=true),
+     *       @OA\Property(property="nationality", type="string", nullable=true),
+     *       @OA\Property(property="residence", type="string", nullable=true)
      *     )
      *   ),
      *

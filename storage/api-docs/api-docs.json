@@ -258,6 +258,37 @@
                                         "data": {
                                             "properties": {
                                                 "user": {
+                                                    "properties": {
+                                                        "id": {
+                                                            "type": "string",
+                                                            "format": "uuid"
+                                                        },
+                                                        "company_id": {
+                                                            "type": "string",
+                                                            "format": "uuid"
+                                                        },
+                                                        "full_name": {
+                                                            "type": "string"
+                                                        },
+                                                        "email": {
+                                                            "type": "string",
+                                                            "format": "email"
+                                                        },
+                                                        "role": {
+                                                            "type": "string"
+                                                        },
+                                                        "status": {
+                                                            "type": "string"
+                                                        },
+                                                        "is_first_login": {
+                                                            "type": "boolean"
+                                                        },
+                                                        "profile_completed": {
+                                                            "description": "If false, the frontend should redirect the user to the complete-profile screen (POST /api/profile/complete). Completing it is not mandatory right after login.",
+                                                            "type": "boolean",
+                                                            "example": false
+                                                        }
+                                                    },
                                                     "type": "object"
                                                 },
                                                 "company": {
@@ -1558,6 +1589,34 @@
                                         "type": "string",
                                         "format": "uuid",
                                         "example": "00000000-0000-0000-0000-000000000000"
+                                    },
+                                    "gender": {
+                                        "type": "string",
+                                        "enum": [
+                                            "male",
+                                            "female"
+                                        ],
+                                        "nullable": true
+                                    },
+                                    "marital_status": {
+                                        "type": "string",
+                                        "enum": [
+                                            "single",
+                                            "married",
+                                            "divorced",
+                                            "widowed"
+                                        ],
+                                        "nullable": true
+                                    },
+                                    "nationality": {
+                                        "type": "string",
+                                        "example": "Syrian",
+                                        "nullable": true
+                                    },
+                                    "residence": {
+                                        "type": "string",
+                                        "example": "Damascus, Syria",
+                                        "nullable": true
                                     }
                                 },
                                 "type": "object"
@@ -2132,6 +2191,34 @@
                                     "is_active": {
                                         "type": "boolean",
                                         "example": true
+                                    },
+                                    "gender": {
+                                        "type": "string",
+                                        "enum": [
+                                            "male",
+                                            "female"
+                                        ],
+                                        "nullable": true
+                                    },
+                                    "marital_status": {
+                                        "type": "string",
+                                        "enum": [
+                                            "single",
+                                            "married",
+                                            "divorced",
+                                            "widowed"
+                                        ],
+                                        "nullable": true
+                                    },
+                                    "nationality": {
+                                        "type": "string",
+                                        "example": "Syrian",
+                                        "nullable": true
+                                    },
+                                    "residence": {
+                                        "type": "string",
+                                        "example": "Damascus, Syria",
+                                        "nullable": true
                                     }
                                 },
                                 "type": "object"
@@ -2604,6 +2691,34 @@
                                     "is_active": {
                                         "type": "boolean",
                                         "example": true
+                                    },
+                                    "gender": {
+                                        "type": "string",
+                                        "enum": [
+                                            "male",
+                                            "female"
+                                        ],
+                                        "nullable": true
+                                    },
+                                    "marital_status": {
+                                        "type": "string",
+                                        "enum": [
+                                            "single",
+                                            "married",
+                                            "divorced",
+                                            "widowed"
+                                        ],
+                                        "nullable": true
+                                    },
+                                    "nationality": {
+                                        "type": "string",
+                                        "example": "Syrian",
+                                        "nullable": true
+                                    },
+                                    "residence": {
+                                        "type": "string",
+                                        "example": "Damascus, Syria",
+                                        "nullable": true
                                     }
                                 },
                                 "type": "object"
@@ -2738,6 +2853,32 @@
                                     },
                                     "is_active": {
                                         "type": "boolean"
+                                    },
+                                    "gender": {
+                                        "type": "string",
+                                        "enum": [
+                                            "male",
+                                            "female"
+                                        ],
+                                        "nullable": true
+                                    },
+                                    "marital_status": {
+                                        "type": "string",
+                                        "enum": [
+                                            "single",
+                                            "married",
+                                            "divorced",
+                                            "widowed"
+                                        ],
+                                        "nullable": true
+                                    },
+                                    "nationality": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "residence": {
+                                        "type": "string",
+                                        "nullable": true
                                     }
                                 },
                                 "type": "object"
@@ -5045,6 +5186,34 @@
                                     "is_active": {
                                         "type": "boolean",
                                         "example": true
+                                    },
+                                    "gender": {
+                                        "type": "string",
+                                        "enum": [
+                                            "male",
+                                            "female"
+                                        ],
+                                        "nullable": true
+                                    },
+                                    "marital_status": {
+                                        "type": "string",
+                                        "enum": [
+                                            "single",
+                                            "married",
+                                            "divorced",
+                                            "widowed"
+                                        ],
+                                        "nullable": true
+                                    },
+                                    "nationality": {
+                                        "type": "string",
+                                        "example": "Syrian",
+                                        "nullable": true
+                                    },
+                                    "residence": {
+                                        "type": "string",
+                                        "example": "Damascus, Syria",
+                                        "nullable": true
                                     }
                                 },
                                 "type": "object"
@@ -5222,6 +5391,34 @@
                                     "is_active": {
                                         "type": "boolean",
                                         "example": true
+                                    },
+                                    "gender": {
+                                        "type": "string",
+                                        "enum": [
+                                            "male",
+                                            "female"
+                                        ],
+                                        "nullable": true
+                                    },
+                                    "marital_status": {
+                                        "type": "string",
+                                        "enum": [
+                                            "single",
+                                            "married",
+                                            "divorced",
+                                            "widowed"
+                                        ],
+                                        "nullable": true
+                                    },
+                                    "nationality": {
+                                        "type": "string",
+                                        "example": "Syrian",
+                                        "nullable": true
+                                    },
+                                    "residence": {
+                                        "type": "string",
+                                        "example": "Damascus, Syria",
+                                        "nullable": true
                                     }
                                 },
                                 "type": "object"
@@ -6253,6 +6450,109 @@
                 }
             }
         },
+        "/api/profile/complete": {
+            "post": {
+                "tags": [
+                    "Profile"
+                ],
+                "summary": "Complete the logged-in employee's profile by uploading their documents",
+                "description": "Not mandatory right after first login - the employee can complete this whenever they choose. Stores profile_image, identity_image and (optionally) university_certificate, then marks the user's profile_completed flag as true.",
+                "operationId": "bb46e11804ea472681b0e928aa4fc479",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "required": [
+                                    "profile_image",
+                                    "identity_image"
+                                ],
+                                "properties": {
+                                    "profile_image": {
+                                        "description": "Personal profile picture",
+                                        "type": "string",
+                                        "format": "binary"
+                                    },
+                                    "identity_image": {
+                                        "description": "Photo of the national ID / identity document",
+                                        "type": "string",
+                                        "format": "binary"
+                                    },
+                                    "university_certificate": {
+                                        "description": "University certificate photo/scan (optional)",
+                                        "type": "string",
+                                        "format": "binary"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Profile completed successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Profile completed successfully."
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "profile_completed": {
+                                                    "type": "boolean",
+                                                    "example": true
+                                                },
+                                                "documents": {
+                                                    "properties": {
+                                                        "profile_image_url": {
+                                                            "type": "string",
+                                                            "nullable": true
+                                                        },
+                                                        "identity_image_url": {
+                                                            "type": "string",
+                                                            "nullable": true
+                                                        },
+                                                        "university_certificate_url": {
+                                                            "type": "string",
+                                                            "nullable": true
+                                                        }
+                                                    },
+                                                    "type": "object"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "403": {
+                        "description": "No employee record found for this user"
+                    },
+                    "422": {
+                        "description": "Validation failed"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
         "/api/companies/{company}/advance-policy": {
             "get": {
                 "tags": [
@@ -6936,6 +7236,10 @@
         {
             "name": "Management Overtime",
             "description": "Overtime approval workflow for department managers and HR"
+        },
+        {
+            "name": "Profile",
+            "description": "Employee self-service profile completion (documents upload)"
         },
         {
             "name": "Salary Advance Policies",

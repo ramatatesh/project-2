@@ -66,6 +66,10 @@ class SubscriptionService
                 'role' => Role::GeneralManager->value,
                 'status' => 'active', // أحرف صغيرة ليمر الـ Login بنجاح
                 'is_first_login' => true,
+                'gender' => $data['gender'] ?? null,
+                'marital_status' => $data['marital_status'] ?? null,
+                'nationality' => $data['nationality'] ?? null,
+                'residence' => $data['residence'] ?? null,
             ]);
 
             Department::create([
@@ -231,6 +235,10 @@ class SubscriptionService
                     'role' => Role::GeneralManager->value,
                     'status' => 'active',
                     'is_first_login' => true,
+                    'gender' => filled($metadata['gender'] ?? null) ? $metadata['gender'] : null,
+                    'marital_status' => filled($metadata['marital_status'] ?? null) ? $metadata['marital_status'] : null,
+                    'nationality' => filled($metadata['nationality'] ?? null) ? $metadata['nationality'] : null,
+                    'residence' => filled($metadata['residence'] ?? null) ? $metadata['residence'] : null,
                 ]);
 
                 dispatch(new \App\Jobs\SendRegistrationEmailJob($user->email, $tempPassword));

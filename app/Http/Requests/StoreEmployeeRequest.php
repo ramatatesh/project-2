@@ -35,6 +35,10 @@ class StoreEmployeeRequest extends FormRequest
             'hire_date' => ['required', 'date'],
             'employment_type' => ['sometimes', 'nullable', 'string', 'max:100'],
             'is_active' => ['sometimes', 'boolean'],
+            'gender' => ['sometimes', 'nullable', 'string', 'in:male,female'],
+            'marital_status' => ['sometimes', 'nullable', 'string', 'in:single,married,divorced,widowed'],
+            'nationality' => ['sometimes', 'nullable', 'string', 'max:100'],
+            'residence' => ['sometimes', 'nullable', 'string', 'max:255'],
         ];
     }
 

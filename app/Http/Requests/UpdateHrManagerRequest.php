@@ -39,6 +39,10 @@ class UpdateHrManagerRequest extends FormRequest
             ],
             'education' => ['sometimes', 'string', 'max:255'],
             'is_active' => ['sometimes', 'boolean'],
+            'gender' => ['sometimes', 'nullable', 'string', 'in:male,female'],
+            'marital_status' => ['sometimes', 'nullable', 'string', 'in:single,married,divorced,widowed'],
+            'nationality' => ['sometimes', 'nullable', 'string', 'max:100'],
+            'residence' => ['sometimes', 'nullable', 'string', 'max:255'],
         ];
     }
 

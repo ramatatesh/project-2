@@ -45,6 +45,10 @@ class EmployeeService
                 'status' => 'active',
                 'is_first_login' => true,
                 'phone' => $data['phone'] ?? null,
+                'gender' => $data['gender'] ?? null,
+                'marital_status' => $data['marital_status'] ?? null,
+                'nationality' => $data['nationality'] ?? null,
+                'residence' => $data['residence'] ?? null,
             ]);
 
             $employee = Employee::create([
@@ -80,7 +84,7 @@ class EmployeeService
     {
         return DB::transaction(function () use ($employee, $data) {
             $userUpdates = [];
-            foreach (['full_name', 'email', 'phone'] as $field) {
+            foreach (['full_name', 'email', 'phone', 'gender', 'marital_status', 'nationality', 'residence'] as $field) {
                 if (array_key_exists($field, $data)) {
                     $userUpdates[$field] = $data[$field];
                 }

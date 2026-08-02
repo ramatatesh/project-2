@@ -183,7 +183,7 @@ class AttendanceTest extends TestCase
         $response = $this->postJson('/api/employee/attendance/check-out', ['qr_token' => $this->currentQrToken()]);
 
         $response->assertStatus(422);
-        $response->assertJsonFragment(['message' => 'You have not checked in today.']);
+        $response->assertJsonFragment(['message' => 'You have not checked in today or your attendance is already completed.']);
     }
 
     public function test_check_in_is_rejected_when_outside_gps_radius(): void
