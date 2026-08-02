@@ -3,11 +3,13 @@
 namespace Database\Seeders;
 
 use App\Enums\Role;
+use App\Models\AttendancePolicy;
 use App\Models\Company;
 use App\Models\Department;
 use App\Models\Employee;
 use App\Models\HolidayPolicy;
 use App\Models\LeaveType;
+use App\Models\SalaryRule;
 use App\Models\User;
 use App\Services\LeaveBalanceService;
 use Illuminate\Database\Seeder;
@@ -40,6 +42,32 @@ class TestCompanyTeamSeeder extends Seeder
             'company_id' => $company->id,
             'weekly_holidays' => ['friday'],
         ]);
+
+        AttendancePolicy::create([
+            'id' => Str::uuid()->toString(),
+            'company_id' => $company->id,
+            'work_start_time' => '09:00:00',
+            'work_end_time' => '17:00:00',
+            'minimum_daily_hours' => 8,
+            'allows_overtime' => true,
+            'work_days' => ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday'],
+        ]);
+
+        foreach ([
+            ['rule_type' => 'overtime_hour', 'time_unit' => 'hour', 'value' => 150],
+            ['rule_type' => 'overtime_day', 'time_unit' => 'day', 'value' => 150],
+        ] as $rule) {
+            SalaryRule::create([
+                'id' => Str::uuid()->toString(),
+                'company_id' => $company->id,
+                'rule_type' => $rule['rule_type'],
+                'time_unit' => $rule['time_unit'],
+                'operation' => 'addition',
+                'value_type' => 'percent',
+                'value' => $rule['value'],
+                'is_active' => true,
+            ]);
+        }
 
         $hrDepartment = Department::create([
             'id' => Str::uuid()->toString(),
@@ -160,15 +188,17 @@ class TestCompanyTeamSeeder extends Seeder
         $this->command->info('Company ID      : ' . $company->id);
         $this->command->info('Leave Type ID   : ' . $leaveType->id);
         $this->command->info('Eng. Dept ID    : ' . $engineeringDepartment->id);
-        $this->command->info('Password (all)  : ' . $password);
         $this->command->info('--------------------------------------------------');
         $this->command->info('HR Email        : ' . $hrEmail);
+        $this->command->info('HR Password     : ' . $password);
         $this->command->info('HR Token        : ' . $hrToken);
         $this->command->info('--------------------------------------------------');
         $this->command->info('Manager Email   : ' . $managerEmail);
+        $this->command->info('Manager Password: ' . $password);
         $this->command->info('Manager Token   : ' . $managerToken);
         $this->command->info('--------------------------------------------------');
         $this->command->info('Employee Email  : ' . $employeeEmail);
+        $this->command->info('Employee Password: ' . $password);
         $this->command->info('Employee Token  : ' . $employeeToken);
         $this->command->info('==================================================');
     }

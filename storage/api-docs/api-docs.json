@@ -2283,65 +2283,7 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Paginated employee advance requests",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "success": {
-                                            "type": "boolean",
-                                            "example": true
-                                        },
-                                        "data": {
-                                            "properties": {
-                                                "current_page": {
-                                                    "type": "integer"
-                                                },
-                                                "data": {
-                                                    "type": "array",
-                                                    "items": {
-                                                        "properties": {
-                                                            "id": {
-                                                                "type": "string",
-                                                                "format": "uuid"
-                                                            },
-                                                            "requested_amount": {
-                                                                "type": "number"
-                                                            },
-                                                            "repayment_months": {
-                                                                "type": "integer"
-                                                            },
-                                                            "monthly_installment": {
-                                                                "type": "number"
-                                                            },
-                                                            "status": {
-                                                                "type": "string"
-                                                            },
-                                                            "created_at": {
-                                                                "type": "string",
-                                                                "format": "datetime"
-                                                            }
-                                                        },
-                                                        "type": "object"
-                                                    }
-                                                },
-                                                "last_page": {
-                                                    "type": "integer"
-                                                },
-                                                "per_page": {
-                                                    "type": "integer"
-                                                },
-                                                "total": {
-                                                    "type": "integer"
-                                                }
-                                            },
-                                            "type": "object"
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
+                        "description": "Paginated employee advance requests"
                     },
                     "401": {
                         "description": "Unauthenticated"
@@ -2366,63 +2308,7 @@
                 "operationId": "039d844b1a905c89eb4ac1e76e58dad2",
                 "responses": {
                     "200": {
-                        "description": "Eligibility details",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "success": {
-                                            "type": "boolean",
-                                            "example": true
-                                        },
-                                        "data": {
-                                            "properties": {
-                                                "basic_salary": {
-                                                    "type": "number",
-                                                    "format": "float",
-                                                    "example": 1200
-                                                },
-                                                "max_allowed_amount": {
-                                                    "type": "number",
-                                                    "format": "float",
-                                                    "example": 600
-                                                },
-                                                "has_active_advance": {
-                                                    "type": "boolean",
-                                                    "example": false
-                                                },
-                                                "active_advance_details": {
-                                                    "properties": {
-                                                        "id": {
-                                                            "type": "string",
-                                                            "format": "uuid"
-                                                        },
-                                                        "requested_amount": {
-                                                            "type": "number",
-                                                            "format": "float"
-                                                        },
-                                                        "monthly_installment": {
-                                                            "type": "number",
-                                                            "format": "float"
-                                                        },
-                                                        "repayment_months": {
-                                                            "type": "integer"
-                                                        },
-                                                        "status": {
-                                                            "type": "string"
-                                                        }
-                                                    },
-                                                    "type": "object",
-                                                    "nullable": true
-                                                }
-                                            },
-                                            "type": "object"
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
+                        "description": "Eligibility details"
                     },
                     "401": {
                         "description": "Unauthenticated"
@@ -2477,44 +2363,7 @@
                 },
                 "responses": {
                     "201": {
-                        "description": "Advance request submitted successfully",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "success": {
-                                            "type": "boolean",
-                                            "example": true
-                                        },
-                                        "message": {
-                                            "type": "string"
-                                        },
-                                        "data": {
-                                            "properties": {
-                                                "id": {
-                                                    "type": "string",
-                                                    "format": "uuid"
-                                                },
-                                                "requested_amount": {
-                                                    "type": "number"
-                                                },
-                                                "repayment_months": {
-                                                    "type": "integer"
-                                                },
-                                                "monthly_installment": {
-                                                    "type": "number"
-                                                },
-                                                "status": {
-                                                    "type": "string"
-                                                }
-                                            },
-                                            "type": "object"
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
+                        "description": "Advance request submitted successfully"
                     },
                     "422": {
                         "description": "Validation failed or business rule violation"
@@ -3023,12 +2872,15 @@
                                         "data": {
                                             "properties": {
                                                 "total_allowed_days": {
+                                                    "description": "Paid Free Days Leave Allocation only",
                                                     "type": "integer"
                                                 },
                                                 "total_used_days": {
+                                                    "description": "Paid Free Days Leave Allocation only",
                                                     "type": "integer"
                                                 },
                                                 "remaining_days": {
+                                                    "description": "Paid Free Days Leave Allocation only",
                                                     "type": "integer"
                                                 },
                                                 "balances": {
@@ -3231,6 +3083,123 @@
                     },
                     "422": {
                         "description": "Validation failed or insufficient balance"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/employee/overtime": {
+            "get": {
+                "tags": [
+                    "Employee Overtime"
+                ],
+                "summary": "List the logged-in employee's overtime requests",
+                "operationId": "d296a4527dd0116c0ff744107a77b6c5",
+                "responses": {
+                    "200": {
+                        "description": "Paginated overtime requests"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/employee/overtime/preview": {
+            "get": {
+                "tags": [
+                    "Employee Overtime"
+                ],
+                "summary": "Preview estimated overtime pay from company salary rules",
+                "operationId": "6501223638cf267dca4e2f235b0f28e3",
+                "parameters": [
+                    {
+                        "name": "duration_type",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "hour",
+                                "day"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "units",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Estimated overtime amount"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/employee/overtime/apply": {
+            "post": {
+                "tags": [
+                    "Employee Overtime"
+                ],
+                "summary": "Submit an overtime request",
+                "operationId": "d8c03598725e81af7e1a6a2c4ba7adb8",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "request_date",
+                                    "duration_type",
+                                    "units"
+                                ],
+                                "properties": {
+                                    "request_date": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "2026-08-02"
+                                    },
+                                    "duration_type": {
+                                        "type": "string",
+                                        "enum": [
+                                            "hour",
+                                            "day"
+                                        ]
+                                    },
+                                    "units": {
+                                        "type": "integer",
+                                        "example": 3
+                                    },
+                                    "reason": {
+                                        "type": "string",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Overtime request submitted"
                     }
                 },
                 "security": [
@@ -5458,72 +5427,7 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Paginated advance requests",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "success": {
-                                            "type": "boolean",
-                                            "example": true
-                                        },
-                                        "data": {
-                                            "properties": {
-                                                "current_page": {
-                                                    "type": "integer"
-                                                },
-                                                "data": {
-                                                    "type": "array",
-                                                    "items": {
-                                                        "properties": {
-                                                            "id": {
-                                                                "type": "string",
-                                                                "format": "uuid"
-                                                            },
-                                                            "employee_name": {
-                                                                "type": "string"
-                                                            },
-                                                            "department_name": {
-                                                                "type": "string",
-                                                                "nullable": true
-                                                            },
-                                                            "requested_amount": {
-                                                                "type": "number"
-                                                            },
-                                                            "monthly_installment": {
-                                                                "type": "number"
-                                                            },
-                                                            "repayment_months": {
-                                                                "type": "integer"
-                                                            },
-                                                            "status": {
-                                                                "type": "string"
-                                                            },
-                                                            "created_at": {
-                                                                "type": "string",
-                                                                "format": "datetime"
-                                                            }
-                                                        },
-                                                        "type": "object"
-                                                    }
-                                                },
-                                                "last_page": {
-                                                    "type": "integer"
-                                                },
-                                                "per_page": {
-                                                    "type": "integer"
-                                                },
-                                                "total": {
-                                                    "type": "integer"
-                                                }
-                                            },
-                                            "type": "object"
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
+                        "description": "Paginated advance requests"
                     }
                 },
                 "security": [
@@ -5553,101 +5457,7 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Advance request details",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "success": {
-                                            "type": "boolean",
-                                            "example": true
-                                        },
-                                        "data": {
-                                            "properties": {
-                                                "id": {
-                                                    "type": "string",
-                                                    "format": "uuid"
-                                                },
-                                                "employee": {
-                                                    "properties": {
-                                                        "id": {
-                                                            "type": "string",
-                                                            "format": "uuid"
-                                                        },
-                                                        "full_name": {
-                                                            "type": "string"
-                                                        },
-                                                        "job_title": {
-                                                            "type": "string"
-                                                        },
-                                                        "department_name": {
-                                                            "type": "string",
-                                                            "nullable": true
-                                                        },
-                                                        "basic_salary": {
-                                                            "type": "number"
-                                                        }
-                                                    },
-                                                    "type": "object"
-                                                },
-                                                "requested_amount": {
-                                                    "type": "number"
-                                                },
-                                                "repayment_months": {
-                                                    "type": "integer"
-                                                },
-                                                "monthly_installment": {
-                                                    "type": "number"
-                                                },
-                                                "reason": {
-                                                    "type": "string",
-                                                    "nullable": true
-                                                },
-                                                "status": {
-                                                    "type": "string"
-                                                },
-                                                "approved_by_manager": {
-                                                    "type": "string",
-                                                    "nullable": true
-                                                },
-                                                "approved_by_hr": {
-                                                    "type": "string",
-                                                    "nullable": true
-                                                },
-                                                "created_at": {
-                                                    "type": "string",
-                                                    "format": "datetime"
-                                                },
-                                                "installments": {
-                                                    "type": "array",
-                                                    "items": {
-                                                        "properties": {
-                                                            "id": {
-                                                                "type": "string",
-                                                                "format": "uuid"
-                                                            },
-                                                            "due_date": {
-                                                                "type": "string",
-                                                                "format": "date"
-                                                            },
-                                                            "amount": {
-                                                                "type": "number"
-                                                            },
-                                                            "status": {
-                                                                "type": "string"
-                                                            }
-                                                        },
-                                                        "type": "object"
-                                                    }
-                                                }
-                                            },
-                                            "type": "object"
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
+                        "description": "Advance request details"
                     },
                     "403": {
                         "description": "Access denied"
@@ -5717,41 +5527,58 @@
                 },
                 "responses": {
                     "200": {
-                        "description": "Action executed successfully",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "success": {
-                                            "type": "boolean",
-                                            "example": true
-                                        },
-                                        "message": {
-                                            "type": "string"
-                                        },
-                                        "data": {
-                                            "properties": {
-                                                "id": {
-                                                    "type": "string",
-                                                    "format": "uuid"
-                                                },
-                                                "status": {
-                                                    "type": "string"
-                                                }
-                                            },
-                                            "type": "object"
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
+                        "description": "Action executed successfully"
                     },
                     "403": {
                         "description": "Unauthorized role or company mismatch"
                     },
                     "422": {
                         "description": "Invalid workflow state"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/management/advances/{id}/installments/{installmentId}/pay": {
+            "post": {
+                "tags": [
+                    "Management Advances"
+                ],
+                "summary": "Mark a salary advance installment as paid",
+                "operationId": "c37a4157f90e97e88839ce9db353efec",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    },
+                    {
+                        "name": "installmentId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Installment marked as paid"
+                    },
+                    "403": {
+                        "description": "HR only"
+                    },
+                    "422": {
+                        "description": "Invalid installment state"
                     }
                 },
                 "security": [
@@ -6187,6 +6014,115 @@
                     },
                     "422": {
                         "description": "Invalid workflow state"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/management/overtime": {
+            "get": {
+                "tags": [
+                    "Management Overtime"
+                ],
+                "summary": "List overtime requests awaiting review (manager/HR inbox)",
+                "operationId": "2c28fd5d63c303d054794ae61b492433",
+                "parameters": [
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Paginated overtime requests"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/management/overtime/{id}": {
+            "get": {
+                "tags": [
+                    "Management Overtime"
+                ],
+                "summary": "Get overtime request details",
+                "operationId": "d6d548d381b5e553627d69b96bf7058e",
+                "responses": {
+                    "200": {
+                        "description": "Overtime request details"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/management/overtime/{id}/action": {
+            "post": {
+                "tags": [
+                    "Management Overtime"
+                ],
+                "summary": "Approve or reject an overtime request",
+                "operationId": "60e33fc934e01fef57326f6ef15d37fa",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "action",
+                                    "role_context"
+                                ],
+                                "properties": {
+                                    "action": {
+                                        "type": "string",
+                                        "enum": [
+                                            "approve",
+                                            "reject"
+                                        ]
+                                    },
+                                    "role_context": {
+                                        "type": "string",
+                                        "enum": [
+                                            "manager",
+                                            "hr"
+                                        ]
+                                    },
+                                    "hours_approved": {
+                                        "type": "integer",
+                                        "nullable": true
+                                    },
+                                    "rejection_reason": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "review_notes": {
+                                        "type": "string",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Action executed successfully"
                     }
                 },
                 "security": [
@@ -6909,6 +6845,10 @@
             "description": "Employee leave management endpoints"
         },
         {
+            "name": "Employee Overtime",
+            "description": "Employee overtime (العمل الإضافي) self-service endpoints"
+        },
+        {
             "name": "Evaluation Cycles",
             "description": "Manage evaluation cycles"
         },
@@ -6955,6 +6895,10 @@
         {
             "name": "Management Leaves",
             "description": "Leave request approval workflow for department managers and HR"
+        },
+        {
+            "name": "Management Overtime",
+            "description": "Overtime approval workflow for department managers and HR"
         },
         {
             "name": "Salary Advance Policies",

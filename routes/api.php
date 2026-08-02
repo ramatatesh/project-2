@@ -22,6 +22,8 @@ use App\Http\Controllers\HolidayPolicyController;
 use App\Http\Controllers\ManagementAdvanceController;
 use App\Http\Controllers\ManagementAttendanceController;
 use App\Http\Controllers\ManagementLeaveController;
+use App\Http\Controllers\ManagementOvertimeController;
+use App\Http\Controllers\EmployeeOvertimeController;
 use App\Http\Controllers\HrManagerController;
 use App\Http\Controllers\PaymentWebhookController;
 use App\Http\Controllers\SalaryAdvancePolicyController;
@@ -233,6 +235,20 @@ Route::middleware(['auth:sanctum', 'role:department_manager,hr_manager'])->prefi
     Route::get('/{id}', [ManagementAdvanceController::class, 'show']);
     Route::post('/{id}/action', [ManagementAdvanceController::class, 'action']);
     Route::post('/{id}/installments/{installmentId}/pay', [ManagementAdvanceController::class, 'markInstallmentPaid']);
+});
+
+// Employee self-service: overtime requests.
+Route::middleware(['auth:sanctum', 'role:employee'])->prefix('employee/overtime')->group(function () {
+    Route::get('/', [EmployeeOvertimeController::class, 'index']);
+    Route::get('/preview', [EmployeeOvertimeController::class, 'preview']);
+    Route::post('/apply', [EmployeeOvertimeController::class, 'apply']);
+});
+
+// Management approval workflow for overtime.
+Route::middleware(['auth:sanctum', 'role:department_manager,hr_manager'])->prefix('management/overtime')->group(function () {
+    Route::get('/', [ManagementOvertimeController::class, 'index']);
+    Route::get('/{id}', [ManagementOvertimeController::class, 'show']);
+    Route::post('/{id}/action', [ManagementOvertimeController::class, 'action']);
 });
 
 // Employee self-service: attendance check-in/check-out via rotating QR code + personal dashboard.
