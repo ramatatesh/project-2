@@ -261,7 +261,8 @@ class EvaluationSystemTest extends TestCase
         $this->assertNotNull($score);
         $this->assertEquals(10.0, $score->manager_score);
         $this->assertEquals(8.0, $score->self_score);
-        $this->assertEquals(9.25, $score->final_score);
+        // Hardcoded weights: manager 60 + self 10 (no peer) => (10*60 + 8*10) / 70
+        $this->assertEquals(9.71, $score->final_score);
     }
 
     public function test_closed_cycle_blocks_submission(): void
@@ -297,6 +298,98 @@ class EvaluationSystemTest extends TestCase
             ->assertJsonPath('data.0.assigned_reviews', 2)
             ->assertJsonPath('data.0.completed_reviews', 0)
             ->assertJsonPath('data.0.status', 'Pending');
+    }
+
+    public function test_pending_review_becomes_expired_after_due_date(): void
+    {
+        [$cycle] = $this->createLaunchedCycle();
+
+        $selfReview = EvaluationReview::where('evaluation_cycle_id', $cycle->id)
+            ->where('employee_id', $this->employee->id)
+            ->where('review_type', EvaluationReview::TYPE_SELF)
+            ->first();
+
+        $selfReview->update(['due_date' => now()->subDay()->toDateString()]);
+
+        $expired = app(\App\Services\EvaluationService::class)->expirePendingReviews($cycle->id);
+
+        $this->assertSame(1, $expired);
+        $this->assertSame(
+            EvaluationReview::STATUS_EXPIRED,
+            $selfReview->fresh()->status
+        );
+    }
+
+    public function test_completed_review_is_not_expired_after_due_date(): void
+    {
+        [$cycle, $template] = $this->createLaunchedCycle();
+
+        $selfReview = EvaluationReview::where('evaluation_cycle_id', $cycle->id)
+            ->where('employee_id', $this->employee->id)
+            ->where('review_type', EvaluationReview::TYPE_SELF)
+            ->first();
+
+        $questionIds = $template->questions->pluck('id')->toArray();
+
+        $this->actingAs($this->employeeUser)
+            ->postJson("/api/evaluations/my-reviews/{$selfReview->id}/submit", [
+                'answers' => [
+                    ['question_id' => $questionIds[0], 'rating' => 4],
+                    ['question_id' => $questionIds[1], 'comment' => 'Done'],
+                ],
+            ])
+            ->assertOk();
+
+        $selfReview->update(['due_date' => now()->subDay()->toDateString()]);
+
+        app(\App\Services\EvaluationService::class)->expirePendingReviews($cycle->id);
+
+        $this->assertSame(
+            EvaluationReview::STATUS_COMPLETED,
+            $selfReview->fresh()->status
+        );
+    }
+
+    public function test_expired_review_blocks_submission(): void
+    {
+        [$cycle, $template] = $this->createLaunchedCycle();
+
+        $selfReview = EvaluationReview::where('evaluation_cycle_id', $cycle->id)
+            ->where('employee_id', $this->employee->id)
+            ->where('review_type', EvaluationReview::TYPE_SELF)
+            ->first();
+
+        $selfReview->update(['due_date' => now()->subDay()->toDateString()]);
+
+        $questionId = $template->questions->first()->id;
+
+        $response = $this->actingAs($this->employeeUser)
+            ->postJson("/api/evaluations/my-reviews/{$selfReview->id}/submit", [
+                'answers' => [
+                    ['question_id' => $questionId, 'rating' => 3],
+                ],
+            ]);
+
+        $response->assertStatus(403);
+        $this->assertSame(
+            EvaluationReview::STATUS_EXPIRED,
+            $selfReview->fresh()->status
+        );
+    }
+
+    public function test_my_reviews_can_filter_expired_status(): void
+    {
+        [$cycle] = $this->createLaunchedCycle();
+
+        EvaluationReview::where('evaluation_cycle_id', $cycle->id)
+            ->where('reviewer_id', $this->employeeUser->id)
+            ->update(['due_date' => now()->subDay()->toDateString()]);
+
+        $this->actingAs($this->employeeUser);
+
+        $this->getJson('/api/evaluations/my-reviews?status=expired')
+            ->assertOk()
+            ->assertJsonPath('data.0.status', EvaluationReview::STATUS_EXPIRED);
     }
 
     private function createTemplate(string $name): EvaluationTemplate

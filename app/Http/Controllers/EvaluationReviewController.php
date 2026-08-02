@@ -22,17 +22,19 @@ class EvaluationReviewController extends Controller
     /**
      * @OA\Get(
      *   path="/api/evaluations/my-reviews",
-     *   summary="Get pending/completed reviews assigned to the authenticated user",
+     *   summary="Get pending/completed/expired reviews assigned to the authenticated user",
      *   tags={"My Evaluations"},
      *   security={{"sanctum":{}}},
      *
-     *   @OA\Parameter(name="status", in="query", @OA\Schema(type="string", enum={"pending","completed"})),
+     *   @OA\Parameter(name="status", in="query", @OA\Schema(type="string", enum={"pending","completed","expired"})),
      *
      *   @OA\Response(response=200, description="Reviews retrieved successfully")
      * )
      */
     public function myReviews(Request $request): JsonResponse
 {
+    $this->evaluationService->expirePendingReviews();
+
     $query = EvaluationReview::where('reviewer_id', auth()->id())
         ->with(['cycle.template.questions', 'employee.user', 'employee.department']);
 
@@ -84,6 +86,9 @@ class EvaluationReviewController extends Controller
         if ($review->reviewer_id !== auth()->id()) {
             return response()->json(['success' => false, 'message' => 'This review is not assigned to you.'], 403);
         }
+
+        $this->evaluationService->expireReviewIfPastDue($review);
+        $review->refresh();
 
         return response()->json([
             'success' => true,

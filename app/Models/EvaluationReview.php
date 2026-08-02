@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -45,6 +46,8 @@ class EvaluationReview extends Model
 
     public const STATUS_COMPLETED = 'completed';
 
+    public const STATUS_EXPIRED = 'expired';
+
     public function company(): BelongsTo
     {
         return $this->belongsTo(Company::class);
@@ -68,5 +71,26 @@ class EvaluationReview extends Model
     public function answers(): HasMany
     {
         return $this->hasMany(EvaluationAnswer::class, 'evaluation_review_id');
+    }
+
+    /**
+     * True when the review deadline (due_date, or cycle end_date as fallback)
+     * has fully passed.
+     */
+    public function isPastDue(): bool
+    {
+        $due = $this->due_date;
+
+        if (! $due) {
+            $due = $this->relationLoaded('cycle')
+                ? $this->cycle?->end_date
+                : $this->cycle()->value('end_date');
+        }
+
+        if (! $due) {
+            return false;
+        }
+
+        return Carbon::parse($due)->endOfDay()->isPast();
     }
 }

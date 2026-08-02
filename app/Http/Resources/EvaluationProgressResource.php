@@ -11,6 +11,8 @@ class EvaluationProgressResource extends JsonResource
     {
         $total = (int) ($this->total_reviews ?? 0);
         $completed = (int) ($this->completed_reviews ?? 0);
+        $expired = (int) ($this->expired_reviews ?? 0);
+        $pending = (int) ($this->pending_reviews ?? max(0, $total - $completed - $expired));
         $percentage = $total > 0 ? round(($completed / $total) * 100, 2) : 0;
 
        return [
@@ -33,6 +35,8 @@ class EvaluationProgressResource extends JsonResource
 
            'assigned_reviews' => $total,
            'completed_reviews' => $completed,
+           'expired_reviews' => $expired,
+           'pending_reviews' => $pending,
            'completion_percentage' => $percentage,
 
            'status' => $completed >= $total && $total > 0
