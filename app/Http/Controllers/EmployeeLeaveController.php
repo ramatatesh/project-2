@@ -5,7 +5,8 @@ namespace App\Http\Controllers;
 use App\Http\Requests\EmployeeLeaveRequest;
 use App\Models\LeaveRequest;
 use App\Models\LeaveType;
-use Carbon\Carbon;
+use App\Services\LeaveBalanceService;
+use App\Services\LeaveDurationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -18,6 +19,18 @@ use Illuminate\Support\Str;
  */
 class EmployeeLeaveController extends Controller
 {
+    public function __construct(
+        private readonly LeaveDurationService $leaveDurationService,
+        private readonly LeaveBalanceService $leaveBalanceService,
+    ) {
+    }
+
+    /**
+     * Primary leave type used for the dashboard summary totals
+     * (allowed / used / remaining days shown in the web UI).
+     */
+    private const PRIMARY_LEAVE_TYPE_NAME = 'Paid Free Days Leave Allocation';
+
     /**
      * @OA\Get(
      *   path="/api/employee/leaves/dashboard",
@@ -30,9 +43,9 @@ class EmployeeLeaveController extends Controller
      *     @OA\JsonContent(
      *       @OA\Property(property="success", type="boolean", example=true),
      *       @OA\Property(property="data", type="object",
-     *         @OA\Property(property="total_allowed_days", type="integer"),
-     *         @OA\Property(property="total_used_days", type="integer"),
-     *         @OA\Property(property="remaining_days", type="integer"),
+     *         @OA\Property(property="total_allowed_days", type="integer", description="Paid Free Days Leave Allocation only"),
+     *         @OA\Property(property="total_used_days", type="integer", description="Paid Free Days Leave Allocation only"),
+     *         @OA\Property(property="remaining_days", type="integer", description="Paid Free Days Leave Allocation only"),
      *         @OA\Property(property="balances", type="array",
      *           @OA\Items(
      *             @OA\Property(property="id", type="string", format="uuid"),
@@ -79,25 +92,29 @@ class EmployeeLeaveController extends Controller
 
         $totalAllowed = 0;
         $totalUsed = 0;
+        $primaryMatched = false;
 
-        $balances = $leaveTypes->map(function (LeaveType $leaveType) use ($employee, $year, &$totalAllowed, &$totalUsed) {
-            $used = (float) LeaveRequest::where('employee_id', $employee->id)
-                ->where('leave_type_id', $leaveType->id)
-                ->where('status', 'approved')
-                ->whereYear('start_date', $year)
-                ->sum('requested_value');
+        $balances = $leaveTypes->map(function (LeaveType $leaveType) use ($employee, $year, &$totalAllowed, &$totalUsed, &$primaryMatched) {
+            $balance = $this->leaveBalanceService->syncUsedDays($employee, $leaveType, $year);
 
-            $remaining = max(0, $leaveType->allocation_value - $used);
+            $used = (float) $balance->used_days;
+            $remaining = (float) $balance->remaining_days;
 
-            $totalAllowed += $leaveType->allocation_value;
-            $totalUsed += $used;
+            // Summary totals must reflect Paid Free Days Leave Allocation only —
+            // not the sum of sick/study/travel/maternity/etc. leave types.
+            if ($this->isPrimaryLeaveType($leaveType->name)) {
+                $totalAllowed = (float) $balance->total_days;
+                $totalUsed = $used;
+                $primaryMatched = true;
+            }
 
             return [
                 'id' => $leaveType->id,
                 'name' => $leaveType->name,
-                'allocation_value' => $leaveType->allocation_value,
+                'allocation_value' => (int) $balance->total_days,
                 'used_value' => (int) round($used),
                 'remaining_value' => (int) round($remaining),
+                'is_primary' => $this->isPrimaryLeaveType($leaveType->name),
             ];
         });
 
@@ -111,7 +128,7 @@ class EmployeeLeaveController extends Controller
                     'id' => $leaveRequest->id,
                     'leave_type_name' => $leaveRequest->leaveType?->name,
                     'start_date' => $leaveRequest->start_date?->toDateString(),
-                    'duration_days' => $this->calculateDurationDays($leaveRequest->start_date, $leaveRequest->end_date),
+                    'duration_days' => (int) $leaveRequest->requested_value,
                     'status' => $this->resolveHistoryStatus($leaveRequest),
                 ];
             });
@@ -119,9 +136,9 @@ class EmployeeLeaveController extends Controller
         return response()->json([
             'success' => true,
             'data' => [
-                'total_allowed_days' => (int) $totalAllowed,
-                'total_used_days' => (int) round($totalUsed),
-                'remaining_days' => (int) max(0, round($totalAllowed - $totalUsed)),
+                'total_allowed_days' => $primaryMatched ? (int) $totalAllowed : 0,
+                'total_used_days' => $primaryMatched ? (int) round($totalUsed) : 0,
+                'remaining_days' => $primaryMatched ? (int) max(0, round($totalAllowed - $totalUsed)) : 0,
                 'balances' => $balances,
                 'leave_history' => $leaveHistory,
             ],
@@ -221,17 +238,27 @@ class EmployeeLeaveController extends Controller
             ? $startDate
             : $data['end_date'];
 
-        $durationDays = $this->calculateDurationDays($startDate, $endDate);
+        if ($this->leaveBalanceService->hasOverlappingRequest($employee->id, $startDate, $endDate)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Requested dates overlap with an existing leave request.',
+            ], 422);
+        }
 
-        $used = LeaveRequest::where('employee_id', $employee->id)
-            ->where('leave_type_id', $leaveType->id)
-            ->where('status', 'approved')
-            ->whereYear('start_date', now()->year)
-            ->sum('requested_value');
+        $durationDays = $this->leaveDurationService->calculateWorkingDays($companyId, $startDate, $endDate);
 
-        $remaining = $leaveType->allocation_value - $used;
+        if ($durationDays <= 0) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Requested period contains no working days (weekly holidays / public holidays only).',
+            ], 422);
+        }
 
-        if ($durationDays + $used > $leaveType->allocation_value) {
+        $year = (int) date('Y', strtotime($startDate));
+        $balance = $this->leaveBalanceService->syncUsedDays($employee, $leaveType, $year);
+        $remaining = (float) $balance->remaining_days;
+
+        if ($durationDays > $remaining) {
             return response()->json([
                 'success' => false,
                 'message' => 'Requested duration exceeds remaining leave balance.',
@@ -267,14 +294,6 @@ class EmployeeLeaveController extends Controller
         ], 201);
     }
 
-    private function calculateDurationDays($startDate, $endDate): int
-    {
-        $start = Carbon::parse($startDate)->startOfDay();
-        $end = Carbon::parse($endDate)->startOfDay();
-
-        return (int) $start->diffInDays($end) + 1;
-    }
-
     private function resolveHistoryStatus(LeaveRequest $leaveRequest): string
     {
         if (str_starts_with($leaveRequest->status, 'rejected')) {
@@ -290,5 +309,15 @@ class EmployeeLeaveController extends Controller
         }
 
         return 'pending';
+    }
+
+    private function isPrimaryLeaveType(?string $name): bool
+    {
+        if (! $name) {
+            return false;
+        }
+
+        return strcasecmp(trim($name), self::PRIMARY_LEAVE_TYPE_NAME) === 0
+            || str_contains(mb_strtolower($name), 'paid free days');
     }
 }

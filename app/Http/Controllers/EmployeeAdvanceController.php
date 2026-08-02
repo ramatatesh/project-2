@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\ApplySalaryAdvanceRequest;
 use App\Models\SalaryAdvance;
-use App\Models\SalaryAdvancePolicy;
+use App\Services\SalaryAdvanceService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -17,6 +17,11 @@ use Illuminate\Support\Str;
  */
 class EmployeeAdvanceController extends Controller
 {
+    public function __construct(
+        private readonly SalaryAdvanceService $salaryAdvanceService,
+    ) {
+    }
+
     /**
      * @OA\Get(
      *   path="/api/employee/advances",
@@ -29,29 +34,7 @@ class EmployeeAdvanceController extends Controller
      *     required=false,
      *     @OA\Schema(type="integer", default=15)
      *   ),
-     *   @OA\Response(
-     *     response=200,
-     *     description="Paginated employee advance requests",
-     *     @OA\JsonContent(
-     *       @OA\Property(property="success", type="boolean", example=true),
-     *       @OA\Property(property="data", type="object",
-     *         @OA\Property(property="current_page", type="integer"),
-     *         @OA\Property(property="data", type="array",
-     *           @OA\Items(
-     *             @OA\Property(property="id", type="string", format="uuid"),
-     *             @OA\Property(property="requested_amount", type="number"),
-     *             @OA\Property(property="repayment_months", type="integer"),
-     *             @OA\Property(property="monthly_installment", type="number"),
-     *             @OA\Property(property="status", type="string"),
-     *             @OA\Property(property="created_at", type="string", format="datetime")
-     *           )
-     *         ),
-     *         @OA\Property(property="last_page", type="integer"),
-     *         @OA\Property(property="per_page", type="integer"),
-     *         @OA\Property(property="total", type="integer")
-     *       )
-     *     )
-     *   ),
+     *   @OA\Response(response=200, description="Paginated employee advance requests"),
      *   @OA\Response(response=401, description="Unauthenticated"),
      *   @OA\Response(response=403, description="No employee record found")
      * )
@@ -82,6 +65,7 @@ class EmployeeAdvanceController extends Controller
                     'repayment_months' => $advance->repayment_months,
                     'monthly_installment' => $advance->monthly_installment,
                     'status' => $advance->status,
+                    'rejection_reason' => $advance->rejection_reason,
                     'created_at' => $advance->created_at?->toDateTimeString(),
                 ];
             });
@@ -98,25 +82,7 @@ class EmployeeAdvanceController extends Controller
      *   summary="Check current salary advance eligibility",
      *   tags={"Employee Advances"},
      *   security={{"sanctum":{}}},
-     *   @OA\Response(
-     *     response=200,
-     *     description="Eligibility details",
-     *     @OA\JsonContent(
-     *       @OA\Property(property="success", type="boolean", example=true),
-     *       @OA\Property(property="data", type="object",
-     *         @OA\Property(property="basic_salary", type="number", format="float", example=1200.00),
-     *         @OA\Property(property="max_allowed_amount", type="number", format="float", example=600.00),
-     *         @OA\Property(property="has_active_advance", type="boolean", example=false),
-     *         @OA\Property(property="active_advance_details", type="object", nullable=true,
-     *           @OA\Property(property="id", type="string", format="uuid"),
-     *           @OA\Property(property="requested_amount", type="number", format="float"),
-     *           @OA\Property(property="monthly_installment", type="number", format="float"),
-     *           @OA\Property(property="repayment_months", type="integer"),
-     *           @OA\Property(property="status", type="string")
-     *         )
-     *       )
-     *     )
-     *   ),
+     *   @OA\Response(response=200, description="Eligibility details"),
      *   @OA\Response(response=401, description="Unauthenticated"),
      *   @OA\Response(response=403, description="No employee record found")
      * )
@@ -135,19 +101,15 @@ class EmployeeAdvanceController extends Controller
         }
 
         $basicSalary = (float) $employee->base_salary;
-        $policy = SalaryAdvancePolicy::where('company_id', $companyId)->first();
+        $policy = $this->salaryAdvanceService->policyForCompany($companyId);
+        $maxAllowedAmount = $policy
+            ? $this->salaryAdvanceService->maxAllowedAmount($employee, $policy)
+            : 0.0;
 
-        $maxPercentage = (float) ($policy?->max_advance_percentage ?? 0);
-        $maxAllowedAmount = round($basicSalary * $maxPercentage / 100, 2);
-
-        $activeAdvance = SalaryAdvance::where('employee_id', $employee->id)
-            ->where('company_id', $companyId)
-            ->with('installments')
-            ->get()
-            ->first(fn ($advance) => $advance->isActive());
+        $activeAdvance = $this->salaryAdvanceService->findActiveAdvance($employee->id, $companyId);
+        $hasDepartmentManager = $this->salaryAdvanceService->employeeHasDepartmentManager($employee);
 
         $activeDetails = null;
-
         if ($activeAdvance) {
             $activeDetails = [
                 'id' => $activeAdvance->id,
@@ -163,6 +125,10 @@ class EmployeeAdvanceController extends Controller
             'data' => [
                 'basic_salary' => $basicSalary,
                 'max_allowed_amount' => $maxAllowedAmount,
+                'max_repayment_months' => $policy?->max_repayment_months,
+                'allow_multiple_active_advances' => (bool) ($policy?->allow_multiple_active_advances ?? false),
+                'policy_configured' => $policy !== null,
+                'has_department_manager' => $hasDepartmentManager,
                 'has_active_advance' => $activeAdvance !== null,
                 'active_advance_details' => $activeDetails,
             ],
@@ -184,21 +150,7 @@ class EmployeeAdvanceController extends Controller
      *       @OA\Property(property="reason", type="string", nullable=true, example="Emergency medical expense")
      *     )
      *   ),
-     *   @OA\Response(
-     *     response=201,
-     *     description="Advance request submitted successfully",
-     *     @OA\JsonContent(
-     *       @OA\Property(property="success", type="boolean", example=true),
-     *       @OA\Property(property="message", type="string"),
-     *       @OA\Property(property="data", type="object",
-     *         @OA\Property(property="id", type="string", format="uuid"),
-     *         @OA\Property(property="requested_amount", type="number"),
-     *         @OA\Property(property="repayment_months", type="integer"),
-     *         @OA\Property(property="monthly_installment", type="number"),
-     *         @OA\Property(property="status", type="string")
-     *       )
-     *     )
-     *   ),
+     *   @OA\Response(response=201, description="Advance request submitted successfully"),
      *   @OA\Response(response=422, description="Validation failed or business rule violation"),
      *   @OA\Response(response=401, description="Unauthenticated"),
      *   @OA\Response(response=403, description="No employee record found")
@@ -217,7 +169,21 @@ class EmployeeAdvanceController extends Controller
             ], 403);
         }
 
-        $policy = SalaryAdvancePolicy::where('company_id', $companyId)->first();
+        if (! $employee->is_active) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Inactive employees cannot apply for a salary advance.',
+            ], 422);
+        }
+
+        if (! $this->salaryAdvanceService->employeeHasDepartmentManager($employee)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Cannot apply: your department has no assigned manager.',
+            ], 422);
+        }
+
+        $policy = $this->salaryAdvanceService->policyForCompany($companyId);
 
         if (! $policy) {
             return response()->json([
@@ -226,23 +192,16 @@ class EmployeeAdvanceController extends Controller
             ], 422);
         }
 
-        $basicSalary = (float) $employee->base_salary;
-        $maxAllowedAmount = round($basicSalary * (float) $policy->max_advance_percentage / 100, 2);
+        $maxAllowedAmount = $this->salaryAdvanceService->maxAllowedAmount($employee, $policy);
         $requestedAmount = (float) $request->validated('requested_amount');
 
-        if (! $policy->allow_multiple_active_advances) {
-            $hasActive = SalaryAdvance::where('employee_id', $employee->id)
-                ->where('company_id', $companyId)
-                ->with('installments')
-                ->get()
-                ->contains(fn ($advance) => $advance->isActive());
-
-            if ($hasActive) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'لا يمكنك تقديم طلب سلفة جديد لوجود سلفة نشطة قيد السداد',
-                ], 422);
-            }
+        if (! $policy->allow_multiple_active_advances
+            && $this->salaryAdvanceService->hasActiveAdvance($employee->id, $companyId)
+        ) {
+            return response()->json([
+                'success' => false,
+                'message' => 'لا يمكنك تقديم طلب سلفة جديد لوجود سلفة نشطة قيد السداد',
+            ], 422);
         }
 
         if ($requestedAmount > $maxAllowedAmount) {

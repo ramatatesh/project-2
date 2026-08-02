@@ -6,11 +6,10 @@ use App\Enums\Role;
 use App\Http\Requests\ManagementAdvanceActionRequest;
 use App\Models\SalaryAdvance;
 use App\Models\SalaryAdvanceInstallment;
-use Carbon\Carbon;
+use App\Services\SalaryAdvanceService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 
 /**
  * @OA\Tag(
@@ -20,6 +19,11 @@ use Illuminate\Support\Str;
  */
 class ManagementAdvanceController extends Controller
 {
+    public function __construct(
+        private readonly SalaryAdvanceService $salaryAdvanceService,
+    ) {
+    }
+
     /**
      * @OA\Get(
      *   path="/api/management/advances",
@@ -38,31 +42,7 @@ class ManagementAdvanceController extends Controller
      *     required=false,
      *     @OA\Schema(type="integer", default=15)
      *   ),
-     *   @OA\Response(
-     *     response=200,
-     *     description="Paginated advance requests",
-     *     @OA\JsonContent(
-     *       @OA\Property(property="success", type="boolean", example=true),
-     *       @OA\Property(property="data", type="object",
-     *         @OA\Property(property="current_page", type="integer"),
-     *         @OA\Property(property="data", type="array",
-     *           @OA\Items(
-     *             @OA\Property(property="id", type="string", format="uuid"),
-     *             @OA\Property(property="employee_name", type="string"),
-     *             @OA\Property(property="department_name", type="string", nullable=true),
-     *             @OA\Property(property="requested_amount", type="number"),
-     *             @OA\Property(property="monthly_installment", type="number"),
-     *             @OA\Property(property="repayment_months", type="integer"),
-     *             @OA\Property(property="status", type="string"),
-     *             @OA\Property(property="created_at", type="string", format="datetime")
-     *           )
-     *         ),
-     *         @OA\Property(property="last_page", type="integer"),
-     *         @OA\Property(property="per_page", type="integer"),
-     *         @OA\Property(property="total", type="integer")
-     *       )
-     *     )
-     *   )
+     *   @OA\Response(response=200, description="Paginated advance requests")
      * )
      */
     public function index(Request $request): JsonResponse
@@ -76,6 +56,8 @@ class ManagementAdvanceController extends Controller
             ->where('company_id', $companyId)
             ->with(['employee.user', 'employee.department']);
 
+        $status = $request->input('status');
+
         if ($userRole === Role::DepartmentManager->value) {
             $managedDepartmentIds = DB::table('departments')
                 ->where('manager_id', $employee?->id)
@@ -85,10 +67,16 @@ class ManagementAdvanceController extends Controller
                 $q->whereIn('department_id', $managedDepartmentIds);
             });
 
-            $query->where('status', SalaryAdvance::STATUS_PENDING_DEPARTMENT_MANAGER);
+            // Default inbox: only waiting for this manager.
+            if (! $status) {
+                $query->where('status', SalaryAdvance::STATUS_PENDING_DEPARTMENT_MANAGER);
+            }
+        } elseif ($userRole === Role::HrManager->value) {
+            // Default inbox: only waiting for HR (like leave inbox).
+            if (! $status) {
+                $query->where('status', SalaryAdvance::STATUS_PENDING_HR);
+            }
         }
-
-        $status = $request->input('status');
 
         if ($status) {
             if ($status === 'pending') {
@@ -117,6 +105,7 @@ class ManagementAdvanceController extends Controller
                 'monthly_installment' => $advance->monthly_installment,
                 'repayment_months' => $advance->repayment_months,
                 'status' => $advance->status,
+                'rejection_reason' => $advance->rejection_reason,
                 'created_at' => $advance->created_at?->toDateTimeString(),
             ];
         });
@@ -139,39 +128,7 @@ class ManagementAdvanceController extends Controller
      *     required=true,
      *     @OA\Schema(type="string", format="uuid")
      *   ),
-     *   @OA\Response(
-     *     response=200,
-     *     description="Advance request details",
-     *     @OA\JsonContent(
-     *       @OA\Property(property="success", type="boolean", example=true),
-     *       @OA\Property(property="data", type="object",
-     *         @OA\Property(property="id", type="string", format="uuid"),
-     *         @OA\Property(property="employee", type="object",
-     *           @OA\Property(property="id", type="string", format="uuid"),
-     *           @OA\Property(property="full_name", type="string"),
-     *           @OA\Property(property="job_title", type="string"),
-     *           @OA\Property(property="department_name", type="string", nullable=true),
-     *           @OA\Property(property="basic_salary", type="number")
-     *         ),
-     *         @OA\Property(property="requested_amount", type="number"),
-     *         @OA\Property(property="repayment_months", type="integer"),
-     *         @OA\Property(property="monthly_installment", type="number"),
-     *         @OA\Property(property="reason", type="string", nullable=true),
-     *         @OA\Property(property="status", type="string"),
-     *         @OA\Property(property="approved_by_manager", type="string", nullable=true),
-     *         @OA\Property(property="approved_by_hr", type="string", nullable=true),
-     *         @OA\Property(property="created_at", type="string", format="datetime"),
-     *         @OA\Property(property="installments", type="array",
-     *           @OA\Items(
-     *             @OA\Property(property="id", type="string", format="uuid"),
-     *             @OA\Property(property="due_date", type="string", format="date"),
-     *             @OA\Property(property="amount", type="number"),
-     *             @OA\Property(property="status", type="string")
-     *           )
-     *         )
-     *       )
-     *     )
-     *   ),
+     *   @OA\Response(response=200, description="Advance request details"),
      *   @OA\Response(response=403, description="Access denied"),
      *   @OA\Response(response=404, description="Not found")
      * )
@@ -203,36 +160,9 @@ class ManagementAdvanceController extends Controller
             }
         }
 
-        $data = [
-            'id' => $advance->id,
-            'employee' => [
-                'id' => $advance->employee?->id,
-                'full_name' => $advance->employee?->user?->full_name,
-                'job_title' => $advance->employee?->job_title,
-                'department_name' => $advance->employee?->department?->name,
-                'basic_salary' => $advance->employee?->base_salary,
-            ],
-            'requested_amount' => $advance->requested_amount,
-            'repayment_months' => $advance->repayment_months,
-            'monthly_installment' => $advance->monthly_installment,
-            'reason' => $advance->reason,
-            'status' => $advance->status,
-            'approved_by_manager' => $advance->approvingManager?->user?->full_name,
-            'approved_by_hr' => $advance->approvingHr?->user?->full_name,
-            'created_at' => $advance->created_at?->toDateTimeString(),
-            'installments' => $advance->installments->map(function ($installment) {
-                return [
-                    'id' => $installment->id,
-                    'due_date' => $installment->due_date?->toDateString(),
-                    'amount' => $installment->amount,
-                    'status' => $installment->status,
-                ];
-            }),
-        ];
-
         return response()->json([
             'success' => true,
-            'data' => $data,
+            'data' => $this->serializeAdvanceDetails($advance),
         ]);
     }
 
@@ -257,18 +187,7 @@ class ManagementAdvanceController extends Controller
      *       @OA\Property(property="rejection_reason", type="string", nullable=true)
      *     )
      *   ),
-     *   @OA\Response(
-     *     response=200,
-     *     description="Action executed successfully",
-     *     @OA\JsonContent(
-     *       @OA\Property(property="success", type="boolean", example=true),
-     *       @OA\Property(property="message", type="string"),
-     *       @OA\Property(property="data", type="object",
-     *         @OA\Property(property="id", type="string", format="uuid"),
-     *         @OA\Property(property="status", type="string")
-     *       )
-     *     )
-     *   ),
+     *   @OA\Response(response=200, description="Action executed successfully"),
      *   @OA\Response(response=403, description="Unauthorized role or company mismatch"),
      *   @OA\Response(response=422, description="Invalid workflow state")
      * )
@@ -279,110 +198,247 @@ class ManagementAdvanceController extends Controller
         $companyId = $user?->company_id;
         $employee = $user?->employee;
 
-        $advance = SalaryAdvance::where('id', $id)
-            ->where('company_id', $companyId)
-            ->with(['employee.department', 'installments'])
-            ->firstOrFail();
-
         $roleContext = $request->validated('role_context');
         $action = $request->validated('action');
+        $rejectionReason = $request->validated('rejection_reason');
 
-        if ($roleContext === 'manager') {
-            if ($user?->role !== Role::DepartmentManager->value) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Only department managers can perform manager actions.',
-                ], 403);
-            }
+        try {
+            $result = DB::transaction(function () use ($id, $companyId, $employee, $user, $roleContext, $action, $rejectionReason) {
+                $advance = SalaryAdvance::where('id', $id)
+                    ->where('company_id', $companyId)
+                    ->with(['employee.department', 'installments'])
+                    ->lockForUpdate()
+                    ->firstOrFail();
 
-            if ($advance->status !== SalaryAdvance::STATUS_PENDING_DEPARTMENT_MANAGER) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Advance request is not pending department manager review.',
-                ], 422);
-            }
+                if ($roleContext === 'manager') {
+                    if ($user?->role !== Role::DepartmentManager->value) {
+                        return [
+                            'error' => true,
+                            'status' => 403,
+                            'message' => 'Only department managers can perform manager actions.',
+                        ];
+                    }
 
-            $department = $advance->employee?->department;
+                    if ($advance->status !== SalaryAdvance::STATUS_PENDING_DEPARTMENT_MANAGER) {
+                        return [
+                            'error' => true,
+                            'status' => 422,
+                            'message' => 'Advance request is not pending department manager review.',
+                        ];
+                    }
 
-            if (! $department || $department->manager_id !== $employee?->id) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'You do not manage this employee.',
-                ], 403);
-            }
+                    $department = $advance->employee?->department;
 
-            if ($action === 'approve') {
-                $advance->status = SalaryAdvance::STATUS_PENDING_HR;
-                $advance->approved_by_manager_id = $employee?->id;
-                $message = 'Advance request forwarded to HR.';
-            } else {
-                $advance->status = SalaryAdvance::STATUS_REJECTED_BY_MANAGER;
-                $message = 'Advance request rejected by department manager.';
-            }
-        } elseif ($roleContext === 'hr') {
-            if ($user?->role !== Role::HrManager->value) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Only HR managers can perform HR actions.',
-                ], 403);
-            }
+                    if (! $department || $department->manager_id !== $employee?->id) {
+                        return [
+                            'error' => true,
+                            'status' => 403,
+                            'message' => 'You do not manage this employee.',
+                        ];
+                    }
 
-            if ($advance->status !== SalaryAdvance::STATUS_PENDING_HR) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Advance request is not pending HR review.',
-                ], 422);
-            }
+                    if ($action === 'approve') {
+                        $advance->status = SalaryAdvance::STATUS_PENDING_HR;
+                        $advance->approved_by_manager_id = $employee?->id;
+                        $advance->rejection_reason = null;
+                        $message = 'Advance request forwarded to HR.';
+                    } else {
+                        $advance->status = SalaryAdvance::STATUS_REJECTED_BY_MANAGER;
+                        $advance->rejection_reason = $rejectionReason;
+                        $message = 'Advance request rejected by department manager.';
+                    }
+                } elseif ($roleContext === 'hr') {
+                    if ($user?->role !== Role::HrManager->value) {
+                        return [
+                            'error' => true,
+                            'status' => 403,
+                            'message' => 'Only HR managers can perform HR actions.',
+                        ];
+                    }
 
-            if ($action === 'approve') {
-                $advance->status = SalaryAdvance::STATUS_APPROVED;
-                $advance->approved_by_hr_id = $employee?->id;
-                $message = 'Advance request approved.';
+                    if ($advance->status !== SalaryAdvance::STATUS_PENDING_HR) {
+                        return [
+                            'error' => true,
+                            'status' => 422,
+                            'message' => 'Advance request is not pending HR review.',
+                        ];
+                    }
 
-                if ($advance->installments->isEmpty()) {
-                    $this->generateInstallments($advance);
+                    if ($action === 'approve') {
+                        $validation = $this->salaryAdvanceService->validateForApproval($advance);
+                        if (! $validation['ok']) {
+                            return [
+                                'error' => true,
+                                'status' => 422,
+                                'message' => $validation['message'],
+                                'extra' => array_filter([
+                                    'max_allowed_amount' => $validation['max_allowed_amount'] ?? null,
+                                ]),
+                            ];
+                        }
+
+                        $advance->status = SalaryAdvance::STATUS_APPROVED;
+                        $advance->approved_by_hr_id = $employee?->id;
+                        $advance->rejection_reason = null;
+                        $advance->save();
+
+                        // Always regenerate inside the same transaction to avoid partial schedules.
+                        $this->salaryAdvanceService->regenerateInstallments($advance);
+                        $message = 'Advance request approved.';
+                    } else {
+                        $advance->status = SalaryAdvance::STATUS_REJECTED_BY_HR;
+                        $advance->rejection_reason = $rejectionReason;
+                        $message = 'Advance request rejected by HR.';
+                    }
+                } else {
+                    return [
+                        'error' => true,
+                        'status' => 422,
+                        'message' => 'Invalid role context.',
+                    ];
                 }
-            } else {
-                $advance->status = SalaryAdvance::STATUS_REJECTED_BY_HR;
-                $message = 'Advance request rejected by HR.';
-            }
+
+                $advance->save();
+
+                return [
+                    'error' => false,
+                    'message' => $message,
+                    'advance' => $advance,
+                ];
+            });
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unable to process advance action.',
+            ], 500);
         }
 
-        $advance->save();
+        if ($result['error'] ?? false) {
+            $payload = [
+                'success' => false,
+                'message' => $result['message'],
+            ];
+
+            if (! empty($result['extra'])) {
+                $payload = array_merge($payload, $result['extra']);
+            }
+
+            return response()->json($payload, $result['status'] ?? 422);
+        }
 
         return response()->json([
             'success' => true,
-            'message' => $message,
+            'message' => $result['message'],
             'data' => [
-                'id' => $advance->id,
-                'status' => $advance->status,
+                'id' => $result['advance']->id,
+                'status' => $result['advance']->status,
+                'rejection_reason' => $result['advance']->rejection_reason,
             ],
         ]);
     }
 
-    private function generateInstallments(SalaryAdvance $advance): void
+    /**
+     * @OA\Post(
+     *   path="/api/management/advances/{id}/installments/{installmentId}/pay",
+     *   summary="Mark a salary advance installment as paid",
+     *   tags={"Management Advances"},
+     *   security={{"sanctum":{}}},
+     *   @OA\Parameter(
+     *     name="id",
+     *     in="path",
+     *     required=true,
+     *     @OA\Schema(type="string", format="uuid")
+     *   ),
+     *   @OA\Parameter(
+     *     name="installmentId",
+     *     in="path",
+     *     required=true,
+     *     @OA\Schema(type="string", format="uuid")
+     *   ),
+     *   @OA\Response(response=200, description="Installment marked as paid"),
+     *   @OA\Response(response=403, description="HR only"),
+     *   @OA\Response(response=422, description="Invalid installment state")
+     * )
+     */
+    public function markInstallmentPaid(string $id, string $installmentId): JsonResponse
     {
-        $repaymentMonths = (int) $advance->repayment_months;
-        $baseInstallment = (float) $advance->monthly_installment;
-        $total = (float) $advance->requested_amount;
-        $remaining = $total;
+        $user = auth()->user();
 
-        for ($i = 1; $i <= $repaymentMonths; $i++) {
-            if ($i === $repaymentMonths) {
-                $amount = $remaining;
-            } else {
-                $amount = $baseInstallment;
-            }
-
-            $remaining -= $amount;
-
-            SalaryAdvanceInstallment::create([
-                'id' => Str::uuid()->toString(),
-                'salary_advance_id' => $advance->id,
-                'due_date' => Carbon::now()->addMonthNoOverflow($i)->startOfMonth()->toDateString(),
-                'amount' => round($amount, 2),
-                'status' => 'pending',
-            ]);
+        if ($user?->role !== Role::HrManager->value) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Only HR managers can mark installments as paid.',
+            ], 403);
         }
+
+        $advance = SalaryAdvance::where('id', $id)
+            ->where('company_id', $user->company_id)
+            ->firstOrFail();
+
+        if (! in_array($advance->status, [SalaryAdvance::STATUS_APPROVED, SalaryAdvance::STATUS_PAID_OFF], true)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Only approved advances can receive installment payments.',
+            ], 422);
+        }
+
+        $installment = SalaryAdvanceInstallment::where('id', $installmentId)
+            ->where('salary_advance_id', $advance->id)
+            ->firstOrFail();
+
+        if ($installment->status === SalaryAdvanceInstallment::STATUS_PAID) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Installment is already paid.',
+            ], 422);
+        }
+
+        $updatedAdvance = DB::transaction(function () use ($installment) {
+            return $this->salaryAdvanceService->markInstallmentPaid(
+                SalaryAdvanceInstallment::where('id', $installment->id)->lockForUpdate()->firstOrFail()
+            );
+        });
+
+        return response()->json([
+            'success' => true,
+            'message' => $updatedAdvance->status === SalaryAdvance::STATUS_PAID_OFF
+                ? 'Installment paid. Advance is fully paid off.'
+                : 'Installment marked as paid.',
+            'data' => $this->serializeAdvanceDetails(
+                $updatedAdvance->load(['employee.user', 'employee.department', 'approvingManager.user', 'approvingHr.user'])
+            ),
+        ]);
+    }
+
+    private function serializeAdvanceDetails(SalaryAdvance $advance): array
+    {
+        return [
+            'id' => $advance->id,
+            'employee' => [
+                'id' => $advance->employee?->id,
+                'full_name' => $advance->employee?->user?->full_name,
+                'job_title' => $advance->employee?->job_title,
+                'department_name' => $advance->employee?->department?->name,
+                'basic_salary' => $advance->employee?->base_salary,
+            ],
+            'requested_amount' => $advance->requested_amount,
+            'repayment_months' => $advance->repayment_months,
+            'monthly_installment' => $advance->monthly_installment,
+            'reason' => $advance->reason,
+            'rejection_reason' => $advance->rejection_reason,
+            'status' => $advance->status,
+            'approved_by_manager' => $advance->approvingManager?->user?->full_name,
+            'approved_by_hr' => $advance->approvingHr?->user?->full_name,
+            'created_at' => $advance->created_at?->toDateTimeString(),
+            'installments' => $advance->installments->map(function ($installment) {
+                return [
+                    'id' => $installment->id,
+                    'due_date' => $installment->due_date?->toDateString(),
+                    'amount' => $installment->amount,
+                    'status' => $installment->status,
+                    'paid_at' => $installment->paid_at?->toDateTimeString(),
+                ];
+            })->values(),
+        ];
     }
 }

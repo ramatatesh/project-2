@@ -15,6 +15,7 @@ class LeaveRequest extends Model
         'start_date' => 'date',
         'end_date' => 'date',
         'requested_value' => 'decimal:2',
+        'reviewed_at' => 'datetime',
     ];
 
     public function company(): BelongsTo { return $this->belongsTo(Company::class); }

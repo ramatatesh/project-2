@@ -7,6 +7,7 @@ use App\Http\Requests\AttendanceCheckOutRequest;
 use App\Models\LeaveRequest;
 use App\Models\AttendanceRecord;
 use App\Services\AttendanceService;
+use App\Services\LeaveDurationService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -19,8 +20,10 @@ use Illuminate\Http\Request;
  */
 class AttendanceController extends Controller
 {
-    public function __construct(private readonly AttendanceService $attendanceService)
-    {
+    public function __construct(
+        private readonly AttendanceService $attendanceService,
+        private readonly LeaveDurationService $leaveDurationService,
+    ) {
     }
 
     /**
@@ -187,24 +190,36 @@ class AttendanceController extends Controller
         $absentDays = $records
            ->where('attendance_type', AttendanceRecord::TYPE_ABSENT)
            ->count();
-            return response()->json([
-              'success' => true,
-              'data' => [
-                 'month' => $monthDate->format('Y-m'),
-                 'present_days' => $presentDays,
-                 'absent_days' => $absentDays,
-                 'leave_days' => $leaveDays,
-                 'total_late_minutes' => (int) $records->sum('late_minutes'),
-                 'total_work_hours' => round($records->sum('total_work_minutes') / 60, 2),
-                 'records' => $records->map(fn (AttendanceRecord $record) => $this->mapRecord($record))->values(),
-                ],
-            ]);
 
-            $leaveDays = LeaveRequest::where('employee_id', $employee->id)
-               ->where('status', 'approved')
-               ->whereDate('start_date', '<=', $end->toDateString())
-               ->whereDate('end_date', '>=', $start->toDateString())
-               ->count();
+        $approvedLeaves = LeaveRequest::where('employee_id', $employee->id)
+            ->where('status', 'approved')
+            ->whereDate('start_date', '<=', $end->toDateString())
+            ->whereDate('end_date', '>=', $start->toDateString())
+            ->get(['start_date', 'end_date']);
+
+        $leaveDays = 0;
+        foreach ($approvedLeaves as $leave) {
+            $rangeStart = Carbon::parse($leave->start_date)->max($start);
+            $rangeEnd = Carbon::parse($leave->end_date)->min($end);
+            $leaveDays += $this->leaveDurationService->calculateWorkingDays(
+                $user->company_id,
+                $rangeStart,
+                $rangeEnd,
+            );
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'month' => $monthDate->format('Y-m'),
+                'present_days' => $presentDays,
+                'absent_days' => $absentDays,
+                'leave_days' => $leaveDays,
+                'total_late_minutes' => (int) $records->sum('late_minutes'),
+                'total_work_hours' => round($records->sum('total_work_minutes') / 60, 2),
+                'records' => $records->map(fn (AttendanceRecord $record) => $this->mapRecord($record))->values(),
+            ],
+        ]);
     }
 
     private function mapRecord(AttendanceRecord $record): array

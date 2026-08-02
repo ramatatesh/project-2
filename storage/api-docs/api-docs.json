@@ -1992,6 +1992,277 @@
                 ]
             }
         },
+        "/api/hr/department-managers": {
+            "get": {
+                "tags": [
+                    "Department Managers"
+                ],
+                "summary": "List department managers for the current company",
+                "operationId": "1b956853aa735452085678f19055895e",
+                "responses": {
+                    "200": {
+                        "description": "List of department managers",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Department Managers"
+                ],
+                "summary": "Create a new department manager",
+                "operationId": "dc27e484dc73fa81543854e54984084a",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "full_name",
+                                    "email",
+                                    "department_id",
+                                    "job_title",
+                                    "base_salary",
+                                    "hire_date"
+                                ],
+                                "properties": {
+                                    "full_name": {
+                                        "type": "string",
+                                        "example": "Omar Hassan"
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "example": "omar@company.com"
+                                    },
+                                    "phone": {
+                                        "type": "string",
+                                        "example": "+963999888777"
+                                    },
+                                    "department_id": {
+                                        "type": "string",
+                                        "format": "uuid"
+                                    },
+                                    "employee_code": {
+                                        "type": "string",
+                                        "example": "DM-001"
+                                    },
+                                    "education": {
+                                        "type": "string",
+                                        "example": "Bachelor of Engineering"
+                                    },
+                                    "job_title": {
+                                        "type": "string",
+                                        "example": "Engineering Manager"
+                                    },
+                                    "base_salary": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 1500
+                                    },
+                                    "hire_date": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "2026-01-15"
+                                    },
+                                    "employment_type": {
+                                        "type": "string",
+                                        "example": "full-time"
+                                    },
+                                    "is_active": {
+                                        "type": "boolean",
+                                        "example": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Department manager created successfully"
+                    },
+                    "422": {
+                        "description": "Validation failed"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/hr/department-managers/{department_manager}": {
+            "get": {
+                "tags": [
+                    "Department Managers"
+                ],
+                "summary": "Get department manager details",
+                "operationId": "ccaf17ac5d3d2d12c2d03f0243c410ed",
+                "parameters": [
+                    {
+                        "name": "department_manager",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Department manager details"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "Department Managers"
+                ],
+                "summary": "Update a department manager",
+                "operationId": "e257acdf9ab105efcf515c547399ce6a",
+                "parameters": [
+                    {
+                        "name": "department_manager",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Department manager updated successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Department Managers"
+                ],
+                "summary": "Delete a department manager",
+                "operationId": "694fc7d66464a6d61b7057985b7b6e2d",
+                "parameters": [
+                    {
+                        "name": "department_manager",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Deleted successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/hr/department-managers/{department_manager}/activate": {
+            "post": {
+                "tags": [
+                    "Department Managers"
+                ],
+                "summary": "Activate a department manager account",
+                "operationId": "a1971da0346fcc7e12416fdf666465ef",
+                "parameters": [
+                    {
+                        "name": "department_manager",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Activated successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/hr/department-managers/{department_manager}/deactivate": {
+            "post": {
+                "tags": [
+                    "Department Managers"
+                ],
+                "summary": "Deactivate a department manager account",
+                "operationId": "3da58e105555c69a30da4fcd217bb584",
+                "parameters": [
+                    {
+                        "name": "department_manager",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Deactivated successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
         "/api/employee/advances": {
             "get": {
                 "tags": [
@@ -5781,11 +6052,11 @@
                 "tags": [
                     "Management Leaves"
                 ],
-                "summary": "HR inbox for leave requests awaiting HR decision",
+                "summary": "Inbox of leave requests awaiting the current reviewer's decision",
                 "operationId": "2a47b0ce1da92ef181e81b52024e36e0",
                 "responses": {
                     "200": {
-                        "description": "Pending HR leave requests",
+                        "description": "Pending leave requests for the authenticated manager or HR",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -5805,6 +6076,10 @@
                                                     "employee_name": {
                                                         "type": "string"
                                                     },
+                                                    "department_name": {
+                                                        "type": "string",
+                                                        "nullable": true
+                                                    },
                                                     "leave_type_name": {
                                                         "type": "string"
                                                     },
@@ -5823,6 +6098,9 @@
                                                         "type": "string",
                                                         "nullable": true
                                                     },
+                                                    "status": {
+                                                        "type": "string"
+                                                    },
                                                     "remaining_balance_days": {
                                                         "type": "integer"
                                                     }
@@ -5837,7 +6115,7 @@
                         }
                     },
                     "403": {
-                        "description": "Forbidden (HR only)"
+                        "description": "Forbidden"
                     }
                 },
                 "security": [
@@ -6613,6 +6891,10 @@
         {
             "name": "Departments",
             "description": "إدارة أقسام الشركة الحالية (متاح فقط لمدير الموارد البشرية HR Manager)"
+        },
+        {
+            "name": "Department Managers",
+            "description": "Endpoints for managing department manager accounts within the current company (HR only)"
         },
         {
             "name": "Employee Advances",

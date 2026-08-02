@@ -10,7 +10,10 @@ class SalaryAdvanceInstallment extends Model
 {
     use HasUuids;
 
-    protected $fillable = ['id', 'salary_advance_id', 'due_date', 'amount', 'status'];
+    public const STATUS_PENDING = 'pending';
+    public const STATUS_PAID = 'paid';
+
+    protected $fillable = ['id', 'salary_advance_id', 'due_date', 'amount', 'status', 'paid_at'];
     protected $keyType = 'string';
     public $incrementing = false;
     public $timestamps = false;
@@ -18,6 +21,7 @@ class SalaryAdvanceInstallment extends Model
     protected $casts = [
         'due_date' => 'date',
         'amount' => 'decimal:2',
+        'paid_at' => 'datetime',
     ];
 
     public function salaryAdvance(): BelongsTo

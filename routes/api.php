@@ -7,6 +7,7 @@ use App\Http\Controllers\CompanyPolicyController;
 use App\Http\Controllers\CompanyRegistrationController;
 use App\Http\Controllers\CompanySettingsController;
 use App\Http\Controllers\DepartmentController;
+use App\Http\Controllers\DepartmentManagerController;
 use App\Http\Controllers\EmployeeAdvanceController;
 use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\EmployeeLeaveController;
@@ -154,6 +155,15 @@ Route::middleware(['auth:sanctum', 'role:hr_manager'])->prefix('hr')->group(func
     Route::delete('/employees/{employee}', [EmployeeController::class, 'destroy']);
     Route::post('/employees/import', [EmployeeController::class, 'import']);
 
+    // Department Managers
+    Route::get('/department-managers', [DepartmentManagerController::class, 'index']);
+    Route::post('/department-managers', [DepartmentManagerController::class, 'store']);
+    Route::get('/department-managers/{department_manager}', [DepartmentManagerController::class, 'show']);
+    Route::put('/department-managers/{department_manager}', [DepartmentManagerController::class, 'update']);
+    Route::post('/department-managers/{department_manager}/activate', [DepartmentManagerController::class, 'activate']);
+    Route::post('/department-managers/{department_manager}/deactivate', [DepartmentManagerController::class, 'deactivate']);
+    Route::delete('/department-managers/{department_manager}', [DepartmentManagerController::class, 'destroy']);
+
     // Evaluation Templates & Criteria
     Route::get('/evaluation-templates', [EvaluationTemplateController::class, 'index']);
     Route::post('/evaluation-templates', [EvaluationTemplateController::class, 'store']);
@@ -222,6 +232,7 @@ Route::middleware(['auth:sanctum', 'role:department_manager,hr_manager'])->prefi
     Route::get('/', [ManagementAdvanceController::class, 'index']);
     Route::get('/{id}', [ManagementAdvanceController::class, 'show']);
     Route::post('/{id}/action', [ManagementAdvanceController::class, 'action']);
+    Route::post('/{id}/installments/{installmentId}/pay', [ManagementAdvanceController::class, 'markInstallmentPaid']);
 });
 
 // Employee self-service: attendance check-in/check-out via rotating QR code + personal dashboard.

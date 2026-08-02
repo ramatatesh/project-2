@@ -5,8 +5,9 @@ namespace App\Http\Controllers;
 use App\Enums\Role;
 use App\Http\Requests\ManagementLeaveActionRequest;
 use App\Models\LeaveRequest;
-use Carbon\Carbon;
+use App\Services\LeaveBalanceService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\DB;
 
 /**
  * @OA\Tag(
@@ -16,61 +17,82 @@ use Illuminate\Http\JsonResponse;
  */
 class ManagementLeaveController extends Controller
 {
+    public function __construct(
+        private readonly LeaveBalanceService $leaveBalanceService,
+    ) {
+    }
+
     /**
      * @OA\Get(
      *   path="/api/management/leaves/inbox",
-     *   summary="HR inbox for leave requests awaiting HR decision",
+     *   summary="Inbox of leave requests awaiting the current reviewer's decision",
      *   tags={"Management Leaves"},
      *   security={{"sanctum":{}}},
      *   @OA\Response(
      *     response=200,
-     *     description="Pending HR leave requests",
+     *     description="Pending leave requests for the authenticated manager or HR",
      *     @OA\JsonContent(
      *       @OA\Property(property="success", type="boolean", example=true),
      *       @OA\Property(property="data", type="array",
      *         @OA\Items(
      *           @OA\Property(property="id", type="string", format="uuid"),
      *           @OA\Property(property="employee_name", type="string"),
+     *           @OA\Property(property="department_name", type="string", nullable=true),
      *           @OA\Property(property="leave_type_name", type="string"),
      *           @OA\Property(property="start_date", type="string", format="date"),
      *           @OA\Property(property="end_date", type="string", format="date"),
      *           @OA\Property(property="duration_days", type="integer"),
      *           @OA\Property(property="reason", type="string", nullable=true),
+     *           @OA\Property(property="status", type="string"),
      *           @OA\Property(property="remaining_balance_days", type="integer")
      *         )
      *       )
      *     )
      *   ),
-     *   @OA\Response(response=403, description="Forbidden (HR only)")
+     *   @OA\Response(response=403, description="Forbidden")
      * )
      */
     public function inbox(): JsonResponse
     {
         $user = auth()->user();
+        $companyId = $user?->company_id;
+        $employee = $user?->employee;
+        $role = $user?->role;
 
-        if ($user?->role !== Role::HrManager->value) {
+        $query = LeaveRequest::where('company_id', $companyId)
+            ->with(['employee.user', 'leaveType', 'employee.department']);
+
+        if ($role === Role::DepartmentManager->value) {
+            $managedDepartmentIds = DB::table('departments')
+                ->where('manager_id', $employee?->id)
+                ->pluck('id');
+
+            $query->where('status', 'pending_department_manager')
+                ->whereHas('employee', function ($q) use ($managedDepartmentIds) {
+                    $q->whereIn('department_id', $managedDepartmentIds);
+                });
+        } elseif ($role === Role::HrManager->value) {
+            $query->where('status', 'pending_hr');
+        } else {
             return response()->json([
                 'success' => false,
-                'message' => 'HR access only.',
+                'message' => 'Unauthorized role for leave inbox.',
             ], 403);
         }
 
-        $companyId = $user->company_id;
-
-        $requests = LeaveRequest::where('company_id', $companyId)
-            ->where('status', 'pending_hr')
-            ->with(['employee.user', 'leaveType', 'employee.department'])
-            ->orderByDesc('created_at')
+        $requests = $query->orderByDesc('created_at')
             ->get()
             ->map(function (LeaveRequest $leaveRequest) {
                 return [
                     'id' => $leaveRequest->id,
                     'employee_name' => $leaveRequest->employee?->user?->full_name,
+                    'department_name' => $leaveRequest->employee?->department?->name,
                     'leave_type_name' => $leaveRequest->leaveType?->name,
                     'start_date' => $leaveRequest->start_date?->toDateString(),
                     'end_date' => $leaveRequest->end_date?->toDateString(),
                     'duration_days' => (int) $leaveRequest->requested_value,
                     'reason' => $leaveRequest->reason,
+                    'status' => $leaveRequest->status,
                     'remaining_balance_days' => $this->calculateRemainingBalance($leaveRequest),
                 ];
             });
@@ -117,7 +139,7 @@ class ManagementLeaveController extends Controller
 
         $leaveRequest = LeaveRequest::where('id', $id)
             ->where('company_id', $companyId)
-            ->with('employee.department')
+            ->with(['employee.department', 'leaveType'])
             ->firstOrFail();
 
         $roleContext = $request->validated('role_context');
@@ -171,6 +193,35 @@ class ManagementLeaveController extends Controller
             }
 
             if ($action === 'approve') {
+                $overlap = $this->leaveBalanceService->hasOverlappingRequest(
+                    $leaveRequest->employee_id,
+                    $leaveRequest->start_date->toDateString(),
+                    $leaveRequest->end_date->toDateString(),
+                    $leaveRequest->id,
+                );
+
+                if ($overlap) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Cannot approve: dates overlap with another active leave request.',
+                    ], 422);
+                }
+
+                $year = (int) $leaveRequest->start_date->year;
+                $employee = $leaveRequest->employee;
+                $leaveType = $leaveRequest->leaveType;
+
+                if ($employee && $leaveType) {
+                    $balance = $this->leaveBalanceService->syncUsedDays($employee, $leaveType, $year);
+                    if ((float) $leaveRequest->requested_value > (float) $balance->remaining_days) {
+                        return response()->json([
+                            'success' => false,
+                            'message' => 'Cannot approve: requested duration exceeds remaining leave balance.',
+                            'remaining_balance' => max(0, (float) $balance->remaining_days),
+                        ], 422);
+                    }
+                }
+
                 $leaveRequest->status = 'approved';
                 $message = 'Leave request approved.';
             } else {
@@ -180,7 +231,17 @@ class ManagementLeaveController extends Controller
             }
         }
 
+        $leaveRequest->reviewed_by = $user->id;
+        $leaveRequest->reviewed_at = now();
         $leaveRequest->save();
+
+        if ($leaveRequest->status === 'approved' && $leaveRequest->employee && $leaveRequest->leaveType) {
+            $this->leaveBalanceService->syncUsedDays(
+                $leaveRequest->employee,
+                $leaveRequest->leaveType,
+                (int) $leaveRequest->start_date->year,
+            );
+        }
 
         return response()->json([
             'success' => true,
@@ -188,18 +249,27 @@ class ManagementLeaveController extends Controller
             'data' => [
                 'id' => $leaveRequest->id,
                 'status' => $leaveRequest->status,
+                'reviewed_by' => $leaveRequest->reviewed_by,
+                'reviewed_at' => $leaveRequest->reviewed_at?->toDateTimeString(),
             ],
         ]);
     }
 
     private function calculateRemainingBalance(LeaveRequest $leaveRequest): int
     {
-        $used = LeaveRequest::where('employee_id', $leaveRequest->employee_id)
-            ->where('leave_type_id', $leaveRequest->leave_type_id)
-            ->where('status', 'approved')
-            ->whereYear('start_date', now()->year)
-            ->sum('requested_value');
+        $employee = $leaveRequest->employee;
+        $leaveType = $leaveRequest->leaveType;
 
-        return (int) max(0, ($leaveRequest->leaveType?->allocation_value ?? 0) - $used);
+        if (! $employee || ! $leaveType) {
+            return 0;
+        }
+
+        $year = $leaveRequest->start_date
+            ? (int) $leaveRequest->start_date->year
+            : now()->year;
+
+        $balance = $this->leaveBalanceService->syncUsedDays($employee, $leaveType, $year);
+
+        return (int) max(0, round((float) $balance->remaining_days));
     }
 }

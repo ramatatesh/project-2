@@ -20,6 +20,11 @@ use PhpOffice\PhpSpreadsheet\Shared\Date;
 
 class EmployeeService
 {
+    public function __construct(
+        private readonly LeaveBalanceService $leaveBalanceService,
+    ) {
+    }
+
     /**
      * إنشاء مستخدم + سجل موظف مرتبط بالشركة داخل Transaction واحد.
      * لا يعتمد على أي company_id قادم من الطلب؛ يأخذ الشركة من الـ HR الحالي.
@@ -55,6 +60,8 @@ class EmployeeService
                 'employment_type' => $data['employment_type'] ?? null,
                 'is_active' => $data['is_active'] ?? true,
             ]);
+
+            $this->leaveBalanceService->initializeForEmployee($employee);
 
             $user->setRelation('employee', $employee);
 

@@ -26,6 +26,7 @@ class SalaryAdvance extends Model
         'repayment_months',
         'monthly_installment',
         'reason',
+        'rejection_reason',
         'status',
         'approved_by_manager_id',
         'approved_by_hr_id',
@@ -72,7 +73,7 @@ class SalaryAdvance extends Model
         }
 
         if ($this->status === self::STATUS_APPROVED) {
-            return $this->installments()->where('status', 'pending')->exists();
+            return $this->installments()->where('status', SalaryAdvanceInstallment::STATUS_PENDING)->exists();
         }
 
         return false;

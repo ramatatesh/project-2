@@ -23,6 +23,10 @@ return Application::configure(basePath: dirname(__DIR__))
         // has fully ended before an employee is marked absent, while still keeping
         // attendance data ready the same day for payroll.
         $schedule->command('attendance:mark-absent')->dailyAt('01:00');
+
+        // Annual leave balance renewal: create leave_balances rows for the new year
+        // for every active employee × active leave type (skipped if already present).
+        $schedule->command('leaves:renew-balances')->yearlyOn(1, 1, '00:30');
     })
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->append(\Illuminate\Http\Middleware\HandleCors::class);
