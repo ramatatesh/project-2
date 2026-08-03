@@ -252,6 +252,7 @@ Route::middleware(['auth:sanctum', 'role:department_manager,hr_manager'])->prefi
 // Employee self-service: overtime requests.
 Route::middleware(['auth:sanctum', 'role:employee'])->prefix('employee/overtime')->group(function () {
     Route::get('/', [EmployeeOvertimeController::class, 'index']);
+    Route::get('/rates', [EmployeeOvertimeController::class, 'rates']);
     Route::get('/preview', [EmployeeOvertimeController::class, 'preview']);
     Route::post('/apply', [EmployeeOvertimeController::class, 'apply']);
 });

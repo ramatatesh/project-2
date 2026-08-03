@@ -83,14 +83,30 @@ class OvertimeService
             ];
         }
 
-        $amount = $this->calculateAmount($employee, $rule, $units);
+        $unitAmount = $this->calculateAmount($employee, $rule, 1);
+        $totalAmount = $this->calculateAmount($employee, $rule, $units);
 
         return [
             'ok' => true,
+            'duration_type' => $durationType,
+            'units' => $units,
             'rule_type' => $rule->rule_type,
             'rule_value' => $rule->value,
             'value_type' => $rule->value_type,
-            'estimated_amount' => $amount,
+            'unit_amount' => $unitAmount,
+            'estimated_amount' => $totalAmount,
+        ];
+    }
+
+    public function rates(Employee $employee): array
+    {
+        $hourRule = $this->activeRuleFor($employee->company_id, OvertimeRequest::DURATION_HOUR);
+        $dayRule = $this->activeRuleFor($employee->company_id, OvertimeRequest::DURATION_DAY);
+
+        return [
+            'rate_per_hour' => $hourRule ? $this->calculateAmount($employee, $hourRule, 1) : null,
+            'rate_per_day' => $dayRule ? $this->calculateAmount($employee, $dayRule, 1) : null,
+            'currency' => $employee->company?->payroll_currency ?? 'SYP',
         ];
     }
 

@@ -2162,10 +2162,6 @@
                                         "type": "string",
                                         "format": "uuid"
                                     },
-                                    "employee_code": {
-                                        "type": "string",
-                                        "example": "DM-001"
-                                    },
                                     "education": {
                                         "type": "string",
                                         "example": "Bachelor of Engineering"
@@ -2663,10 +2659,6 @@
                                         "type": "string",
                                         "format": "uuid"
                                     },
-                                    "employee_code": {
-                                        "type": "string",
-                                        "example": "EMP-001"
-                                    },
                                     "education": {
                                         "type": "string",
                                         "example": "BSc"
@@ -2830,10 +2822,6 @@
                                     "department_id": {
                                         "type": "string",
                                         "format": "uuid"
-                                    },
-                                    "employee_code": {
-                                        "type": "string",
-                                        "example": "EMP-002"
                                     },
                                     "education": {
                                         "type": "string"
@@ -3289,6 +3277,57 @@
                 ]
             }
         },
+        "/api/employee/overtime/rates": {
+            "get": {
+                "tags": [
+                    "Employee Overtime"
+                ],
+                "summary": "Show current overtime rates per hour and per day based on company salary rules",
+                "operationId": "6ff6777537ce7ac93c9eb3137db2e1b6",
+                "responses": {
+                    "200": {
+                        "description": "Current overtime rates",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "rate_per_hour": {
+                                                    "type": "number",
+                                                    "format": "float",
+                                                    "nullable": true
+                                                },
+                                                "rate_per_day": {
+                                                    "type": "number",
+                                                    "format": "float",
+                                                    "nullable": true
+                                                },
+                                                "currency": {
+                                                    "type": "string",
+                                                    "example": "SYP"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
         "/api/employee/overtime/preview": {
             "get": {
                 "tags": [
@@ -3378,6 +3417,77 @@
                 "responses": {
                     "201": {
                         "description": "Overtime request submitted"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/employee/salaries": {
+            "get": {
+                "tags": [
+                    "Employee Salaries"
+                ],
+                "summary": "List monthly salary records for the logged-in employee",
+                "operationId": "6e01ceaaef50b8452283d182cb387dc0",
+                "parameters": [
+                    {
+                        "name": "year",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 12
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Salary history with last received salary"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/employee/salaries/{id}": {
+            "get": {
+                "tags": [
+                    "Employee Salaries"
+                ],
+                "summary": "Get detailed payslip for a salary month",
+                "operationId": "ca41db7d1bb06166385d6429004a26e6",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Salary month details"
+                    },
+                    "404": {
+                        "description": "Not found"
                     }
                 },
                 "security": [
@@ -5158,10 +5268,6 @@
                                         "type": "string",
                                         "example": "+963999888777"
                                     },
-                                    "employee_code": {
-                                        "type": "string",
-                                        "example": "HRM-001"
-                                    },
                                     "education": {
                                         "type": "string",
                                         "example": "Bachelor of Business Administration"
@@ -5362,10 +5468,6 @@
                                         "type": "string",
                                         "format": "uuid",
                                         "example": "123e4567-e89b-12d3-a456-426614174000"
-                                    },
-                                    "employee_code": {
-                                        "type": "string",
-                                        "example": "HRM-001"
                                     },
                                     "education": {
                                         "type": "string",
@@ -6358,6 +6460,146 @@
                 "responses": {
                     "200": {
                         "description": "Action executed successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/management/salaries": {
+            "get": {
+                "tags": [
+                    "Management Salaries"
+                ],
+                "summary": "List salary records for the company (HR)",
+                "operationId": "17f09d0f6e885a9ae7ffa2a65fbdaf15",
+                "parameters": [
+                    {
+                        "name": "month",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "year",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "employee_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Paginated salary records"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/management/salaries/{id}": {
+            "get": {
+                "tags": [
+                    "Management Salaries"
+                ],
+                "summary": "Get salary record details (HR)",
+                "operationId": "c77c4f5a8fdeb0dc3980c8cddcc59fac",
+                "responses": {
+                    "200": {
+                        "description": "Salary details"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/management/salaries/generate": {
+            "post": {
+                "tags": [
+                    "Management Salaries"
+                ],
+                "summary": "Generate draft salary records for a month",
+                "operationId": "07fbf783a7c773bce569a5c289262b56",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "month",
+                                    "year"
+                                ],
+                                "properties": {
+                                    "month": {
+                                        "type": "integer",
+                                        "example": 8
+                                    },
+                                    "year": {
+                                        "type": "integer",
+                                        "example": 2026
+                                    },
+                                    "employee_id": {
+                                        "type": "string",
+                                        "format": "uuid",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Draft salaries generated"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/management/salaries/{id}/pay": {
+            "post": {
+                "tags": [
+                    "Management Salaries"
+                ],
+                "summary": "Mark a salary record as paid/received",
+                "operationId": "cbe2fbce9e349feb3795a847fae595f4",
+                "responses": {
+                    "200": {
+                        "description": "Salary marked as paid"
                     }
                 },
                 "security": [
@@ -7380,6 +7622,10 @@
             "description": "Employee overtime (العمل الإضافي) self-service endpoints"
         },
         {
+            "name": "Employee Salaries",
+            "description": "Employee self-service salary history and monthly payslip details"
+        },
+        {
             "name": "Evaluation Cycles",
             "description": "Manage evaluation cycles"
         },
@@ -7430,6 +7676,10 @@
         {
             "name": "Management Overtime",
             "description": "Overtime approval workflow for department managers and HR"
+        },
+        {
+            "name": "Management Salaries",
+            "description": "HR salary generation and payment closing"
         },
         {
             "name": "Profile",
