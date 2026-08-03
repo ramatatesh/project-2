@@ -34,6 +34,8 @@ class EvaluationProgressController extends Controller
     {
         $this->evaluationService->ensureOwnsCompany($cycle, auth()->user()->company_id);
 
+        $this->evaluationService->expirePendingReviews($cycle->id);
+
         $items = $this->evaluationService->getProgressForCycle($cycle);
 
         return response()->json([

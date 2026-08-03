@@ -46,15 +46,12 @@ class UpdateDepartmentManagerRequest extends FormRequest
             'base_salary' => ['sometimes', 'numeric', 'min:0'],
             'hire_date' => ['sometimes', 'date'],
             'employment_type' => ['sometimes', 'nullable', 'string', 'max:100'],
-            'employee_code' => [
-                'sometimes',
-                'nullable',
-                'string',
-                'max:100',
-                Rule::unique('employees', 'employee_code')->ignore(optional($manager?->employee)->id),
-            ],
             'education' => ['sometimes', 'nullable', 'string', 'max:255'],
             'is_active' => ['sometimes', 'boolean'],
+            'gender' => ['sometimes', 'nullable', 'string', 'in:male,female'],
+            'marital_status' => ['sometimes', 'nullable', 'string', 'in:single,married,divorced,widowed'],
+            'nationality' => ['sometimes', 'nullable', 'string', 'max:100'],
+            'residence' => ['sometimes', 'nullable', 'string', 'max:255'],
         ];
     }
 

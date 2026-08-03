@@ -45,6 +45,10 @@ class EmployeeService
                 'status' => 'active',
                 'is_first_login' => true,
                 'phone' => $data['phone'] ?? null,
+                'gender' => $data['gender'] ?? null,
+                'marital_status' => $data['marital_status'] ?? null,
+                'nationality' => $data['nationality'] ?? null,
+                'residence' => $data['residence'] ?? null,
             ]);
 
             $employee = Employee::create([
@@ -52,7 +56,6 @@ class EmployeeService
                 'user_id' => $user->id,
                 'company_id' => $company->id,
                 'department_id' => $data['department_id'],
-                'employee_code' => $data['employee_code'] ?? null,
                 'education' => $data['education'] ?? null,
                 'job_title' => $data['job_title'],
                 'base_salary' => $data['base_salary'],
@@ -80,7 +83,7 @@ class EmployeeService
     {
         return DB::transaction(function () use ($employee, $data) {
             $userUpdates = [];
-            foreach (['full_name', 'email', 'phone'] as $field) {
+            foreach (['full_name', 'email', 'phone', 'gender', 'marital_status', 'nationality', 'residence'] as $field) {
                 if (array_key_exists($field, $data)) {
                     $userUpdates[$field] = $data[$field];
                 }
@@ -93,7 +96,7 @@ class EmployeeService
             }
 
             $employeeUpdates = [];
-            foreach (['department_id', 'employee_code', 'education', 'job_title', 'base_salary', 'hire_date', 'employment_type', 'is_active'] as $field) {
+            foreach (['department_id', 'education', 'job_title', 'base_salary', 'hire_date', 'employment_type', 'is_active'] as $field) {
                 if (array_key_exists($field, $data)) {
                     $employeeUpdates[$field] = $data[$field];
                 }
@@ -187,7 +190,6 @@ class EmployeeService
         $validRows = [];
         $errors = [];
         $usedEmails = [];
-        $usedCodes = [];
 
         foreach ($dataRows as $index => $row) {
             $rowNumber = $index + 2; // 1 = header, data starts at 2
@@ -199,7 +201,7 @@ class EmployeeService
 
             $this->normalizeRowDates($rowAssoc);
 
-            $rowErrors = $this->validateRow($rowAssoc, $company, $departmentsByName, $usedEmails, $usedCodes);
+            $rowErrors = $this->validateRow($rowAssoc, $company, $departmentsByName, $usedEmails);
             if (! empty($rowErrors)) {
                 $errors[$rowNumber] = $rowErrors;
 
@@ -209,9 +211,6 @@ class EmployeeService
             $rowAssoc['department_id'] = $this->resolveDepartmentId($rowAssoc, $departmentsByName);
 
             $usedEmails[] = strtolower(trim((string) $rowAssoc['email']));
-            if (! empty($rowAssoc['employee_code'])) {
-                $usedCodes[] = $rowAssoc['employee_code'];
-            }
 
             $validRows[] = $rowAssoc;
         }
@@ -391,7 +390,7 @@ class EmployeeService
     /**
      * التحقق من صف واحد. يستخدم اسم القسم بدلاً من UUID.
      */
-    protected function validateRow(array $row, Company $company, Collection $departmentsByName, array &$usedEmails, array &$usedCodes): array
+    protected function validateRow(array $row, Company $company, Collection $departmentsByName, array &$usedEmails): array
     {
         $errors = [];
         $email = $row['email'] ?? null;
@@ -433,12 +432,6 @@ class EmployeeService
             }
         } elseif (! self::departmentBelongsToCompany($departmentId, $company->id)) {
             $errors['department_id'] = ['department does not belong to your company.'];
-        }
-
-        if (! empty($row['employee_code'])) {
-            if (Employee::where('employee_code', $row['employee_code'])->exists() || in_array($row['employee_code'], $usedCodes, true)) {
-                $errors['employee_code'] = ['employee_code already exists.'];
-            }
         }
 
         return $errors;

@@ -24,6 +24,10 @@ class CompanyRegistrationRequest extends FormRequest
             'phone' => ['required', 'string', 'max:50'],
             'plan_id' => ['required', 'string', 'exists:subscription_plans,id'],
          //   'payment_status' => ['nullable', 'in:paid,pending'],
+            'gender' => ['sometimes', 'nullable', 'string', 'in:male,female'],
+            'marital_status' => ['sometimes', 'nullable', 'string', 'in:single,married,divorced,widowed'],
+            'nationality' => ['sometimes', 'nullable', 'string', 'max:100'],
+            'residence' => ['sometimes', 'nullable', 'string', 'max:255'],
         ];
     }
 

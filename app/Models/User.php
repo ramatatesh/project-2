@@ -28,6 +28,11 @@ class User extends Authenticatable
         'status',
         'is_first_login',
         'phone',
+        'gender',
+        'marital_status',
+        'nationality',
+        'residence',
+        'profile_completed',
     ];
 
     protected $hidden = [
@@ -40,6 +45,7 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'is_first_login' => 'boolean',
+            'profile_completed' => 'boolean',
         ];
     }
 

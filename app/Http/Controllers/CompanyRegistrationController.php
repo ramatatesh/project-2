@@ -25,6 +25,10 @@ class CompanyRegistrationController extends Controller
      *       @OA\Property(property="contact_name", type="string", example="Ahmad"),
      *       @OA\Property(property="phone", type="string", example="+963999999999"),
      *       @OA\Property(property="plan_id", type="string", format="uuid", example="00000000-0000-0000-0000-000000000000"),
+     *       @OA\Property(property="gender", type="string", enum={"male","female"}, nullable=true),
+     *       @OA\Property(property="marital_status", type="string", enum={"single","married","divorced","widowed"}, nullable=true),
+     *       @OA\Property(property="nationality", type="string", nullable=true, example="Syrian"),
+     *       @OA\Property(property="residence", type="string", nullable=true, example="Damascus, Syria"),
      *     )
      *   ),
      *   @OA\Response(response=201, description="Free plan: company registered successfully, credentials emailed"),

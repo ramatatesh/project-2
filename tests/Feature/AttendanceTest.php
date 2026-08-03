@@ -79,7 +79,6 @@ class AttendanceTest extends TestCase
             'user_id' => $this->employeeUser->id,
             'company_id' => $this->company->id,
             'department_id' => $this->department->id,
-            'employee_code' => 'EMP-ATT-1',
             'job_title' => 'Developer',
             'base_salary' => 1000,
             'hire_date' => '2022-01-01',
@@ -183,7 +182,7 @@ class AttendanceTest extends TestCase
         $response = $this->postJson('/api/employee/attendance/check-out', ['qr_token' => $this->currentQrToken()]);
 
         $response->assertStatus(422);
-        $response->assertJsonFragment(['message' => 'You have not checked in today.']);
+        $response->assertJsonFragment(['message' => 'You have not checked in today or your attendance is already completed.']);
     }
 
     public function test_check_in_is_rejected_when_outside_gps_radius(): void
@@ -313,7 +312,6 @@ class AttendanceTest extends TestCase
             'user_id' => $employeeOnLeaveUser->id,
             'company_id' => $this->company->id,
             'department_id' => $this->department->id,
-            'employee_code' => 'EMP-ATT-2',
             'job_title' => 'Developer',
             'base_salary' => 1000,
             'hire_date' => '2022-01-01',
@@ -393,7 +391,6 @@ class AttendanceTest extends TestCase
             'user_id' => $managerUser->id,
             'company_id' => $this->company->id,
             'department_id' => $otherDepartment->id,
-            'employee_code' => 'EMP-MGR',
             'job_title' => 'Sales Manager',
             'base_salary' => 2000,
             'hire_date' => '2020-01-01',

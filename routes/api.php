@@ -28,6 +28,7 @@ use App\Http\Controllers\EmployeeSalaryController;
 use App\Http\Controllers\HrManagerController;
 use App\Http\Controllers\ManagementSalaryController;
 use App\Http\Controllers\PaymentWebhookController;
+use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SalaryAdvancePolicyController;
 use App\Http\Controllers\SubscriptionPlanController;
 use Illuminate\Support\Facades\Route;
@@ -36,11 +37,20 @@ Route::middleware('guest')->prefix('auth')->group(function () {
     Route::post('/login', [AuthController::class, 'login'])->name('auth.login')->middleware('throttle:5,1');
     Route::post('/forgot-password', [AuthController::class, 'forgotPassword'])->name('auth.forgot-password')->middleware('throttle:3,1');
     Route::post('/verify-otp',[AuthController::class,'verifyOtp']);
+    Route::post('/resend-otp', [AuthController::class, 'resendOtp']);
     Route::post('/reset-password', [AuthController::class, 'resetPassword'])->name('auth.reset-password');
 });
 
 Route::middleware('auth:sanctum')->prefix('auth')->group(function () {
     Route::post('/complete-first-login', [AuthController::class, 'completeFirstLogin'])->name('auth.complete-first-login');
+});
+
+// Profile: view / update / documents upload.
+// Available to any authenticated user. Employee-only fields/files require an employee record.
+Route::middleware('auth:sanctum')->prefix('profile')->group(function () {
+    Route::get('/', [ProfileController::class, 'show'])->name('profile.show');
+    Route::put('/', [ProfileController::class, 'update'])->name('profile.update');
+    Route::post('/documents', [ProfileController::class, 'uploadDocuments'])->name('profile.documents');
 });
 
 // Public self-registration for tenant companies (rate-limited).

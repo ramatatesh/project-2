@@ -75,6 +75,10 @@ class StripeService
                 'contact_name' => (string) ($registrationData['contact_name'] ?? $registrationData['name']),
                 'phone' => (string) $registrationData['phone'],
                 'payroll_currency' => (string) ($registrationData['payroll_currency'] ?? 'SYP'),
+                'gender' => (string) ($registrationData['gender'] ?? ''),
+                'marital_status' => (string) ($registrationData['marital_status'] ?? ''),
+                'nationality' => (string) ($registrationData['nationality'] ?? ''),
+                'residence' => (string) ($registrationData['residence'] ?? ''),
             ],
         ]);
     }

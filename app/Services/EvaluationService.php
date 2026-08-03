@@ -193,6 +193,17 @@ class EvaluationService
             throw new RuntimeException('Evaluation cycle is closed. Submissions are not allowed.');
         }
 
+        $this->expireReviewIfPastDue($review);
+        $review->refresh();
+
+        if ($review->status === EvaluationReview::STATUS_EXPIRED) {
+            throw new RuntimeException('This evaluation review has expired. Submissions are not allowed.');
+        }
+
+        if ($review->status !== EvaluationReview::STATUS_PENDING) {
+            throw new RuntimeException('Only pending evaluation reviews can be submitted.');
+        }
+
         $allowedQuestionIds = $review->cycle->template->questions->pluck('id')->toArray();
         $now = now();
 
@@ -219,6 +230,55 @@ class EvaluationService
             'status' => EvaluationReview::STATUS_COMPLETED,
             'submitted_at' => $now,
         ]);
+    }
+
+    /**
+     * Mark pending reviews as expired when their due_date (or cycle end_date) has passed.
+     * Completed reviews are never changed.
+     *
+     * @return int Number of reviews that were expired
+     */
+    public function expirePendingReviews(?string $cycleId = null): int
+    {
+        $query = EvaluationReview::query()
+            ->where('status', EvaluationReview::STATUS_PENDING)
+            ->with('cycle');
+
+        if ($cycleId) {
+            $query->where('evaluation_cycle_id', $cycleId);
+        }
+
+        $expiredCount = 0;
+
+        $query->orderBy('id')->chunkById(100, function ($reviews) use (&$expiredCount) {
+            foreach ($reviews as $review) {
+                if ($this->expireReviewIfPastDue($review)) {
+                    $expiredCount++;
+                }
+            }
+        });
+
+        return $expiredCount;
+    }
+
+    /**
+     * Expire a single pending review if its deadline has passed.
+     *
+     * @return bool True when the review was transitioned to expired
+     */
+    public function expireReviewIfPastDue(EvaluationReview $review): bool
+    {
+        if ($review->status !== EvaluationReview::STATUS_PENDING) {
+            return false;
+        }
+
+        if (! $review->isPastDue()) {
+            return false;
+        }
+
+        $review->update(['status' => EvaluationReview::STATUS_EXPIRED]);
+
+        return true;
     }
 
     public function scoreReview(EvaluationReview $review, array $scoresData): void
@@ -316,6 +376,14 @@ class EvaluationService
                 $employee->completed_reviews = $cycle->reviews()
                     ->where('employee_id', $employee->id)
                     ->where('status', EvaluationReview::STATUS_COMPLETED)
+                    ->count();
+                $employee->expired_reviews = $cycle->reviews()
+                    ->where('employee_id', $employee->id)
+                    ->where('status', EvaluationReview::STATUS_EXPIRED)
+                    ->count();
+                $employee->pending_reviews = $cycle->reviews()
+                    ->where('employee_id', $employee->id)
+                    ->where('status', EvaluationReview::STATUS_PENDING)
                     ->count();
 
                 return $employee;

@@ -27,6 +27,10 @@ return Application::configure(basePath: dirname(__DIR__))
         // Annual leave balance renewal: create leave_balances rows for the new year
         // for every active employee × active leave type (skipped if already present).
         $schedule->command('leaves:renew-balances')->yearlyOn(1, 1, '00:30');
+
+        // Expire pending evaluation reviews whose due_date (end of day) has passed.
+        // Hourly so status flips soon after the deadline without waiting until next midnight.
+        $schedule->command('evaluations:expire-pending-reviews')->hourly();
     })
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->append(\Illuminate\Http\Middleware\HandleCors::class);

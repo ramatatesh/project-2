@@ -76,13 +76,16 @@ class DepartmentManagerController extends Controller
      *       @OA\Property(property="email", type="string", format="email", example="omar@company.com"),
      *       @OA\Property(property="phone", type="string", example="+963999888777"),
      *       @OA\Property(property="department_id", type="string", format="uuid"),
-     *       @OA\Property(property="employee_code", type="string", example="DM-001"),
      *       @OA\Property(property="education", type="string", example="Bachelor of Engineering"),
      *       @OA\Property(property="job_title", type="string", example="Engineering Manager"),
      *       @OA\Property(property="base_salary", type="number", format="float", example=1500),
      *       @OA\Property(property="hire_date", type="string", format="date", example="2026-01-15"),
      *       @OA\Property(property="employment_type", type="string", example="full-time"),
-     *       @OA\Property(property="is_active", type="boolean", example=true)
+     *       @OA\Property(property="is_active", type="boolean", example=true),
+     *       @OA\Property(property="gender", type="string", enum={"male","female"}, nullable=true),
+     *       @OA\Property(property="marital_status", type="string", enum={"single","married","divorced","widowed"}, nullable=true),
+     *       @OA\Property(property="nationality", type="string", nullable=true, example="Syrian"),
+     *       @OA\Property(property="residence", type="string", nullable=true, example="Damascus, Syria")
      *     )
      *   ),
      *   @OA\Response(response=201, description="Department manager created successfully"),
@@ -111,6 +114,10 @@ class DepartmentManagerController extends Controller
                     'status' => ($data['is_active'] ?? true) ? 'active' : 'inactive',
                     'is_first_login' => true,
                     'phone' => $data['phone'] ?? null,
+                    'gender' => $data['gender'] ?? null,
+                    'marital_status' => $data['marital_status'] ?? null,
+                    'nationality' => $data['nationality'] ?? null,
+                    'residence' => $data['residence'] ?? null,
                 ]);
 
                 $employee = Employee::create([
@@ -118,7 +125,6 @@ class DepartmentManagerController extends Controller
                     'user_id' => $user->id,
                     'company_id' => $companyId,
                     'department_id' => $department->id,
-                    'employee_code' => $data['employee_code'] ?? null,
                     'education' => $data['education'] ?? null,
                     'job_title' => $data['job_title'],
                     'base_salary' => $data['base_salary'],
@@ -215,6 +221,11 @@ class DepartmentManagerController extends Controller
                 if (array_key_exists('phone', $data)) {
                     $userUpdates['phone'] = $data['phone'];
                 }
+                foreach (['gender', 'marital_status', 'nationality', 'residence'] as $field) {
+                    if (array_key_exists($field, $data)) {
+                        $userUpdates[$field] = $data[$field];
+                    }
+                }
                 if (isset($data['is_active'])) {
                     $userUpdates['status'] = $data['is_active'] ? 'active' : 'inactive';
                 }
@@ -231,7 +242,7 @@ class DepartmentManagerController extends Controller
                 }
 
                 $employeeUpdates = [];
-                foreach (['employee_code', 'education', 'job_title', 'base_salary', 'hire_date', 'employment_type', 'is_active'] as $field) {
+                foreach (['education', 'job_title', 'base_salary', 'hire_date', 'employment_type', 'is_active'] as $field) {
                     if (array_key_exists($field, $data)) {
                         $employeeUpdates[$field] = $data[$field];
                     }
@@ -421,12 +432,16 @@ class DepartmentManagerController extends Controller
             'phone' => $manager->phone,
             'status' => $manager->status,
             'is_first_login' => $manager->is_first_login,
+            'profile_completed' => $manager->profile_completed,
+            'gender' => $manager->gender,
+            'marital_status' => $manager->marital_status,
+            'nationality' => $manager->nationality,
+            'residence' => $manager->residence,
             'role' => $manager->role,
             'employee' => $manager->employee ? [
                 'id' => $manager->employee->id,
                 'department_id' => $manager->employee->department_id,
                 'department_name' => $manager->employee->department?->name,
-                'employee_code' => $manager->employee->employee_code,
                 'education' => $manager->employee->education,
                 'job_title' => $manager->employee->job_title,
                 'base_salary' => $manager->employee->base_salary,
