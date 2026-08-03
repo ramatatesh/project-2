@@ -43,6 +43,7 @@ class OvertimeRequest extends Model
         'request_date' => 'date',
         'dept_approved_at' => 'datetime',
         'hr_registered_at' => 'datetime',
+        'created_at' => 'datetime',
         'calculated_amount' => 'decimal:2',
         'hours_requested' => 'integer',
         'hours_approved' => 'integer',

@@ -9,6 +9,7 @@ use App\Models\Department;
 use App\Models\Employee;
 use App\Models\HolidayPolicy;
 use App\Models\LeaveType;
+use App\Models\SalaryRecord;
 use App\Models\SalaryRule;
 use App\Models\User;
 use App\Services\LeaveBalanceService;
@@ -177,6 +178,49 @@ class TestCompanyTeamSeeder extends Seeder
             'is_active' => true,
         ]);
         $leaveBalanceService->initializeForEmployee($employee);
+
+        // Sample payslips so employee salary history can be tested immediately.
+        $lastMonth = now()->subMonth();
+        SalaryRecord::create([
+            'id' => Str::uuid()->toString(),
+            'company_id' => $company->id,
+            'employee_id' => $employee->id,
+            'month' => (int) $lastMonth->month,
+            'year' => (int) $lastMonth->year,
+            'base_salary' => 1200.00,
+            'overtime_amount' => 75.00,
+            'bonus_amount' => 0,
+            'late_deduction' => 20.00,
+            'absent_deduction' => 0,
+            'loan_deduction' => 0,
+            'manual_bonus' => 0,
+            'manual_deduction' => 0,
+            'net_salary' => 1255.00,
+            'status' => SalaryRecord::STATUS_PAID,
+            'closed_by' => $hrUser->id,
+            'closed_at' => $lastMonth->copy()->endOfMonth(),
+        ]);
+
+        $twoMonthsAgo = now()->subMonths(2);
+        SalaryRecord::create([
+            'id' => Str::uuid()->toString(),
+            'company_id' => $company->id,
+            'employee_id' => $employee->id,
+            'month' => (int) $twoMonthsAgo->month,
+            'year' => (int) $twoMonthsAgo->year,
+            'base_salary' => 1200.00,
+            'overtime_amount' => 0,
+            'bonus_amount' => 100.00,
+            'late_deduction' => 0,
+            'absent_deduction' => 0,
+            'loan_deduction' => 50.00,
+            'manual_bonus' => 0,
+            'manual_deduction' => 0,
+            'net_salary' => 1250.00,
+            'status' => SalaryRecord::STATUS_PAID,
+            'closed_by' => $hrUser->id,
+            'closed_at' => $twoMonthsAgo->copy()->endOfMonth(),
+        ]);
 
         $hrToken = $hrUser->createToken('test-hr-token')->plainTextToken;
         $managerToken = $managerUser->createToken('test-manager-token')->plainTextToken;

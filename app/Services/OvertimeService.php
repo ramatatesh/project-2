@@ -12,6 +12,10 @@ use Illuminate\Support\Str;
 
 class OvertimeService
 {
+    public function __construct(
+        private readonly SalaryService $salaryService,
+    ) {
+    }
     public function allowsOvertime(string $companyId): bool
     {
         $policy = AttendancePolicy::where('company_id', $companyId)->first();
@@ -124,35 +128,20 @@ class OvertimeService
                 'manual_bonus' => 0,
                 'manual_deduction' => 0,
                 'net_salary' => $base + $amount,
-                'status' => 'draft',
+                'status' => SalaryRecord::STATUS_DRAFT,
             ]);
 
             return $record;
         }
 
-        if ($record->status === 'closed') {
+        if ($this->salaryService->isPaid($record)) {
             throw new \RuntimeException('Cannot apply overtime to a closed salary record for this month.');
         }
 
         $record->overtime_amount = round((float) $record->overtime_amount + $amount, 2);
-        $record->net_salary = $this->recalculateNet($record);
+        $record->net_salary = $this->salaryService->recalculateNet($record);
         $record->save();
 
         return $record;
-    }
-
-    public function recalculateNet(SalaryRecord $record): float
-    {
-        return round(
-            (float) $record->base_salary
-            + (float) $record->overtime_amount
-            + (float) $record->bonus_amount
-            + (float) $record->manual_bonus
-            - (float) $record->late_deduction
-            - (float) $record->absent_deduction
-            - (float) $record->loan_deduction
-            - (float) $record->manual_deduction,
-            2
-        );
     }
 }

@@ -24,7 +24,9 @@ use App\Http\Controllers\ManagementAttendanceController;
 use App\Http\Controllers\ManagementLeaveController;
 use App\Http\Controllers\ManagementOvertimeController;
 use App\Http\Controllers\EmployeeOvertimeController;
+use App\Http\Controllers\EmployeeSalaryController;
 use App\Http\Controllers\HrManagerController;
+use App\Http\Controllers\ManagementSalaryController;
 use App\Http\Controllers\PaymentWebhookController;
 use App\Http\Controllers\SalaryAdvancePolicyController;
 use App\Http\Controllers\SubscriptionPlanController;
@@ -249,6 +251,20 @@ Route::middleware(['auth:sanctum', 'role:department_manager,hr_manager'])->prefi
     Route::get('/', [ManagementOvertimeController::class, 'index']);
     Route::get('/{id}', [ManagementOvertimeController::class, 'show']);
     Route::post('/{id}/action', [ManagementOvertimeController::class, 'action']);
+});
+
+// Employee self-service: salary history / payslips.
+Route::middleware(['auth:sanctum', 'role:employee'])->prefix('employee/salaries')->group(function () {
+    Route::get('/', [EmployeeSalaryController::class, 'index']);
+    Route::get('/{id}', [EmployeeSalaryController::class, 'show']);
+});
+
+// HR salary generation and payment closing.
+Route::middleware(['auth:sanctum', 'role:hr_manager'])->prefix('management/salaries')->group(function () {
+    Route::get('/', [ManagementSalaryController::class, 'index']);
+    Route::post('/generate', [ManagementSalaryController::class, 'generate']);
+    Route::get('/{id}', [ManagementSalaryController::class, 'show']);
+    Route::post('/{id}/pay', [ManagementSalaryController::class, 'pay']);
 });
 
 // Employee self-service: attendance check-in/check-out via rotating QR code + personal dashboard.
