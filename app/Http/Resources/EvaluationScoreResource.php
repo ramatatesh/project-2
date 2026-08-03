@@ -15,7 +15,6 @@ class EvaluationScoreResource extends JsonResource
             'employee_id' => $this->employee_id,
             'employee' => $this->whenLoaded('employee', fn () => [
                 'id' => $this->employee->id,
-                'employee_code' => $this->employee->employee_code,
                 'full_name' => $this->employee->user?->full_name,
                 'job_title' => $this->employee->job_title,
             ]),

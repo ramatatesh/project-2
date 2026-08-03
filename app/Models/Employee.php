@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Employee extends Model
 {
-    protected $fillable = ['id', 'user_id', 'company_id', 'department_id', 'employee_code', 'education', 'job_title', 'base_salary', 'hire_date', 'employment_type', 'is_active'];
+    protected $fillable = ['id', 'user_id', 'company_id', 'department_id', 'education', 'job_title', 'base_salary', 'hire_date', 'employment_type', 'is_active'];
 
     protected $keyType = 'string';
 

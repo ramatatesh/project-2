@@ -23,7 +23,6 @@ class EvaluationReviewResource extends JsonResource
             'created_at' => $this->created_at,
             'employee' => $this->whenLoaded('employee', fn () => [
                 'id' => $this->employee->id,
-                'employee_code' => $this->employee->employee_code,
                 'job_title' => $this->employee->job_title,
                 'user' => $this->employee->user ? [
                     'id' => $this->employee->user->id,

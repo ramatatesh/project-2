@@ -61,7 +61,6 @@ class ProfileCompletionTest extends TestCase
             'user_id' => $this->employeeUser->id,
             'company_id' => $this->company->id,
             'department_id' => $department->id,
-            'employee_code' => 'EMP-PROFILE-1',
             'job_title' => 'Developer',
             'base_salary' => 1000,
             'hire_date' => '2022-01-01',

@@ -28,7 +28,6 @@ class StoreEmployeeRequest extends FormRequest
                     $fail('The selected department does not belong to your company.');
                 }
             }],
-            'employee_code' => ['sometimes', 'nullable', 'string', 'max:100', Rule::unique('employees', 'employee_code')],
             'education' => ['sometimes', 'nullable', 'string', 'max:255'],
             'job_title' => ['required', 'string', 'max:255'],
             'base_salary' => ['required', 'numeric', 'min:0'],

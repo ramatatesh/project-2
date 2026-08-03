@@ -30,7 +30,6 @@ class UpdateEmployeeRequest extends FormRequest
                     $fail('The selected department does not belong to your company.');
                 }
             }],
-            'employee_code' => ['sometimes', 'nullable', 'string', 'max:100', Rule::unique('employees', 'employee_code')->ignore($employee?->id, 'id')],
             'education' => ['sometimes', 'nullable', 'string', 'max:255'],
             'job_title' => ['sometimes', 'string', 'max:255'],
             'base_salary' => ['sometimes', 'numeric', 'min:0'],

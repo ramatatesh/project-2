@@ -20,7 +20,6 @@ class EvaluationProgressResource extends JsonResource
 
             'employee' => [
                'id' => $this->id,
-               'employee_code' => $this->employee_code,
                'full_name' => $this->user?->full_name,
                'email' => $this->user?->email,
                'job_title' => $this->job_title,

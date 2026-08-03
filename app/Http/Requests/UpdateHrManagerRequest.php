@@ -30,13 +30,6 @@ class UpdateHrManagerRequest extends FormRequest
             'base_salary' => ['sometimes', 'numeric', 'min:0'],
             'hire_date' => ['sometimes', 'date'],
             'employment_type' => ['sometimes', 'string', 'max:100'],
-            'employee_code' => [
-                'sometimes',
-                'nullable',
-                'string',
-                'max:100',
-                Rule::unique('employees', 'employee_code')->ignore(optional($this->route('hr_manager')->employee)->id),
-            ],
             'education' => ['sometimes', 'string', 'max:255'],
             'is_active' => ['sometimes', 'boolean'],
             'gender' => ['sometimes', 'nullable', 'string', 'in:male,female'],

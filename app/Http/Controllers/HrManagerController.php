@@ -78,7 +78,6 @@ class HrManagerController extends Controller
      *       @OA\Property(property="full_name", type="string", example="Sarah Ahmed"),
      *       @OA\Property(property="email", type="string", format="email", example="sarah@company.com"),
      *       @OA\Property(property="phone", type="string", example="+963999888777"),
-     *       @OA\Property(property="employee_code", type="string", example="HRM-001"),
      *       @OA\Property(property="education", type="string", example="Bachelor of Business Administration"),
      *       @OA\Property(property="job_title", type="string", example="HR Manager"),
      *       @OA\Property(property="base_salary", type="number", format="float", example=1200.50),
@@ -142,7 +141,6 @@ class HrManagerController extends Controller
                     'user_id' => $user->id,
                     'company_id' => $company->id,
                     'department_id' => $hrDepartment->id,
-                    'employee_code' => $data['employee_code'] ?? null,
                     'education' => $data['education'] ?? null,
                     'job_title' => $data['job_title'],
                     'base_salary' => $data['base_salary'],
@@ -242,7 +240,6 @@ class HrManagerController extends Controller
      *       @OA\Property(property="email", type="string", format="email", example="sarah@company.com"),
      *       @OA\Property(property="phone", type="string", example="+963999888777"),
      *       @OA\Property(property="department_id", type="string", format="uuid", example="123e4567-e89b-12d3-a456-426614174000"),
-     *       @OA\Property(property="employee_code", type="string", example="HRM-001"),
      *       @OA\Property(property="education", type="string", example="Bachelor of Business Administration"),
      *       @OA\Property(property="job_title", type="string", example="HR Manager"),
      *       @OA\Property(property="base_salary", type="number", format="float", example=1200.50),
@@ -304,7 +301,7 @@ class HrManagerController extends Controller
                     throw new \RuntimeException('Associated employee record not found.');
                 }
 
-                foreach (['department_id', 'employee_code', 'education', 'job_title', 'base_salary', 'hire_date', 'employment_type', 'is_active'] as $field) {
+                foreach (['department_id', 'education', 'job_title', 'base_salary', 'hire_date', 'employment_type', 'is_active'] as $field) {
                     if (array_key_exists($field, $data)) {
                         $employeeUpdates[$field] = $data[$field];
                     }
@@ -516,7 +513,6 @@ class HrManagerController extends Controller
             'employee' => $hrManager->employee ? [
                 'id' => $hrManager->employee->id,
                 'department_id' => $hrManager->employee->department_id,
-                'employee_code' => $hrManager->employee->employee_code,
                 'education' => $hrManager->employee->education,
                 'job_title' => $hrManager->employee->job_title,
                 'base_salary' => $hrManager->employee->base_salary,

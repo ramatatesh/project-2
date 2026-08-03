@@ -26,7 +26,6 @@ class EmployeeTemplateExport implements FromArray, WithEvents, WithHeadings, Wit
             'email',
             'phone',
             'department',
-            'employee_code',
             'education',
             'job_title',
             'base_salary',
@@ -43,32 +42,30 @@ class EmployeeTemplateExport implements FromArray, WithEvents, WithHeadings, Wit
                 'ahmad@example.com',
                 '+963999999999',
                 'Human Resources',
-                'EMP-001',
                 'Bachelor',
                 'Software Engineer',
                 1500,
                 '2026-07-14',
                 'full-time',
             ],
-            ['', '', '', '', '', '', '', '', '', ''],
+            ['', '', '', '', '', '', '', '', ''],
         ];
     }
 
     public function styles(Worksheet $sheet)
     {
-        $sheet->getStyle('A1:J1')->getFont()->setBold(true);
-        $sheet->getStyle('A1:J1')->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('DDDDDD');
+        $sheet->getStyle('A1:I1')->getFont()->setBold(true);
+        $sheet->getStyle('A1:I1')->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('DDDDDD');
 
         $sheet->getColumnDimension('A')->setWidth(25);
         $sheet->getColumnDimension('B')->setWidth(32);
         $sheet->getColumnDimension('C')->setWidth(18);
         $sheet->getColumnDimension('D')->setWidth(22);
-        $sheet->getColumnDimension('E')->setWidth(18);
-        $sheet->getColumnDimension('F')->setWidth(20);
-        $sheet->getColumnDimension('G')->setWidth(22);
+        $sheet->getColumnDimension('E')->setWidth(20);
+        $sheet->getColumnDimension('F')->setWidth(22);
+        $sheet->getColumnDimension('G')->setWidth(14);
         $sheet->getColumnDimension('H')->setWidth(14);
-        $sheet->getColumnDimension('I')->setWidth(14);
-        $sheet->getColumnDimension('J')->setWidth(18);
+        $sheet->getColumnDimension('I')->setWidth(18);
 
         $sheet->freezePane('A2');
     }
@@ -84,12 +81,11 @@ class EmployeeTemplateExport implements FromArray, WithEvents, WithHeadings, Wit
                     'B1' => 'Unique email address (required).',
                     'C1' => 'Phone number, optional.',
                     'D1' => 'Department name as registered in your company (required).',
-                    'E1' => 'Optional internal employee code.',
-                    'F1' => 'Education level, optional.',
-                    'G1' => 'Job title (required).',
-                    'H1' => 'Base salary as a number, e.g. 1500 (required).',
-                    'I1' => 'Hire date as Y-m-d or d/m/Y, e.g. 2026-07-14 (required).',
-                    'J1' => 'Employment type: full-time, part-time, contract or internship.',
+                    'E1' => 'Education level, optional.',
+                    'F1' => 'Job title (required).',
+                    'G1' => 'Base salary as a number, e.g. 1500 (required).',
+                    'H1' => 'Hire date as Y-m-d or d/m/Y, e.g. 2026-07-14 (required).',
+                    'I1' => 'Employment type: full-time, part-time, contract or internship.',
                 ];
 
                 foreach ($comments as $cell => $text) {
@@ -110,7 +106,7 @@ class EmployeeTemplateExport implements FromArray, WithEvents, WithHeadings, Wit
                 $validation->setPrompt('Choose an employment type.');
                 $validation->setFormula1('"full-time,part-time,contract,internship"');
 
-                $sheet->setDataValidation('J2:J1000', $validation);
+                $sheet->setDataValidation('I2:I1000', $validation);
             },
         ];
     }

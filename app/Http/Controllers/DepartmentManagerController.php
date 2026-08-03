@@ -76,7 +76,6 @@ class DepartmentManagerController extends Controller
      *       @OA\Property(property="email", type="string", format="email", example="omar@company.com"),
      *       @OA\Property(property="phone", type="string", example="+963999888777"),
      *       @OA\Property(property="department_id", type="string", format="uuid"),
-     *       @OA\Property(property="employee_code", type="string", example="DM-001"),
      *       @OA\Property(property="education", type="string", example="Bachelor of Engineering"),
      *       @OA\Property(property="job_title", type="string", example="Engineering Manager"),
      *       @OA\Property(property="base_salary", type="number", format="float", example=1500),
@@ -126,7 +125,6 @@ class DepartmentManagerController extends Controller
                     'user_id' => $user->id,
                     'company_id' => $companyId,
                     'department_id' => $department->id,
-                    'employee_code' => $data['employee_code'] ?? null,
                     'education' => $data['education'] ?? null,
                     'job_title' => $data['job_title'],
                     'base_salary' => $data['base_salary'],
@@ -244,7 +242,7 @@ class DepartmentManagerController extends Controller
                 }
 
                 $employeeUpdates = [];
-                foreach (['employee_code', 'education', 'job_title', 'base_salary', 'hire_date', 'employment_type', 'is_active'] as $field) {
+                foreach (['education', 'job_title', 'base_salary', 'hire_date', 'employment_type', 'is_active'] as $field) {
                     if (array_key_exists($field, $data)) {
                         $employeeUpdates[$field] = $data[$field];
                     }
@@ -444,7 +442,6 @@ class DepartmentManagerController extends Controller
                 'id' => $manager->employee->id,
                 'department_id' => $manager->employee->department_id,
                 'department_name' => $manager->employee->department?->name,
-                'employee_code' => $manager->employee->employee_code,
                 'education' => $manager->employee->education,
                 'job_title' => $manager->employee->job_title,
                 'base_salary' => $manager->employee->base_salary,

@@ -55,7 +55,6 @@ class TestHrManagerSeeder extends Seeder
             'company_id'      => $company->id,
             'user_id'         => $user->id,
             'department_id'   => $hrDepartment->id,
-            'employee_code'   => 'HR-' . strtoupper(Str::random(4)),
             'job_title'       => 'HR Manager',
             'base_salary'     => 2000.00,
             'hire_date'       => now()->subYear(),

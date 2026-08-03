@@ -76,7 +76,6 @@ class EmployeeController extends Controller
         if ($search = $request->input('search')) {
             $query->where(function ($q) use ($search) {
                 $q->where('job_title', 'ilike', "%{$search}%")
-                    ->orWhere('employee_code', 'ilike', "%{$search}%")
                     ->orWhereHas('user', function ($u) use ($search) {
                         $u->where('full_name', 'ilike', "%{$search}%")
                             ->orWhere('email', 'ilike', "%{$search}%");
@@ -118,7 +117,6 @@ class EmployeeController extends Controller
      *       @OA\Property(property="email", type="string", format="email", example="ahmad@example.com"),
      *       @OA\Property(property="phone", type="string", example="+963999999999"),
      *       @OA\Property(property="department_id", type="string", format="uuid"),
-     *       @OA\Property(property="employee_code", type="string", example="EMP-001"),
      *       @OA\Property(property="education", type="string", example="BSc"),
      *       @OA\Property(property="job_title", type="string", example="Engineer"),
      *       @OA\Property(property="base_salary", type="number", example=1500),
@@ -205,7 +203,6 @@ class EmployeeController extends Controller
      *       @OA\Property(property="email", type="string", format="email", example="ahmad2@example.com"),
      *       @OA\Property(property="phone", type="string", example="+963999999999"),
      *       @OA\Property(property="department_id", type="string", format="uuid"),
-     *       @OA\Property(property="employee_code", type="string", example="EMP-002"),
      *       @OA\Property(property="education", type="string"),
      *       @OA\Property(property="job_title", type="string"),
      *       @OA\Property(property="base_salary", type="number"),

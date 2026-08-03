@@ -67,9 +67,9 @@ class EmployeeImportTest extends TestCase
         $this->actingAs($this->hrManager);
 
         $rows = [
-            ['John Doe', 'john@company.test', '+963111111111', 'Human Resources', 'EMP-001', 'BSc', 'Developer', 1500, '2024-01-01', 'full-time'],
-            ['Jane Doe', 'jane@company.test', '+963222222222', 'human resources', 'EMP-002', 'MSc', 'Designer', 1800, '01/01/2024', 'part-time'],
-            ['Bob Smith', 'bob@company.test', '+963333333333', '  Human Resources  ', 'EMP-003', 'PhD', 'Manager', 2500, Date::PHPToExcel(new \DateTime('2024-01-01')), 'contract'],
+            ['John Doe', 'john@company.test', '+963111111111', 'Human Resources', 'BSc', 'Developer', 1500, '2024-01-01', 'full-time'],
+            ['Jane Doe', 'jane@company.test', '+963222222222', 'human resources', 'MSc', 'Designer', 1800, '01/01/2024', 'part-time'],
+            ['Bob Smith', 'bob@company.test', '+963333333333', '  Human Resources  ', 'PhD', 'Manager', 2500, Date::PHPToExcel(new \DateTime('2024-01-01')), 'contract'],
         ];
 
         $file = $this->makeImportFile($rows);
@@ -88,9 +88,12 @@ class EmployeeImportTest extends TestCase
         $this->assertCount(3, Employee::all());
         $this->assertCount(4, User::all()); // HR manager + 3 imported employees
 
-        $this->assertDatabaseHas('employees', ['employee_code' => 'EMP-001', 'hire_date' => '2024-01-01']);
-        $this->assertDatabaseHas('employees', ['employee_code' => 'EMP-002', 'hire_date' => '2024-01-01']);
-        $this->assertDatabaseHas('employees', ['employee_code' => 'EMP-003', 'hire_date' => '2024-01-01']);
+        $this->assertDatabaseHas('users', ['email' => 'john@company.test']);
+        $this->assertDatabaseHas('users', ['email' => 'jane@company.test']);
+        $this->assertDatabaseHas('users', ['email' => 'bob@company.test']);
+        $this->assertDatabaseHas('employees', ['job_title' => 'Developer', 'hire_date' => '2024-01-01']);
+        $this->assertDatabaseHas('employees', ['job_title' => 'Designer', 'hire_date' => '2024-01-01']);
+        $this->assertDatabaseHas('employees', ['job_title' => 'Manager', 'hire_date' => '2024-01-01']);
 
         Queue::assertPushed(SendEmployeeWelcomeEmailJob::class, 3);
     }
@@ -100,9 +103,9 @@ class EmployeeImportTest extends TestCase
         $this->actingAs($this->hrManager);
 
         $rows = [
-            ['Valid User', 'valid@company.test', '+963111111111', 'Human Resources', 'EMP-001', 'BSc', 'Developer', 1500, '2024-01-01', 'full-time'],
-            ['Bad Department', 'baddept@company.test', '+963111111111', 'Unknown Department', 'EMP-002', 'BSc', 'Developer', 1500, '2024-01-01', 'full-time'],
-            ['Bad Date', 'baddate@company.test', '+963111111111', 'Human Resources', 'EMP-003', 'BSc', 'Developer', 1500, 'not-a-date', 'full-time'],
+            ['Valid User', 'valid@company.test', '+963111111111', 'Human Resources', 'BSc', 'Developer', 1500, '2024-01-01', 'full-time'],
+            ['Bad Department', 'baddept@company.test', '+963111111111', 'Unknown Department', 'BSc', 'Developer', 1500, '2024-01-01', 'full-time'],
+            ['Bad Date', 'baddate@company.test', '+963111111111', 'Human Resources', 'BSc', 'Developer', 1500, 'not-a-date', 'full-time'],
         ];
 
         $file = $this->makeImportFile($rows);
@@ -119,7 +122,7 @@ class EmployeeImportTest extends TestCase
             ->assertJsonPath('errors.3.department', ['department not found.'])
             ->assertJsonPath('errors.4.hire_date', ['hire_date is required and must be a valid date (Y-m-d).']);
 
-        $this->assertCount(0, Employee::whereNotNull('employee_code')->get());
+        $this->assertCount(0, Employee::all());
         $this->assertDatabaseMissing('users', ['email' => 'valid@company.test']);
     }
 
@@ -132,14 +135,14 @@ class EmployeeImportTest extends TestCase
         {
             public function headings(): array
             {
-                return ['full_name', 'email', 'phone', 'department', 'employee_code', 'education', 'job_title', 'base_salary', 'hire_date', 'employment_type', ''];
+                return ['full_name', 'email', 'phone', 'department', 'education', 'job_title', 'base_salary', 'hire_date', 'employment_type', ''];
             }
 
             public function array(): array
             {
                 return [
-                    ['Alice', 'alice@company.test', '+963444444444', 'Human Resources', 'EMP-004', 'BSc', 'Engineer', 2000, '2024-01-01', 'full-time', ''],
-                    ['', '', '', '', '', '', '', '', '', '', ''],
+                    ['Alice', 'alice@company.test', '+963444444444', 'Human Resources', 'BSc', 'Engineer', 2000, '2024-01-01', 'full-time', ''],
+                    ['', '', '', '', '', '', '', '', '', ''],
                 ];
             }
         };
@@ -174,7 +177,7 @@ class EmployeeImportTest extends TestCase
 
             public function headings(): array
             {
-                return ['full_name', 'email', 'phone', 'department', 'employee_code', 'education', 'job_title', 'base_salary', 'hire_date', 'employment_type'];
+                return ['full_name', 'email', 'phone', 'department', 'education', 'job_title', 'base_salary', 'hire_date', 'employment_type'];
             }
 
             public function array(): array
