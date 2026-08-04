@@ -273,6 +273,8 @@ Route::middleware(['auth:sanctum', 'role:employee'])->prefix('employee/salaries'
 // HR salary generation and payment closing.
 Route::middleware(['auth:sanctum', 'role:hr_manager'])->prefix('management/salaries')->group(function () {
     Route::get('/', [ManagementSalaryController::class, 'index']);
+    Route::get('/by-month', [ManagementSalaryController::class, 'byMonth']);
+    Route::get('/employees/{employee}/history', [ManagementSalaryController::class, 'employeeHistory']);
     Route::post('/generate', [ManagementSalaryController::class, 'generate']);
     Route::get('/{id}', [ManagementSalaryController::class, 'show']);
     Route::post('/{id}/pay', [ManagementSalaryController::class, 'pay']);

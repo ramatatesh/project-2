@@ -6542,6 +6542,82 @@
                 ]
             }
         },
+        "/api/management/salaries/employees/{employee}/history": {
+            "get": {
+                "tags": [
+                    "Management Salaries"
+                ],
+                "summary": "Get full salary history and details for a selected employee",
+                "operationId": "48893d6c34c67e08b9b9dcf57810df2c",
+                "parameters": [
+                    {
+                        "name": "employee",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Employee salary history"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/management/salaries/by-month": {
+            "get": {
+                "tags": [
+                    "Management Salaries"
+                ],
+                "summary": "Get detailed salary records for all employees in a selected month",
+                "operationId": "0d3bc2f3194dd67c28b9eb698984594d",
+                "parameters": [
+                    {
+                        "name": "month",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "year",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 100
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Monthly salary details"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
         "/api/management/salaries/generate": {
             "post": {
                 "tags": [

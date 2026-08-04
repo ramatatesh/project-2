@@ -6,6 +6,7 @@ use App\Models\Company;
 use App\Models\Department;
 use App\Models\Employee;
 use App\Models\LeaveType;
+use App\Models\SalaryRecord;
 use App\Models\User;
 use App\Enums\Role;
 use Illuminate\Database\Seeder;
@@ -68,12 +69,96 @@ class TestEmployeeSeeder extends Seeder
         ]);
 
         // 6. توليد Bearer Token لـ Swagger
+        // 7. إنشاء سجلات رواتب تجريبية للموظف (لبضعة أشهر سابقة)
+        $now = now();
+
+        $salaryRecords = [
+            [
+                'month' => (int) $now->copy()->subMonths(3)->month,
+                'year' => (int) $now->copy()->subMonths(3)->year,
+                'base_salary' => 1200.00,
+                'overtime_amount' => 200.00,
+                'bonus_amount' => 0,
+                'manual_bonus' => 0,
+                'late_deduction' => 0,
+                'absent_deduction' => 0,
+                'loan_deduction' => 0,
+                'manual_deduction' => 0,
+                'status' => SalaryRecord::STATUS_PAID,
+            ],
+            [
+                'month' => (int) $now->copy()->subMonths(2)->month,
+                'year' => (int) $now->copy()->subMonths(2)->year,
+                'base_salary' => 1200.00,
+                'overtime_amount' => 0,
+                'bonus_amount' => 0,
+                'manual_bonus' => 0,
+                'late_deduction' => 30.00,
+                'absent_deduction' => 0,
+                'loan_deduction' => 0,
+                'manual_deduction' => 0,
+                'status' => SalaryRecord::STATUS_PAID,
+            ],
+            [
+                'month' => (int) $now->copy()->subMonths(1)->month,
+                'year' => (int) $now->copy()->subMonths(1)->year,
+                'base_salary' => 1200.00,
+                'overtime_amount' => 150.00,
+                'bonus_amount' => 100.00,
+                'manual_bonus' => 0,
+                'late_deduction' => 50.00,
+                'absent_deduction' => 0,
+                'loan_deduction' => 100.00,
+                'manual_deduction' => 0,
+                'status' => SalaryRecord::STATUS_PAID,
+            ],
+            [
+                'month' => (int) $now->month,
+                'year' => (int) $now->year,
+                'base_salary' => 1200.00,
+                'overtime_amount' => 0,
+                'bonus_amount' => 0,
+                'manual_bonus' => 50.00,
+                'late_deduction' => 0,
+                'absent_deduction' => 80.00,
+                'loan_deduction' => 0,
+                'manual_deduction' => 70.00,
+                'status' => SalaryRecord::STATUS_DRAFT,
+            ],
+        ];
+
+        foreach ($salaryRecords as $record) {
+            $net = round(
+                $record['base_salary']
+                + $record['overtime_amount']
+                + $record['bonus_amount']
+                + $record['manual_bonus']
+                - $record['late_deduction']
+                - $record['absent_deduction']
+                - $record['loan_deduction']
+                - $record['manual_deduction'],
+                2
+            );
+
+            SalaryRecord::create(array_merge($record, [
+                'id' => Str::uuid()->toString(),
+                'company_id' => $company->id,
+                'employee_id' => $employee->id,
+                'net_salary' => $net,
+                'closed_by' => $record['status'] === SalaryRecord::STATUS_PAID ? $user->id : null,
+                'closed_at' => $record['status'] === SalaryRecord::STATUS_PAID ? now() : null,
+            ]));
+        }
+
         $token = $user->createToken('test-token')->plainTextToken;
 
         $this->command->info('==================================================');
         $this->command->info('✅ Test Data Seeded Successfully!');
         $this->command->info('--------------------------------------------------');
         $this->command->info('Leave Type ID: ' . $leaveType->id);
+        $this->command->info('Employee ID : ' . $employee->id);
+        $this->command->info('Company ID  : ' . $company->id);
+        $this->command->info('Salary Records: ' . count($salaryRecords));
         $this->command->info('Bearer Token : ' . $token);
         $this->command->info('==================================================');
     }

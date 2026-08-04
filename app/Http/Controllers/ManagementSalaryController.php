@@ -111,6 +111,119 @@ class ManagementSalaryController extends Controller
     }
 
     /**
+     * @OA\Get(
+     *   path="/api/management/salaries/employees/{employee}/history",
+     *   summary="Get full salary history and details for a selected employee",
+     *   tags={"Management Salaries"},
+     *   security={{"sanctum":{}}},
+     *   @OA\Parameter(
+     *     name="employee",
+     *     in="path",
+     *     required=true,
+     *     @OA\Schema(type="string", format="uuid")
+     *   ),
+     *   @OA\Response(response=200, description="Employee salary history")
+     * )
+     */
+    public function employeeHistory(Employee $employee): JsonResponse
+    {
+        $user = auth()->user();
+        if ($user?->role !== Role::HrManager->value) {
+            return response()->json(['success' => false, 'message' => 'HR access only.'], 403);
+        }
+
+        if ($employee->company_id !== $user->company_id) {
+            return response()->json(['success' => false, 'message' => 'Employee does not belong to your company.'], 403);
+        }
+
+        $records = SalaryRecord::where('employee_id', $employee->id)
+            ->where('company_id', $user->company_id)
+            ->with(['salaryAdjustments'])
+            ->orderByDesc('year')
+            ->orderByDesc('month')
+            ->get()
+            ->map(function (SalaryRecord $record) use ($employee) {
+                $details = $this->salaryService->serializeDetails($record);
+                $details['employee_id'] = $employee->id;
+                $details['employee_name'] = $employee->user?->full_name;
+
+                return $details;
+            });
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'employee_id' => $employee->id,
+                'employee_name' => $employee->user?->full_name,
+                'job_title' => $employee->job_title,
+                'records' => $records,
+            ],
+        ]);
+    }
+
+    /**
+     * @OA\Get(
+     *   path="/api/management/salaries/by-month",
+     *   summary="Get detailed salary records for all employees in a selected month",
+     *   tags={"Management Salaries"},
+     *   security={{"sanctum":{}}},
+     *   @OA\Parameter(name="month", in="query", required=true, @OA\Schema(type="integer")),
+     *   @OA\Parameter(name="year", in="query", required=true, @OA\Schema(type="integer")),
+     *   @OA\Parameter(name="per_page", in="query", required=false, @OA\Schema(type="integer", default=100)),
+     *   @OA\Response(response=200, description="Monthly salary details")
+     * )
+     */
+    public function byMonth(Request $request): JsonResponse
+    {
+        $user = auth()->user();
+        if ($user?->role !== Role::HrManager->value) {
+            return response()->json(['success' => false, 'message' => 'HR access only.'], 403);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'month' => ['required', 'integer', 'min:1', 'max:12'],
+            'year' => ['required', 'integer', 'min:2000', 'max:2100'],
+            'per_page' => ['sometimes', 'integer', 'min:1', 'max:200'],
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed.',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        $month = (int) $validator->validated()['month'];
+        $year = (int) $validator->validated()['year'];
+        $perPage = (int) ($validator->validated()['per_page'] ?? 100);
+
+        $paginator = SalaryRecord::where('company_id', $user->company_id)
+            ->where('month', $month)
+            ->where('year', $year)
+            ->with(['employee.user', 'salaryAdjustments'])
+            ->orderBy('employee_id')
+            ->paginate($perPage);
+
+        $paginator->getCollection()->transform(function (SalaryRecord $record) {
+            $details = $this->salaryService->serializeDetails($record);
+            $details['employee_id'] = $record->employee_id;
+            $details['employee_name'] = $record->employee?->user?->full_name;
+
+            return $details;
+        });
+
+        return response()->json([
+            'success' => true,
+            'data' => array_merge($paginator->toArray(), [
+                'month' => $month,
+                'year' => $year,
+                'period' => sprintf('%04d-%02d', $year, $month),
+            ]),
+        ]);
+    }
+
+    /**
      * @OA\Post(
      *   path="/api/management/salaries/generate",
      *   summary="Generate draft salary records for a month",
