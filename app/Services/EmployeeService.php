@@ -5,9 +5,16 @@ namespace App\Services;
 use App\Enums\Role;
 use App\Imports\EmployeeImport;
 use App\Jobs\SendEmployeeWelcomeEmailJob;
+use App\Models\AttendanceRecord;
 use App\Models\Company;
 use App\Models\Department;
 use App\Models\Employee;
+use App\Models\EvaluationReview;
+use App\Models\EvaluationScore;
+use App\Models\LeaveRequest;
+use App\Models\OvertimeRequest;
+use App\Models\SalaryAdvance;
+use App\Models\SalaryRecord;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\UploadedFile;
@@ -112,14 +119,59 @@ class EmployeeService
     /**
      * حذف الموظف مع حسابه المرتبط (لتفادي بيانات يتيمة) داخل Transaction.
      * يمنع حذف المدير العام أو الـ Super Admin للحفاظ على إدارة الشركة.
+     *
+     * إذا كان للموظف أي سجلات تاريخية مرتبطة (حضور/إجازات/رواتب/سُلف/إضافي/تقييمات)
+     * لا يتم الحذف إطلاقاً (لتفادي فقدان البيانات عبر ON DELETE CASCADE)، ويتم تجميد
+     * حسابه بدلاً من ذلك.
+     *
+     * @return array{deleted: bool, frozen: bool}
      */
-    public function deleteEmployee(Employee $employee): void
+    public function deleteEmployee(Employee $employee): array
     {
+        if ($this->hasHistoricalRecords($employee)) {
+            $this->freezeEmployee($employee);
+
+            return ['deleted' => false, 'frozen' => true];
+        }
+
         DB::transaction(function () use ($employee) {
             $user = $employee->user;
             $employee->delete();
             if ($user) {
                 $user->delete();
+            }
+        });
+
+        return ['deleted' => true, 'frozen' => false];
+    }
+
+    /**
+     * هل يمتلك الموظف أي سجلات تاريخية بالنظام (حضور/إجازات/رواتب/سُلف/إضافي/تقييمات)؟
+     * تُستخدم لمنع حذف الموظف نهائياً حفاظاً على سجلات الشركة.
+     */
+    public function hasHistoricalRecords(Employee $employee): bool
+    {
+        $employeeId = $employee->id;
+
+        return AttendanceRecord::where('employee_id', $employeeId)->exists()
+            || LeaveRequest::where('employee_id', $employeeId)->exists()
+            || SalaryRecord::where('employee_id', $employeeId)->exists()
+            || SalaryAdvance::where('employee_id', $employeeId)->exists()
+            || OvertimeRequest::where('employee_id', $employeeId)->exists()
+            || EvaluationReview::where('employee_id', $employeeId)->exists()
+            || EvaluationScore::where('employee_id', $employeeId)->exists();
+    }
+
+    /**
+     * تجميد الموظف وحسابه بدلاً من حذفهما (Employee.is_active = false, User.status = inactive).
+     */
+    public function freezeEmployee(Employee $employee): void
+    {
+        DB::transaction(function () use ($employee) {
+            $employee->update(['is_active' => false]);
+
+            if ($employee->user) {
+                $employee->user->update(['status' => 'inactive']);
             }
         });
     }
@@ -200,6 +252,7 @@ class EmployeeService
             }
 
             $this->normalizeRowDates($rowAssoc);
+            $this->normalizeRowEnums($rowAssoc);
 
             $rowErrors = $this->validateRow($rowAssoc, $company, $departmentsByName, $usedEmails);
             if (! empty($rowErrors)) {
@@ -327,6 +380,19 @@ class EmployeeService
     }
 
     /**
+     * يوحّد قيم gender/marital_status (إن وُجدت بملف الإكسل) لتطابق نفس القيم
+     * المقبولة عبر الـ API (male/female, single/married/divorced/widowed).
+     */
+    protected function normalizeRowEnums(array &$row): void
+    {
+        foreach (['gender', 'marital_status'] as $field) {
+            if (! empty($row[$field])) {
+                $row[$field] = strtolower(trim((string) $row[$field]));
+            }
+        }
+    }
+
+    /**
      * Supports Excel serial dates, DateTime objects, Y-m-d, d/m/Y, m/d/Y, Y/m/d.
      */
     protected function normalizeDate($value): ?string
@@ -419,6 +485,12 @@ class EmployeeService
         }
         if (empty($row['hire_date']) || ! $this->isValidDate($row['hire_date'])) {
             $errors['hire_date'] = ['hire_date is required and must be a valid date (Y-m-d).'];
+        }
+        if (! empty($row['gender']) && ! in_array($row['gender'], ['male', 'female'], true)) {
+            $errors['gender'] = ['gender must be male or female.'];
+        }
+        if (! empty($row['marital_status']) && ! in_array($row['marital_status'], ['single', 'married', 'divorced', 'widowed'], true)) {
+            $errors['marital_status'] = ['marital_status must be one of: single, married, divorced, widowed.'];
         }
 
         $departmentName = $row['department'] ?? null;

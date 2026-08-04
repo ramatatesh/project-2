@@ -9,6 +9,7 @@ use App\Models\Company;
 use App\Models\Employee;
 use App\Models\Department;
 use App\Models\User;
+use App\Services\EmployeeService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -23,6 +24,10 @@ use Illuminate\Support\Str;
  */
 class HrManagerController extends Controller
 {
+    public function __construct(private readonly EmployeeService $employeeService)
+    {
+    }
+
     /**
      * @OA\Get(
      *   path="/api/companies/{company}/hr-managers",
@@ -77,11 +82,11 @@ class HrManagerController extends Controller
      *       required={"full_name","email","department_id","job_title","base_salary","hire_date"},
      *       @OA\Property(property="full_name", type="string", example="Sarah Ahmed"),
      *       @OA\Property(property="email", type="string", format="email", example="sarah@company.com"),
-     *       @OA\Property(property="phone", type="string", example="+963999888777"),
+     *       @OA\Property(property="phone", type="string", pattern="^09[0-9]{8}$", example="0999888777", description="يجب أن يبدأ بـ 09 ويتكون من 10 أرقام"),
      *       @OA\Property(property="education", type="string", example="Bachelor of Business Administration"),
      *       @OA\Property(property="job_title", type="string", example="HR Manager"),
      *       @OA\Property(property="base_salary", type="number", format="float", example=1200.50),
-     *       @OA\Property(property="hire_date", type="string", format="date", example="2026-07-01"),
+     *       @OA\Property(property="hire_date", type="string", format="date", example="2026-07-01", description="لا يمكن أن يكون تاريخاً مستقبلياً"),
      *       @OA\Property(property="employment_type", type="string", example="full-time"),
      *       @OA\Property(property="is_active", type="boolean", example=true),
      *       @OA\Property(property="gender", type="string", enum={"male","female"}, nullable=true),
@@ -238,12 +243,12 @@ class HrManagerController extends Controller
      *     @OA\JsonContent(
      *       @OA\Property(property="full_name", type="string", example="Sarah Ahmed"),
      *       @OA\Property(property="email", type="string", format="email", example="sarah@company.com"),
-     *       @OA\Property(property="phone", type="string", example="+963999888777"),
+     *       @OA\Property(property="phone", type="string", pattern="^09[0-9]{8}$", example="0999888777", description="يجب أن يبدأ بـ 09 ويتكون من 10 أرقام"),
      *       @OA\Property(property="department_id", type="string", format="uuid", example="123e4567-e89b-12d3-a456-426614174000"),
      *       @OA\Property(property="education", type="string", example="Bachelor of Business Administration"),
      *       @OA\Property(property="job_title", type="string", example="HR Manager"),
      *       @OA\Property(property="base_salary", type="number", format="float", example=1200.50),
-     *       @OA\Property(property="hire_date", type="string", format="date", example="2026-07-01"),
+     *       @OA\Property(property="hire_date", type="string", format="date", example="2026-07-01", description="لا يمكن أن يكون تاريخاً مستقبلياً"),
      *       @OA\Property(property="employment_type", type="string", example="full-time"),
      *       @OA\Property(property="is_active", type="boolean", example=true),
      *       @OA\Property(property="gender", type="string", enum={"male","female"}, nullable=true),
@@ -453,6 +458,14 @@ class HrManagerController extends Controller
      *       @OA\Property(property="success", type="boolean", example=true),
      *       @OA\Property(property="message", type="string", example="HR manager deleted successfully.")
      *     )
+     *   ),
+     *   @OA\Response(
+     *     response=409,
+     *     description="Cannot delete: self-deletion, last remaining HR manager, or existing historical records (frozen instead)",
+     *     @OA\JsonContent(
+     *       @OA\Property(property="success", type="boolean", example=false),
+     *       @OA\Property(property="message", type="string", example="لا يمكن حذف آخر مدير موارد بشرية في الشركة.")
+     *     )
      *   )
      * )
      */
@@ -460,6 +473,36 @@ class HrManagerController extends Controller
     {
         try {
             $hrManager = $this->ensureHrManagerBelongsToCompany($company, $hrManager);
+
+            if ($hrManager->id === auth()->id()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'لا يمكنك حذف حسابك الخاص كمدير موارد بشرية.',
+                ], 409);
+            }
+
+            $hasOtherHrManager = User::where('company_id', $company->id)
+                ->where('role', 'hr_manager')
+                ->where('id', '!=', $hrManager->id)
+                ->exists();
+
+            if (! $hasOtherHrManager) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'لا يمكن حذف آخر مدير موارد بشرية في الشركة.',
+                ], 409);
+            }
+
+            $employee = $hrManager->employee ?? Employee::where('user_id', $hrManager->id)->first();
+
+            if ($employee && $this->employeeService->hasHistoricalRecords($employee)) {
+                $this->employeeService->freezeEmployee($employee);
+
+                return response()->json([
+                    'success' => false,
+                    'message' => 'لا يمكن حذف الموظف لأنه يمتلك سجلات مرتبطة بالنظام. تم تجميد حسابه بدلاً من ذلك.',
+                ], 409);
+            }
 
             DB::transaction(function () use ($hrManager) {
                 $employee = $hrManager->employee ?? Employee::where('user_id', $hrManager->id)->first();

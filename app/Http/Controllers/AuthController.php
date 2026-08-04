@@ -341,6 +341,7 @@ public function resendOtp(ForgotPasswordRequest $request): JsonResponse
      * @OA\Post(
      * path="/api/auth/reset-password",
      * summary="إعادة تعيين كلمة المرور بعد التحقق من رمز OTP",
+     * description="كلمة المرور الجديدة يجب أن تحتوي على 8 أحرف على الأقل، حرف كبير، حرف صغير، رقم، ورمز خاص - وإلا يُرجع 422 مع رسالة توضح تحديداً أي شرط لم يتحقق.",
      * tags={"المصادقة (Authentication)"},
      * @OA\RequestBody(
      * required=true,
@@ -408,6 +409,7 @@ public function resendOtp(ForgotPasswordRequest $request): JsonResponse
      * @OA\Post(
      * path="/api/auth/complete-first-login",
      * summary="تغيير كلمة المرور الإلزامية عند تسجيل الدخول الأول للمنصة",
+     * description="كلمة المرور الجديدة يجب أن تحتوي على 8 أحرف على الأقل، حرف كبير، حرف صغير، رقم، ورمز خاص - وإلا يُرجع 422 مع رسالة توضح تحديداً أي شرط لم يتحقق.",
      * tags={"المصادقة (Authentication)"},
      * security={{"sanctum":{}}},
      * @OA\RequestBody(
@@ -452,6 +454,14 @@ public function resendOtp(ForgotPasswordRequest $request): JsonResponse
                         ->numbers()
                         ->symbols(),
                 ],
+            ], [
+                'password.required' => 'كلمة المرور مطلوبة.',
+                'password.confirmed' => 'تأكيد كلمة المرور غير متطابق.',
+                'password.min' => 'يجب أن تحتوي كلمة المرور على 8 أحرف على الأقل.',
+                'password.letters' => 'يجب أن تحتوي كلمة المرور على حرف واحد على الأقل.',
+                'password.mixed' => 'يجب أن تحتوي كلمة المرور على حرف كبير وحرف صغير.',
+                'password.numbers' => 'يجب أن تحتوي كلمة المرور على رقم واحد على الأقل.',
+                'password.symbols' => 'يجب أن تحتوي كلمة المرور على رمز خاص واحد على الأقل.',
             ]);
 
             if ($validator->fails()) {
@@ -477,6 +487,39 @@ public function resendOtp(ForgotPasswordRequest $request): JsonResponse
             Log::error('Complete first login failed', ['error' => $th->getMessage()]);
 
             return $this->errorResponse('Unable to complete password update process.', 500);
+        }
+    }
+
+    /**
+     * @OA\Post(
+     * path="/api/auth/logout",
+     * summary="تسجيل خروج المستخدم (إبطال الـ Token الحالي فقط)",
+     * tags={"المصادقة (Authentication)"},
+     * security={{"sanctum":{}}},
+     * @OA\Response(
+     * response=200,
+     * description="تم تسجيل الخروج بنجاح",
+     * @OA\JsonContent(
+     * @OA\Property(property="success", type="boolean", example=true),
+     * @OA\Property(property="message", type="string", example="Logged out successfully.")
+     * )
+     * ),
+     * @OA\Response(
+     * response=401,
+     * description="المستخدم غير مصادق عليه (Unauthenticated)"
+     * )
+     * )
+     */
+    public function logout(\Illuminate\Http\Request $request): JsonResponse
+    {
+        try {
+            $request->user()->currentAccessToken()->delete();
+
+            return $this->successResponse('Logged out successfully.');
+        } catch (\Throwable $th) {
+            Log::error('Logout failed', ['error' => $th->getMessage()]);
+
+            return $this->errorResponse('Unable to process logout request.', 500);
         }
     }
 

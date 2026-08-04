@@ -115,12 +115,12 @@ class EmployeeController extends Controller
      *
      *       @OA\Property(property="full_name", type="string", example="Ahmad Ali"),
      *       @OA\Property(property="email", type="string", format="email", example="ahmad@example.com"),
-     *       @OA\Property(property="phone", type="string", example="+963999999999"),
+     *       @OA\Property(property="phone", type="string", pattern="^09[0-9]{8}$", example="0999999999", description="يجب أن يبدأ بـ 09 ويتكون من 10 أرقام"),
      *       @OA\Property(property="department_id", type="string", format="uuid"),
      *       @OA\Property(property="education", type="string", example="BSc"),
      *       @OA\Property(property="job_title", type="string", example="Engineer"),
      *       @OA\Property(property="base_salary", type="number", example=1500),
-     *       @OA\Property(property="hire_date", type="string", format="date", example="2026-01-01"),
+     *       @OA\Property(property="hire_date", type="string", format="date", example="2026-01-01", description="لا يمكن أن يكون تاريخاً مستقبلياً"),
      *       @OA\Property(property="employment_type", type="string", example="full-time"),
      *       @OA\Property(property="is_active", type="boolean", example=true),
      *       @OA\Property(property="gender", type="string", enum={"male","female"}, nullable=true),
@@ -201,12 +201,12 @@ class EmployeeController extends Controller
      *
      *       @OA\Property(property="full_name", type="string", example="Ahmad Ali Updated"),
      *       @OA\Property(property="email", type="string", format="email", example="ahmad2@example.com"),
-     *       @OA\Property(property="phone", type="string", example="+963999999999"),
+     *       @OA\Property(property="phone", type="string", pattern="^09[0-9]{8}$", example="0999999999", description="يجب أن يبدأ بـ 09 ويتكون من 10 أرقام"),
      *       @OA\Property(property="department_id", type="string", format="uuid"),
      *       @OA\Property(property="education", type="string"),
      *       @OA\Property(property="job_title", type="string"),
      *       @OA\Property(property="base_salary", type="number"),
-     *       @OA\Property(property="hire_date", type="string", format="date"),
+     *       @OA\Property(property="hire_date", type="string", format="date", description="لا يمكن أن يكون تاريخاً مستقبلياً"),
      *       @OA\Property(property="employment_type", type="string"),
      *       @OA\Property(property="is_active", type="boolean"),
      *       @OA\Property(property="gender", type="string", enum={"male","female"}, nullable=true),
@@ -247,6 +247,7 @@ class EmployeeController extends Controller
      * @OA\Delete(
      *   path="/api/hr/employees/{employee}",
      *   summary="حذف موظف مع حسابه المرتبط (لتفادي بيانات يتيمة)",
+     *   description="إذا كان للموظف أي سجلات تاريخية مرتبطة (حضور، إجازات، رواتب، سُلف، إضافي، تقييمات) لا يتم الحذف إطلاقاً - يتم تجميد حسابه (is_active=false) بدلاً من ذلك ويُرجع 409.",
      *   tags={"Employees"},
      *   security={{"sanctum":{}}},
      *
@@ -254,7 +255,15 @@ class EmployeeController extends Controller
      *
      *   @OA\Response(response=200, description="تم الحذف"),
      *   @OA\Response(response=403, description="Cannot delete: user is a General Manager or Super Admin"),
-     *   @OA\Response(response=404, description="Not found / not in your company")
+     *   @OA\Response(response=404, description="Not found / not in your company"),
+     *   @OA\Response(
+     *     response=409,
+     *     description="لا يمكن الحذف بسبب وجود سجلات مرتبطة - تم تجميد الموظف بدلاً من ذلك",
+     *     @OA\JsonContent(
+     *       @OA\Property(property="success", type="boolean", example=false),
+     *       @OA\Property(property="message", type="string", example="لا يمكن حذف الموظف لأنه يمتلك سجلات مرتبطة بالنظام. تم تجميد حسابه بدلاً من ذلك.")
+     *     )
+     *   )
      * )
      */
     public function destroy(Employee $employee): JsonResponse
@@ -270,7 +279,14 @@ class EmployeeController extends Controller
                 ], 403);
             }
 
-            $this->employeeService->deleteEmployee($employee);
+            $result = $this->employeeService->deleteEmployee($employee);
+
+            if (! $result['deleted']) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'لا يمكن حذف الموظف لأنه يمتلك سجلات مرتبطة بالنظام. تم تجميد حسابه بدلاً من ذلك.',
+                ], 409);
+            }
 
             return response()->json([
                 'success' => true,
@@ -290,6 +306,7 @@ class EmployeeController extends Controller
      * @OA\Post(
      *   path="/api/hr/employees/import",
      *   summary="استيراد موظفين من ملف Excel/CSV (All-or-nothing: إن وُجد خطأ لا يُدخل أي صف)",
+     *   description="بالإضافة للأعمدة الأساسية، يدعم الملف أعمدة اختيارية إضافية تُحفظ مباشرة عند إنشاء المستخدم: gender (male/female)، marital_status (single/married/divorced/widowed)، nationality، residence. صور الملف الشخصي/الهوية/الشهادة الجامعية لا تُستورد من الإكسل ويرفعها الموظف لاحقاً بنفسه.",
      *   tags={"Employees"},
      *   security={{"sanctum":{}}},
      *

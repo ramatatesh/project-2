@@ -9,6 +9,7 @@ use App\Jobs\SendRegistrationEmailJob;
 use App\Models\Department;
 use App\Models\Employee;
 use App\Models\User;
+use App\Services\EmployeeService;
 use App\Services\LeaveBalanceService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
@@ -26,6 +27,7 @@ class DepartmentManagerController extends Controller
 {
     public function __construct(
         private readonly LeaveBalanceService $leaveBalanceService,
+        private readonly EmployeeService $employeeService,
     ) {
     }
 
@@ -74,12 +76,12 @@ class DepartmentManagerController extends Controller
      *       required={"full_name","email","department_id","job_title","base_salary","hire_date"},
      *       @OA\Property(property="full_name", type="string", example="Omar Hassan"),
      *       @OA\Property(property="email", type="string", format="email", example="omar@company.com"),
-     *       @OA\Property(property="phone", type="string", example="+963999888777"),
+     *       @OA\Property(property="phone", type="string", pattern="^09[0-9]{8}$", example="0999888777", description="يجب أن يبدأ بـ 09 ويتكون من 10 أرقام"),
      *       @OA\Property(property="department_id", type="string", format="uuid"),
      *       @OA\Property(property="education", type="string", example="Bachelor of Engineering"),
      *       @OA\Property(property="job_title", type="string", example="Engineering Manager"),
      *       @OA\Property(property="base_salary", type="number", format="float", example=1500),
-     *       @OA\Property(property="hire_date", type="string", format="date", example="2026-01-15"),
+     *       @OA\Property(property="hire_date", type="string", format="date", example="2026-01-15", description="لا يمكن أن يكون تاريخاً مستقبلياً"),
      *       @OA\Property(property="employment_type", type="string", example="full-time"),
      *       @OA\Property(property="is_active", type="boolean", example=true),
      *       @OA\Property(property="gender", type="string", enum={"male","female"}, nullable=true),
@@ -372,13 +374,33 @@ class DepartmentManagerController extends Controller
      *     required=true,
      *     @OA\Schema(type="string", format="uuid")
      *   ),
-     *   @OA\Response(response=200, description="Deleted successfully")
+     *   @OA\Response(response=200, description="Deleted successfully"),
+     *   @OA\Response(
+     *     response=409,
+     *     description="لا يمكن الحذف بسبب وجود سجلات مرتبطة - تم تجميد الحساب بدلاً من ذلك",
+     *     @OA\JsonContent(
+     *       @OA\Property(property="success", type="boolean", example=false),
+     *       @OA\Property(property="message", type="string", example="لا يمكن حذف الموظف لأنه يمتلك سجلات مرتبطة بالنظام. تم تجميد حسابه بدلاً من ذلك.")
+     *     )
+     *   )
      * )
      */
     public function destroy(User $departmentManager): JsonResponse
     {
         try {
             $departmentManager = $this->ensureBelongsToCurrentCompany($departmentManager);
+
+            $employee = $departmentManager->employee
+                ?? Employee::where('user_id', $departmentManager->id)->first();
+
+            if ($employee && $this->employeeService->hasHistoricalRecords($employee)) {
+                $this->employeeService->freezeEmployee($employee);
+
+                return response()->json([
+                    'success' => false,
+                    'message' => 'لا يمكن حذف الموظف لأنه يمتلك سجلات مرتبطة بالنظام. تم تجميد حسابه بدلاً من ذلك.',
+                ], 409);
+            }
 
             DB::transaction(function () use ($departmentManager) {
                 $employee = $departmentManager->employee

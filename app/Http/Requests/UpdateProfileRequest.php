@@ -23,9 +23,16 @@ class UpdateProfileRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'phone' => ['sometimes', 'nullable', 'string', 'max:50'],
+            'phone' => ['sometimes', 'nullable', 'string', 'regex:/^09[0-9]{8}$/'],
             'residence' => ['sometimes', 'nullable', 'string', 'max:255'],
             'profile_image' => ['sometimes', 'nullable', 'file', 'image', 'max:4096'],
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'phone.regex' => 'رقم الهاتف يجب أن يبدأ بـ 09 ويتكون من 10 أرقام.',
         ];
     }
 
