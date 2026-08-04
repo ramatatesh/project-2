@@ -39,6 +39,7 @@ class SalaryAdvance extends Model
     protected $casts = [
         'requested_amount' => 'decimal:2',
         'monthly_installment' => 'decimal:2',
+        'created_at' => 'datetime',
     ];
 
     public function company(): BelongsTo
