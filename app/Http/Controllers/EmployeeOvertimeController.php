@@ -47,6 +47,7 @@ class EmployeeOvertimeController extends Controller
 
         $paginator = OvertimeRequest::where('employee_id', $employee->id)
             ->where('company_id', $user->company_id)
+            ->with(['employee.company'])
             ->orderByDesc('created_at')
             ->paginate($perPage)
             ->through(fn (OvertimeRequest $ot) => $this->serialize($ot));
@@ -54,6 +55,51 @@ class EmployeeOvertimeController extends Controller
         return response()->json([
             'success' => true,
             'data' => $paginator,
+        ]);
+    }
+
+    /**
+     * @OA\Get(
+     *   path="/api/employee/overtime/rates",
+     *   summary="Show current overtime rates per hour and per day based on company salary rules",
+     *   tags={"Employee Overtime"},
+     *   security={{"sanctum":{}}},
+     *   @OA\Response(
+     *     response=200,
+     *     description="Current overtime rates",
+     *     @OA\JsonContent(
+     *       @OA\Property(property="success", type="boolean", example=true),
+     *       @OA\Property(property="data", type="object",
+     *         @OA\Property(property="rate_per_hour", type="number", format="float", nullable=true),
+     *         @OA\Property(property="rate_per_day", type="number", format="float", nullable=true),
+     *         @OA\Property(property="currency", type="string", example="SYP")
+     *       )
+     *     )
+     *   )
+     * )
+     */
+    public function rates(): JsonResponse
+    {
+        $user = auth()->user();
+        $employee = $user?->employee;
+
+        if (! $employee) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Employee record not found.',
+            ], 403);
+        }
+
+        if (! $this->overtimeService->allowsOvertime($user->company_id)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Overtime is not allowed by company attendance policy.',
+            ], 422);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => $this->overtimeService->rates($employee),
         ]);
     }
 
@@ -199,12 +245,24 @@ class EmployeeOvertimeController extends Controller
             'message' => 'Overtime request submitted successfully.',
             'data' => array_merge($this->serialize($overtime), [
                 'estimated_amount' => $preview['estimated_amount'],
+                'unit_amount' => $preview['unit_amount'],
+                'rates' => $this->overtimeService->rates($employee),
             ]),
         ], 201);
     }
 
     private function serialize(OvertimeRequest $ot): array
     {
+        $rule = $this->overtimeService->activeRuleFor($ot->company_id, $ot->duration_type);
+
+        $unitAmount = null;
+        $totalAmount = null;
+
+        if ($rule && $ot->employee) {
+            $unitAmount = $this->overtimeService->calculateAmount($ot->employee, $rule, 1);
+            $totalAmount = $this->overtimeService->calculateAmount($ot->employee, $rule, $ot->approvedUnits());
+        }
+
         return [
             'id' => $ot->id,
             'request_date' => $ot->request_date?->toDateString(),
@@ -215,6 +273,9 @@ class EmployeeOvertimeController extends Controller
             'status' => $ot->status,
             'rejection_reason' => $ot->rejection_reason,
             'calculated_amount' => $ot->calculated_amount,
+            'unit_amount' => $unitAmount,
+            'estimated_amount' => $totalAmount,
+            'currency' => $ot->employee?->company?->payroll_currency ?? 'SYP',
             'created_at' => $ot->created_at?->toDateTimeString(),
         ];
     }
