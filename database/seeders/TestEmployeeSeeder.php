@@ -38,7 +38,72 @@ class TestEmployeeSeeder extends Seeder
             'name'       => 'Software Engineering',
         ]);
 
-        // 3. إنشاء حساب مستخدم
+        // 3. إنشاء حساب مدير الشركة (General Manager)
+        $generalManagerEmail = 'general_manager_' . Str::random(5) . '@test.com';
+        $generalManagerUser = User::create([
+            'id'            => Str::uuid()->toString(),
+            'company_id'    => $company->id,
+            'full_name'     => 'General Manager',
+            'email'         => $generalManagerEmail,
+            'password_hash' => bcrypt('password123'),
+            'role'          => Role::GeneralManager->value,
+        ]);
+
+        Employee::create([
+            'id'            => Str::uuid()->toString(),
+            'company_id'    => $company->id,
+            'user_id'       => $generalManagerUser->id,
+            'department_id' => $department->id,
+            'job_title'     => 'General Manager',
+            'base_salary'   => 3000.00,
+            'hire_date'     => now()->subYears(3),
+        ]);
+
+        // 4. إنشاء حساب مدير الموارد البشرية (HR Manager)
+        $hrManagerEmail = 'hr_manager_' . Str::random(5) . '@test.com';
+        $hrManagerUser = User::create([
+            'id'            => Str::uuid()->toString(),
+            'company_id'    => $company->id,
+            'full_name'     => 'HR Manager',
+            'email'         => $hrManagerEmail,
+            'password_hash' => bcrypt('password123'),
+            'role'          => Role::HrManager->value,
+        ]);
+
+        Employee::create([
+            'id'            => Str::uuid()->toString(),
+            'company_id'    => $company->id,
+            'user_id'       => $hrManagerUser->id,
+            'department_id' => $department->id,
+            'job_title'     => 'HR Manager',
+            'base_salary'   => 2000.00,
+            'hire_date'     => now()->subYears(2),
+        ]);
+
+        // 5. إنشاء حساب مدير القسم (Department Manager)
+        $departmentManagerEmail = 'department_manager_' . Str::random(5) . '@test.com';
+        $departmentManagerUser = User::create([
+            'id'            => Str::uuid()->toString(),
+            'company_id'    => $company->id,
+            'full_name'     => 'Department Manager',
+            'email'         => $departmentManagerEmail,
+            'password_hash' => bcrypt('password123'),
+            'role'          => Role::DepartmentManager->value,
+        ]);
+
+        $departmentManagerEmployee = Employee::create([
+            'id'            => Str::uuid()->toString(),
+            'company_id'    => $company->id,
+            'user_id'       => $departmentManagerUser->id,
+            'department_id' => $department->id,
+            'job_title'     => 'Engineering Manager',
+            'base_salary'   => 1800.00,
+            'hire_date'     => now()->subYear(),
+        ]);
+
+        $department->update(['manager_id' => $departmentManagerEmployee->id]);
+
+        // 6. إنشاء حساب الموظف
         $user = User::create([
             'id'            => Str::uuid()->toString(),
             'company_id'    => $company->id,
@@ -48,7 +113,6 @@ class TestEmployeeSeeder extends Seeder
             'role'          => Role::Employee->value ?? 'employee',
         ]);
 
-        // 4. إنشاء ملف الموظف
         $employee = Employee::create([
             'id'            => Str::uuid()->toString(),
             'company_id'    => $company->id,
@@ -59,7 +123,7 @@ class TestEmployeeSeeder extends Seeder
             'hire_date'     => now()->subMonths(6),
         ]);
 
-        // 5. إنشاء نوع إجازة بالحقول الإجبارية المطابقة للميجريشن
+        // 7. إنشاء نوع إجازة بالحقول الإجبارية المطابقة للميجريشن
         $leaveType = LeaveType::create([
             'id'               => Str::uuid()->toString(),
             'company_id'       => $company->id,
@@ -68,8 +132,7 @@ class TestEmployeeSeeder extends Seeder
             'allocation_unit'  => 'days',   // 👈 حقل إجباري
         ]);
 
-        // 6. توليد Bearer Token لـ Swagger
-        // 7. إنشاء سجلات رواتب تجريبية للموظف (لبضعة أشهر سابقة)
+        // 8. إنشاء سجلات رواتب تجريبية للموظف (لبضعة أشهر سابقة)
         $now = now();
 
         $salaryRecords = [
@@ -145,21 +208,40 @@ class TestEmployeeSeeder extends Seeder
                 'company_id' => $company->id,
                 'employee_id' => $employee->id,
                 'net_salary' => $net,
-                'closed_by' => $record['status'] === SalaryRecord::STATUS_PAID ? $user->id : null,
+                'closed_by' => $record['status'] === SalaryRecord::STATUS_PAID ? $generalManagerUser->id : null,
                 'closed_at' => $record['status'] === SalaryRecord::STATUS_PAID ? now() : null,
             ]));
         }
 
+        $generalManagerToken = $generalManagerUser->createToken('test-general-manager-token')->plainTextToken;
+        $hrManagerToken = $hrManagerUser->createToken('test-hr-manager-token')->plainTextToken;
+        $departmentManagerToken = $departmentManagerUser->createToken('test-department-manager-token')->plainTextToken;
         $token = $user->createToken('test-token')->plainTextToken;
 
         $this->command->info('==================================================');
         $this->command->info('✅ Test Data Seeded Successfully!');
         $this->command->info('--------------------------------------------------');
-        $this->command->info('Leave Type ID: ' . $leaveType->id);
-        $this->command->info('Employee ID : ' . $employee->id);
-        $this->command->info('Company ID  : ' . $company->id);
-        $this->command->info('Salary Records: ' . count($salaryRecords));
-        $this->command->info('Bearer Token : ' . $token);
+        $this->command->info('Company ID     : ' . $company->id);
+        $this->command->info('Leave Type ID  : ' . $leaveType->id);
+        $this->command->info('Department ID  : ' . $department->id);
+        $this->command->info('Employee ID    : ' . $employee->id);
+        $this->command->info('Salary Records : ' . count($salaryRecords));
+        $this->command->info('--------------------------------------------------');
+        $this->command->info('General Manager Email    : ' . $generalManagerEmail);
+        $this->command->info('General Manager Password : password123');
+        $this->command->info('General Manager Token    : ' . $generalManagerToken);
+        $this->command->info('--------------------------------------------------');
+        $this->command->info('HR Manager Email    : ' . $hrManagerEmail);
+        $this->command->info('HR Manager Password : password123');
+        $this->command->info('HR Manager Token    : ' . $hrManagerToken);
+        $this->command->info('--------------------------------------------------');
+        $this->command->info('Department Manager Email    : ' . $departmentManagerEmail);
+        $this->command->info('Department Manager Password : password123');
+        $this->command->info('Department Manager Token    : ' . $departmentManagerToken);
+        $this->command->info('--------------------------------------------------');
+        $this->command->info('Employee Email    : ' . $uniqueEmail);
+        $this->command->info('Employee Password : password123');
+        $this->command->info('Employee Token    : ' . $token);
         $this->command->info('==================================================');
     }
 }
