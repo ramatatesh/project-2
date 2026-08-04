@@ -22,7 +22,8 @@ class StoreDepartmentRequest extends FormRequest
             'name' => ['required', 'string', 'max:255', Rule::unique('departments', 'name')
                 ->where(fn ($q) => $q->where('company_id', $companyId))],
             'is_active' => ['sometimes', 'boolean'],
-            'manager_id' => ['sometimes', 'nullable', 'uuid', 'exists:employees,id'],
+            'manager_id' => ['sometimes', 'nullable', 'uuid', Rule::exists('employees', 'id')
+                ->where(fn ($q) => $q->where('company_id', $companyId))],
         ];
     }
 

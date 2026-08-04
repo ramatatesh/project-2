@@ -24,7 +24,8 @@ class UpdateDepartmentRequest extends FormRequest
                 ->where(fn ($q) => $q->where('company_id', $companyId))
                 ->ignore($departmentId, 'id')],
             'is_active' => ['sometimes', 'boolean'],
-            'manager_id' => ['sometimes', 'nullable', 'uuid', 'exists:employees,id'],
+            'manager_id' => ['sometimes', 'nullable', 'uuid', Rule::exists('employees', 'id')
+                ->where(fn ($q) => $q->where('company_id', $companyId))],
         ];
     }
 

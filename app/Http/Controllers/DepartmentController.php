@@ -2,11 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\Role;
 use App\Http\Requests\StoreDepartmentRequest;
 use App\Http\Requests\UpdateDepartmentRequest;
 use App\Http\Resources\DepartmentResource;
 use App\Models\Department;
+use App\Models\Employee;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 /**
@@ -148,13 +152,67 @@ class DepartmentController extends Controller
     {
         $this->ensureBelongsToCurrentCompany($department);
 
-        $department->update($request->validated());
+        $validated = $request->validated();
+
+        DB::transaction(function () use ($department, $validated) {
+            if (array_key_exists('manager_id', $validated)) {
+                $oldManagerId = $department->manager_id;
+                $newManagerId = $validated['manager_id'];
+
+                if ($newManagerId !== $oldManagerId) {
+                    if ($oldManagerId) {
+                        $this->revertEmployeeRole($department, $oldManagerId);
+                    }
+
+                    if ($newManagerId) {
+                        $this->promoteToDepartmentManager($newManagerId);
+                    }
+                }
+            }
+
+            $department->update($validated);
+        });
 
         return response()->json([
             'success' => true,
             'message' => 'Department updated successfully.',
             'data' => new DepartmentResource($department),
         ]);
+    }
+
+    protected function promoteToDepartmentManager(string $employeeId): void
+    {
+        $employee = Employee::find($employeeId);
+
+        if (! $employee || ! $employee->user) {
+            return;
+        }
+
+        if ($employee->user->role === Role::Employee->value) {
+            $employee->user->update(['role' => Role::DepartmentManager->value]);
+        }
+    }
+
+    protected function revertEmployeeRole(Department $department, string $employeeId): void
+    {
+        $employee = Employee::find($employeeId);
+
+        if (! $employee || ! $employee->user) {
+            return;
+        }
+
+        $stillManagesAnotherDepartment = Department::where('company_id', $department->company_id)
+            ->where('manager_id', $employeeId)
+            ->where('id', '!=', $department->id)
+            ->exists();
+
+        if ($stillManagesAnotherDepartment) {
+            return;
+        }
+
+        if ($employee->user->role === Role::DepartmentManager->value) {
+            $employee->user->update(['role' => Role::Employee->value]);
+        }
     }
 
     /**
