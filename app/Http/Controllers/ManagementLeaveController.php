@@ -137,122 +137,140 @@ class ManagementLeaveController extends Controller
         $user = auth()->user();
         $companyId = $user?->company_id;
 
-        $leaveRequest = LeaveRequest::where('id', $id)
-            ->where('company_id', $companyId)
-            ->with(['employee.department', 'leaveType'])
-            ->firstOrFail();
+        return DB::transaction(function () use ($request, $id, $user, $companyId) {
+            $leaveRequest = LeaveRequest::where('id', $id)
+                ->where('company_id', $companyId)
+                ->with(['employee.department', 'leaveType'])
+                ->lockForUpdate()
+                ->firstOrFail();
 
-        $roleContext = $request->validated('role_context');
-        $action = $request->validated('action');
+            $roleContext = $request->validated('role_context');
+            $action = $request->validated('action');
 
-        if ($roleContext === 'manager') {
-            if ($user?->role !== Role::DepartmentManager->value) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Only department managers can perform manager actions.',
-                ], 403);
-            }
-
-            if ($leaveRequest->status !== 'pending_department_manager') {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Request is not pending department manager review.',
-                ], 422);
-            }
-
-            $department = $leaveRequest->employee?->department;
-
-            if (! $department || $department->manager_id !== $user->employee?->id) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'You do not manage this employee.',
-                ], 403);
-            }
-
-            if ($action === 'approve') {
-                $leaveRequest->status = 'pending_hr';
-                $message = 'Leave request forwarded to HR.';
-            } else {
-                $leaveRequest->status = 'rejected_by_manager';
-                $leaveRequest->rejection_reason = $request->input('rejection_reason');
-                $message = 'Leave request rejected by department manager.';
-            }
-        } elseif ($roleContext === 'hr') {
-            if ($user?->role !== Role::HrManager->value) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Only HR managers can perform HR actions.',
-                ], 403);
-            }
-
-            if ($leaveRequest->status !== 'pending_hr') {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Request is not pending HR review.',
-                ], 422);
-            }
-
-            if ($action === 'approve') {
-                $overlap = $this->leaveBalanceService->hasOverlappingRequest(
-                    $leaveRequest->employee_id,
-                    $leaveRequest->start_date->toDateString(),
-                    $leaveRequest->end_date->toDateString(),
-                    $leaveRequest->id,
-                );
-
-                if ($overlap) {
+            if ($roleContext === 'manager') {
+                if ($user?->role !== Role::DepartmentManager->value) {
                     return response()->json([
                         'success' => false,
-                        'message' => 'Cannot approve: dates overlap with another active leave request.',
+                        'message' => 'Only department managers can perform manager actions.',
+                    ], 403);
+                }
+
+                if ($leaveRequest->status !== 'pending_department_manager') {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Request is not pending department manager review.',
                     ], 422);
                 }
 
-                $year = (int) $leaveRequest->start_date->year;
-                $employee = $leaveRequest->employee;
-                $leaveType = $leaveRequest->leaveType;
+                $department = $leaveRequest->employee?->department;
 
-                if ($employee && $leaveType) {
-                    $balance = $this->leaveBalanceService->syncUsedDays($employee, $leaveType, $year);
-                    if ((float) $leaveRequest->requested_value > (float) $balance->remaining_days) {
-                        return response()->json([
-                            'success' => false,
-                            'message' => 'Cannot approve: requested duration exceeds remaining leave balance.',
-                            'remaining_balance' => max(0, (float) $balance->remaining_days),
-                        ], 422);
-                    }
+                if (! $department || $department->manager_id !== $user->employee?->id) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'You do not manage this employee.',
+                    ], 403);
                 }
 
-                $leaveRequest->status = 'approved';
-                $message = 'Leave request approved.';
-            } else {
-                $leaveRequest->status = 'rejected_by_hr';
-                $leaveRequest->rejection_reason = $request->input('rejection_reason');
-                $message = 'Leave request rejected by HR.';
+                if ($action === 'approve') {
+                    $employee = $leaveRequest->employee;
+                    $leaveType = $leaveRequest->leaveType;
+
+                    if ($employee && $leaveType) {
+                        $year = (int) $leaveRequest->start_date->year;
+                        $balance = $this->leaveBalanceService->syncUsedDays($employee, $leaveType, $year);
+                        if ((float) $leaveRequest->requested_value > (float) $balance->remaining_days) {
+                            return response()->json([
+                                'success' => false,
+                                'message' => 'Cannot forward: requested duration exceeds remaining leave balance.',
+                                'remaining_balance' => max(0, (float) $balance->remaining_days),
+                            ], 422);
+                        }
+                    }
+
+                    $leaveRequest->status = 'pending_hr';
+                    $message = 'Leave request forwarded to HR.';
+                } else {
+                    $leaveRequest->status = 'rejected_by_manager';
+                    $leaveRequest->rejection_reason = $request->input('rejection_reason');
+                    $message = 'Leave request rejected by department manager.';
+                }
+            } elseif ($roleContext === 'hr') {
+                if ($user?->role !== Role::HrManager->value) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Only HR managers can perform HR actions.',
+                    ], 403);
+                }
+
+                if ($leaveRequest->status !== 'pending_hr') {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Request is not pending HR review.',
+                    ], 422);
+                }
+
+                if ($action === 'approve') {
+                    $overlap = $this->leaveBalanceService->hasOverlappingRequest(
+                        $leaveRequest->employee_id,
+                        $leaveRequest->start_date->toDateString(),
+                        $leaveRequest->end_date->toDateString(),
+                        $leaveRequest->id,
+                    );
+
+                    if ($overlap) {
+                        return response()->json([
+                            'success' => false,
+                            'message' => 'Cannot approve: dates overlap with another active leave request.',
+                        ], 422);
+                    }
+
+                    $year = (int) $leaveRequest->start_date->year;
+                    $employee = $leaveRequest->employee;
+                    $leaveType = $leaveRequest->leaveType;
+
+                    if ($employee && $leaveType) {
+                        $balance = $this->leaveBalanceService->syncUsedDays($employee, $leaveType, $year);
+                        if ((float) $leaveRequest->requested_value > (float) $balance->remaining_days) {
+                            return response()->json([
+                                'success' => false,
+                                'message' => 'Cannot approve: requested duration exceeds remaining leave balance.',
+                                'remaining_balance' => max(0, (float) $balance->remaining_days),
+                            ], 422);
+                        }
+                    }
+
+                    $leaveRequest->status = 'approved';
+                    $message = 'Leave request approved.';
+                } else {
+                    $leaveRequest->status = 'rejected_by_hr';
+                    $leaveRequest->rejection_reason = $request->input('rejection_reason');
+                    $message = 'Leave request rejected by HR.';
+                }
             }
-        }
 
-        $leaveRequest->reviewed_by = $user->id;
-        $leaveRequest->reviewed_at = now();
-        $leaveRequest->save();
+            $leaveRequest->reviewed_by = $user->id;
+            $leaveRequest->reviewed_at = now();
+            $leaveRequest->save();
 
-        if ($leaveRequest->status === 'approved' && $leaveRequest->employee && $leaveRequest->leaveType) {
-            $this->leaveBalanceService->syncUsedDays(
-                $leaveRequest->employee,
-                $leaveRequest->leaveType,
-                (int) $leaveRequest->start_date->year,
-            );
-        }
+            if ($leaveRequest->status === 'approved' && $leaveRequest->employee && $leaveRequest->leaveType) {
+                $this->leaveBalanceService->syncUsedDays(
+                    $leaveRequest->employee,
+                    $leaveRequest->leaveType,
+                    (int) $leaveRequest->start_date->year,
+                );
+            }
 
-        return response()->json([
-            'success' => true,
-            'message' => $message,
-            'data' => [
-                'id' => $leaveRequest->id,
-                'status' => $leaveRequest->status,
-                'reviewed_by' => $leaveRequest->reviewed_by,
-                'reviewed_at' => $leaveRequest->reviewed_at?->toDateTimeString(),
-            ],
-        ]);
+            return response()->json([
+                'success' => true,
+                'message' => $message,
+                'data' => [
+                    'id' => $leaveRequest->id,
+                    'status' => $leaveRequest->status,
+                    'reviewed_by' => $leaveRequest->reviewed_by,
+                    'reviewed_at' => $leaveRequest->reviewed_at?->toDateTimeString(),
+                ],
+            ]);
+        });
     }
 
     private function calculateRemainingBalance(LeaveRequest $leaveRequest): int

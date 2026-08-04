@@ -37,7 +37,9 @@ class OvertimeRequest extends Model
 
     protected $keyType = 'string';
     public $incrementing = false;
-    public $timestamps = false;
+
+    public $timestamps = true;
+    const UPDATED_AT = null;
 
     protected $casts = [
         'request_date' => 'date',

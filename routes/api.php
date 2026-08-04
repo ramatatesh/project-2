@@ -260,9 +260,10 @@ Route::middleware(['auth:sanctum', 'role:employee'])->prefix('employee/overtime'
 
 // Management approval workflow for overtime.
 Route::middleware(['auth:sanctum', 'role:department_manager,hr_manager'])->prefix('management/overtime')->group(function () {
+    $uuid = '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}';
     Route::get('/', [ManagementOvertimeController::class, 'index']);
-    Route::get('/{id}', [ManagementOvertimeController::class, 'show']);
-    Route::post('/{id}/action', [ManagementOvertimeController::class, 'action']);
+    Route::get('/{id}', [ManagementOvertimeController::class, 'show'])->where('id', $uuid);
+    Route::post('/{id}/action', [ManagementOvertimeController::class, 'action'])->where('id', $uuid);
 });
 
 // Employee self-service: salary history / payslips.
