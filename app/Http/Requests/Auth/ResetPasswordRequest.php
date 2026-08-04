@@ -24,7 +24,7 @@ class ResetPasswordRequest extends FormRequest
         'password' => [
           'required',
           'confirmed',
-          \Illuminate\Validation\Rules\Password::min(8)
+          \Illuminate\Validation\Rules\Password::min(8)->letters()->mixedCase()->numbers()->symbols(),
         ],
     ];
 }
@@ -35,8 +35,12 @@ class ResetPasswordRequest extends FormRequest
             'email.required' => 'Email is required.',
             'email.email' => 'Please provide a valid email address.',
             'password.required' => 'Password is required.',
-            'password.min' => 'Password must be at least 8 characters.',
             'password.confirmed' => 'Password confirmation does not match.',
+            'password.min' => 'يجب أن تحتوي كلمة المرور على 8 أحرف على الأقل.',
+            'password.letters' => 'يجب أن تحتوي كلمة المرور على حرف واحد على الأقل.',
+            'password.mixed' => 'يجب أن تحتوي كلمة المرور على حرف كبير وحرف صغير.',
+            'password.numbers' => 'يجب أن تحتوي كلمة المرور على رقم واحد على الأقل.',
+            'password.symbols' => 'يجب أن تحتوي كلمة المرور على رمز خاص واحد على الأقل.',
         ];
     }
 

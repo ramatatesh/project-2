@@ -464,6 +464,7 @@
                     "المصادقة (Authentication)"
                 ],
                 "summary": "إعادة تعيين كلمة المرور بعد التحقق من رمز OTP",
+                "description": "كلمة المرور الجديدة يجب أن تحتوي على 8 أحرف على الأقل، حرف كبير، حرف صغير، رقم، ورمز خاص - وإلا يُرجع 422 مع رسالة توضح تحديداً أي شرط لم يتحقق.",
                 "operationId": "6af92e090f994419a2295111b391a205",
                 "requestBody": {
                     "required": true,
@@ -539,6 +540,7 @@
                     "المصادقة (Authentication)"
                 ],
                 "summary": "تغيير كلمة المرور الإلزامية عند تسجيل الدخول الأول للمنصة",
+                "description": "كلمة المرور الجديدة يجب أن تحتوي على 8 أحرف على الأقل، حرف كبير، حرف صغير، رقم، ورمز خاص - وإلا يُرجع 422 مع رسالة توضح تحديداً أي شرط لم يتحقق.",
                 "operationId": "b954f9b16adb04877cbe5d6a41900a9e",
                 "requestBody": {
                     "required": true,
@@ -597,6 +599,45 @@
                     },
                     "422": {
                         "description": "خطأ في التحقق من المدخلات (مثال: عدم تطابق كلمة المرور أو ضعفها)"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/auth/logout": {
+            "post": {
+                "tags": [
+                    "المصادقة (Authentication)"
+                ],
+                "summary": "تسجيل خروج المستخدم (إبطال الـ Token الحالي فقط)",
+                "operationId": "69281b12abb272c76871f19cb17ca563",
+                "responses": {
+                    "200": {
+                        "description": "تم تسجيل الخروج بنجاح",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Logged out successfully."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "المستخدم غير مصادق عليه (Unauthenticated)"
                     }
                 },
                 "security": [
@@ -1582,8 +1623,10 @@
                                         "example": "Ahmad"
                                     },
                                     "phone": {
+                                        "description": "يجب أن يبدأ بـ 09 ويتكون من 10 أرقام",
                                         "type": "string",
-                                        "example": "+963999999999"
+                                        "pattern": "^09[0-9]{8}$",
+                                        "example": "0999999999"
                                     },
                                     "plan_id": {
                                         "type": "string",
@@ -2155,16 +2198,14 @@
                                         "example": "omar@company.com"
                                     },
                                     "phone": {
+                                        "description": "يجب أن يبدأ بـ 09 ويتكون من 10 أرقام",
                                         "type": "string",
-                                        "example": "+963999888777"
+                                        "pattern": "^09[0-9]{8}$",
+                                        "example": "0999888777"
                                     },
                                     "department_id": {
                                         "type": "string",
                                         "format": "uuid"
-                                    },
-                                    "employee_code": {
-                                        "type": "string",
-                                        "example": "DM-001"
                                     },
                                     "education": {
                                         "type": "string",
@@ -2180,6 +2221,7 @@
                                         "example": 1500
                                     },
                                     "hire_date": {
+                                        "description": "لا يمكن أن يكون تاريخاً مستقبلياً",
                                         "type": "string",
                                         "format": "date",
                                         "example": "2026-01-15"
@@ -2318,6 +2360,26 @@
                 "responses": {
                     "200": {
                         "description": "Deleted successfully"
+                    },
+                    "409": {
+                        "description": "لا يمكن الحذف بسبب وجود سجلات مرتبطة - تم تجميد الحساب بدلاً من ذلك",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": false
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "لا يمكن حذف الموظف لأنه يمتلك سجلات مرتبطة بالنظام. تم تجميد حسابه بدلاً من ذلك."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -2656,16 +2718,14 @@
                                         "example": "ahmad@example.com"
                                     },
                                     "phone": {
+                                        "description": "يجب أن يبدأ بـ 09 ويتكون من 10 أرقام",
                                         "type": "string",
-                                        "example": "+963999999999"
+                                        "pattern": "^09[0-9]{8}$",
+                                        "example": "0999999999"
                                     },
                                     "department_id": {
                                         "type": "string",
                                         "format": "uuid"
-                                    },
-                                    "employee_code": {
-                                        "type": "string",
-                                        "example": "EMP-001"
                                     },
                                     "education": {
                                         "type": "string",
@@ -2680,6 +2740,7 @@
                                         "example": 1500
                                     },
                                     "hire_date": {
+                                        "description": "لا يمكن أن يكون تاريخاً مستقبلياً",
                                         "type": "string",
                                         "format": "date",
                                         "example": "2026-01-01"
@@ -2824,16 +2885,14 @@
                                         "example": "ahmad2@example.com"
                                     },
                                     "phone": {
+                                        "description": "يجب أن يبدأ بـ 09 ويتكون من 10 أرقام",
                                         "type": "string",
-                                        "example": "+963999999999"
+                                        "pattern": "^09[0-9]{8}$",
+                                        "example": "0999999999"
                                     },
                                     "department_id": {
                                         "type": "string",
                                         "format": "uuid"
-                                    },
-                                    "employee_code": {
-                                        "type": "string",
-                                        "example": "EMP-002"
                                     },
                                     "education": {
                                         "type": "string"
@@ -2845,6 +2904,7 @@
                                         "type": "number"
                                     },
                                     "hire_date": {
+                                        "description": "لا يمكن أن يكون تاريخاً مستقبلياً",
                                         "type": "string",
                                         "format": "date"
                                     },
@@ -2908,6 +2968,7 @@
                     "Employees"
                 ],
                 "summary": "حذف موظف مع حسابه المرتبط (لتفادي بيانات يتيمة)",
+                "description": "إذا كان للموظف أي سجلات تاريخية مرتبطة (حضور، إجازات، رواتب، سُلف، إضافي، تقييمات) لا يتم الحذف إطلاقاً - يتم تجميد حسابه (is_active=false) بدلاً من ذلك ويُرجع 409.",
                 "operationId": "6fafa4a468fde3b5be572c079eade380",
                 "parameters": [
                     {
@@ -2929,6 +2990,26 @@
                     },
                     "404": {
                         "description": "Not found / not in your company"
+                    },
+                    "409": {
+                        "description": "لا يمكن الحذف بسبب وجود سجلات مرتبطة - تم تجميد الموظف بدلاً من ذلك",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": false
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "لا يمكن حذف الموظف لأنه يمتلك سجلات مرتبطة بالنظام. تم تجميد حسابه بدلاً من ذلك."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -2944,6 +3025,7 @@
                     "Employees"
                 ],
                 "summary": "استيراد موظفين من ملف Excel/CSV (All-or-nothing: إن وُجد خطأ لا يُدخل أي صف)",
+                "description": "بالإضافة للأعمدة الأساسية، يدعم الملف أعمدة اختيارية إضافية تُحفظ مباشرة عند إنشاء المستخدم: gender (male/female)، marital_status (single/married/divorced/widowed)، nationality، residence. صور الملف الشخصي/الهوية/الشهادة الجامعية لا تُستورد من الإكسل ويرفعها الموظف لاحقاً بنفسه.",
                 "operationId": "6a70e41774051a7604e34cb286a1b210",
                 "requestBody": {
                     "required": true,
@@ -5155,12 +5237,10 @@
                                         "example": "sarah@company.com"
                                     },
                                     "phone": {
+                                        "description": "يجب أن يبدأ بـ 09 ويتكون من 10 أرقام",
                                         "type": "string",
-                                        "example": "+963999888777"
-                                    },
-                                    "employee_code": {
-                                        "type": "string",
-                                        "example": "HRM-001"
+                                        "pattern": "^09[0-9]{8}$",
+                                        "example": "0999888777"
                                     },
                                     "education": {
                                         "type": "string",
@@ -5176,6 +5256,7 @@
                                         "example": 1200.5
                                     },
                                     "hire_date": {
+                                        "description": "لا يمكن أن يكون تاريخاً مستقبلياً",
                                         "type": "string",
                                         "format": "date",
                                         "example": "2026-07-01"
@@ -5355,17 +5436,15 @@
                                         "example": "sarah@company.com"
                                     },
                                     "phone": {
+                                        "description": "يجب أن يبدأ بـ 09 ويتكون من 10 أرقام",
                                         "type": "string",
-                                        "example": "+963999888777"
+                                        "pattern": "^09[0-9]{8}$",
+                                        "example": "0999888777"
                                     },
                                     "department_id": {
                                         "type": "string",
                                         "format": "uuid",
                                         "example": "123e4567-e89b-12d3-a456-426614174000"
-                                    },
-                                    "employee_code": {
-                                        "type": "string",
-                                        "example": "HRM-001"
                                     },
                                     "education": {
                                         "type": "string",
@@ -5381,6 +5460,7 @@
                                         "example": 1200.5
                                     },
                                     "hire_date": {
+                                        "description": "لا يمكن أن يكون تاريخاً مستقبلياً",
                                         "type": "string",
                                         "format": "date",
                                         "example": "2026-07-01"
@@ -5498,6 +5578,26 @@
                                         "message": {
                                             "type": "string",
                                             "example": "HR manager deleted successfully."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Cannot delete: self-deletion, last remaining HR manager, or existing historical records (frozen instead)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": false
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "لا يمكن حذف آخر مدير موارد بشرية في الشركة."
                                         }
                                     },
                                     "type": "object"
@@ -6572,8 +6672,10 @@
                             "schema": {
                                 "properties": {
                                     "phone": {
+                                        "description": "يجب أن يبدأ بـ 09 ويتكون من 10 أرقام",
                                         "type": "string",
-                                        "example": "+963999999999",
+                                        "pattern": "^09[0-9]{8}$",
+                                        "example": "0999999999",
                                         "nullable": true
                                     },
                                     "residence": {
@@ -6594,8 +6696,10 @@
                             "schema": {
                                 "properties": {
                                     "phone": {
+                                        "description": "يجب أن يبدأ بـ 09 ويتكون من 10 أرقام",
                                         "type": "string",
-                                        "example": "+963999999999",
+                                        "pattern": "^09[0-9]{8}$",
+                                        "example": "0999999999",
                                         "nullable": true
                                     },
                                     "residence": {

@@ -74,7 +74,7 @@ class ProfileController extends Controller
      *     @OA\MediaType(
      *       mediaType="multipart/form-data",
      *       @OA\Schema(
-     *         @OA\Property(property="phone", type="string", nullable=true, example="+963999999999"),
+     *         @OA\Property(property="phone", type="string", nullable=true, pattern="^09[0-9]{8}$", example="0999999999", description="يجب أن يبدأ بـ 09 ويتكون من 10 أرقام"),
      *         @OA\Property(property="residence", type="string", nullable=true, example="Damascus, Syria"),
      *         @OA\Property(property="profile_image", type="string", format="binary", description="Personal profile picture (optional)")
      *       )
@@ -82,7 +82,7 @@ class ProfileController extends Controller
      *     @OA\MediaType(
      *       mediaType="application/json",
      *       @OA\Schema(
-     *         @OA\Property(property="phone", type="string", nullable=true, example="+963999999999"),
+     *         @OA\Property(property="phone", type="string", nullable=true, pattern="^09[0-9]{8}$", example="0999999999", description="يجب أن يبدأ بـ 09 ويتكون من 10 أرقام"),
      *         @OA\Property(property="residence", type="string", nullable=true, example="Damascus, Syria")
      *       )
      *     )

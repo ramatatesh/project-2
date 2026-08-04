@@ -156,6 +156,75 @@ class EmployeeImportTest extends TestCase
             ->assertJson(['success' => true, 'count' => 1]);
     }
 
+    public function test_import_saves_gender_marital_status_nationality_and_residence_when_present(): void
+    {
+        Queue::fake();
+        $this->actingAs($this->hrManager);
+
+        $export = new class implements FromArray, WithHeadings
+        {
+            public function headings(): array
+            {
+                return ['full_name', 'email', 'phone', 'department', 'education', 'job_title', 'base_salary', 'hire_date', 'employment_type', 'gender', 'marital_status', 'nationality', 'residence'];
+            }
+
+            public function array(): array
+            {
+                return [
+                    ['Sara Extra', 'sara@company.test', '+963111111111', 'Human Resources', 'BSc', 'Analyst', 1600, '2024-02-01', 'full-time', 'Female', 'Married', 'Syrian', 'Homs'],
+                ];
+            }
+        };
+
+        $path = 'imports/extra_fields_test.xlsx';
+        Excel::store($export, $path);
+        $file = UploadedFile::fake()->createWithContent('extra_fields_test.xlsx', Storage::disk('local')->get($path));
+
+        $this->postJson('/api/hr/employees/import', ['file' => $file])
+            ->assertOk()
+            ->assertJson(['success' => true, 'count' => 1]);
+
+        $this->assertDatabaseHas('users', [
+            'email' => 'sara@company.test',
+            'gender' => 'female',
+            'marital_status' => 'married',
+            'nationality' => 'Syrian',
+            'residence' => 'Homs',
+        ]);
+    }
+
+    public function test_import_rejects_invalid_gender_and_marital_status_values(): void
+    {
+        $this->actingAs($this->hrManager);
+
+        $export = new class implements FromArray, WithHeadings
+        {
+            public function headings(): array
+            {
+                return ['full_name', 'email', 'phone', 'department', 'education', 'job_title', 'base_salary', 'hire_date', 'employment_type', 'gender', 'marital_status'];
+            }
+
+            public function array(): array
+            {
+                return [
+                    ['Bad Enum', 'badenum@company.test', '+963111111111', 'Human Resources', 'BSc', 'Analyst', 1600, '2024-02-01', 'full-time', 'unknown', 'engaged'],
+                ];
+            }
+        };
+
+        $path = 'imports/bad_enum_test.xlsx';
+        Excel::store($export, $path);
+        $file = UploadedFile::fake()->createWithContent('bad_enum_test.xlsx', Storage::disk('local')->get($path));
+
+        $response = $this->postJson('/api/hr/employees/import', ['file' => $file]);
+
+        $response->assertStatus(422);
+        $response->assertJsonPath('errors.2.gender', ['gender must be male or female.']);
+        $response->assertJsonPath('errors.2.marital_status', ['marital_status must be one of: single, married, divorced, widowed.']);
+
+        $this->assertDatabaseMissing('users', ['email' => 'badenum@company.test']);
+    }
+
     public function test_template_download_returns_xlsx(): void
     {
         $this->actingAs($this->hrManager);

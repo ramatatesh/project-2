@@ -36,11 +36,12 @@ Route::middleware('guest')->prefix('auth')->group(function () {
     Route::post('/forgot-password', [AuthController::class, 'forgotPassword'])->name('auth.forgot-password')->middleware('throttle:3,1');
     Route::post('/verify-otp',[AuthController::class,'verifyOtp']);
     Route::post('/resend-otp', [AuthController::class, 'resendOtp']);
-    Route::post('/reset-password', [AuthController::class, 'resetPassword'])->name('auth.reset-password');
+    Route::post('/reset-password', [AuthController::class, 'resetPassword'])->name('auth.reset-password')->middleware('throttle:5,1');
 });
 
 Route::middleware('auth:sanctum')->prefix('auth')->group(function () {
     Route::post('/complete-first-login', [AuthController::class, 'completeFirstLogin'])->name('auth.complete-first-login');
+    Route::post('/logout', [AuthController::class, 'logout'])->name('auth.logout');
 });
 
 // Profile: view / update / documents upload.

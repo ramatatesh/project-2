@@ -24,11 +24,11 @@ class UpdateHrManagerRequest extends FormRequest
                 'max:255',
                 Rule::unique('users', 'email')->ignore($this->route('hr_manager')->id),
             ],
-            'phone' => ['sometimes', 'string', 'max:50'],
+            'phone' => ['sometimes', 'string', 'regex:/^09[0-9]{8}$/'],
             'department_id' => ['sometimes', 'string', 'exists:departments,id'],
             'job_title' => ['sometimes', 'string', 'max:255'],
             'base_salary' => ['sometimes', 'numeric', 'min:0'],
-            'hire_date' => ['sometimes', 'date'],
+            'hire_date' => ['sometimes', 'date', 'before_or_equal:today'],
             'employment_type' => ['sometimes', 'string', 'max:100'],
             'education' => ['sometimes', 'string', 'max:255'],
             'is_active' => ['sometimes', 'boolean'],
@@ -36,6 +36,14 @@ class UpdateHrManagerRequest extends FormRequest
             'marital_status' => ['sometimes', 'nullable', 'string', 'in:single,married,divorced,widowed'],
             'nationality' => ['sometimes', 'nullable', 'string', 'max:100'],
             'residence' => ['sometimes', 'nullable', 'string', 'max:255'],
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'phone.regex' => 'رقم الهاتف يجب أن يبدأ بـ 09 ويتكون من 10 أرقام.',
+            'hire_date.before_or_equal' => 'لا يمكن أن يكون تاريخ التعيين في المستقبل.',
         ];
     }
 

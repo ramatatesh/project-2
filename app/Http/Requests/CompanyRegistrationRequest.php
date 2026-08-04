@@ -21,13 +21,20 @@ class CompanyRegistrationRequest extends FormRequest
             'domain' => ['nullable', 'string', 'max:255', 'unique:companies,domain'],
             'address' => ['required', 'string', 'max:255'],
             'contact_name' => ['required', 'string', 'max:255'],
-            'phone' => ['required', 'string', 'max:50'],
+            'phone' => ['required', 'string', 'regex:/^09[0-9]{8}$/'],
             'plan_id' => ['required', 'string', 'exists:subscription_plans,id'],
          //   'payment_status' => ['nullable', 'in:paid,pending'],
             'gender' => ['sometimes', 'nullable', 'string', 'in:male,female'],
             'marital_status' => ['sometimes', 'nullable', 'string', 'in:single,married,divorced,widowed'],
             'nationality' => ['sometimes', 'nullable', 'string', 'max:100'],
             'residence' => ['sometimes', 'nullable', 'string', 'max:255'],
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'phone.regex' => 'رقم الهاتف يجب أن يبدأ بـ 09 ويتكون من 10 أرقام.',
         ];
     }
 

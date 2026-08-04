@@ -142,15 +142,15 @@ class ProfileCompletionTest extends TestCase
         $this->actingAs($this->employeeUser);
 
         $this->putJson('/api/profile', [
-            'phone' => '+963922222222',
+            'phone' => '0922222222',
             'residence' => 'Aleppo',
         ])
             ->assertOk()
-            ->assertJsonPath('data.phone', '+963922222222')
+            ->assertJsonPath('data.phone', '0922222222')
             ->assertJsonPath('data.residence', 'Aleppo')
             ->assertJsonPath('data.profile_completed', false);
 
-        $this->assertSame('+963922222222', $this->employeeUser->fresh()->phone);
+        $this->assertSame('0922222222', $this->employeeUser->fresh()->phone);
         $this->assertSame('Aleppo', $this->employeeUser->fresh()->residence);
     }
 
@@ -163,7 +163,7 @@ class ProfileCompletionTest extends TestCase
             'PUT',
             '/api/profile',
             [
-                'phone' => '+963944444444',
+                'phone' => '0944444444',
                 'residence' => 'Homs',
             ],
             [],
@@ -171,12 +171,12 @@ class ProfileCompletionTest extends TestCase
         );
 
         $response->assertOk();
-        $response->assertJsonPath('data.phone', '+963944444444');
+        $response->assertJsonPath('data.phone', '0944444444');
         $response->assertJsonPath('data.residence', 'Homs');
         $this->assertNotNull($response->json('data.profile_image_url'));
         $this->assertFalse($this->employeeUser->fresh()->profile_completed);
 
-        $this->assertSame('+963944444444', $this->employeeUser->fresh()->phone);
+        $this->assertSame('0944444444', $this->employeeUser->fresh()->phone);
         $this->assertSame('Homs', $this->employeeUser->fresh()->residence);
 
         $document = $this->employee->document()->first();
@@ -230,7 +230,7 @@ class ProfileCompletionTest extends TestCase
         $this->actingAs($this->employeeUser);
 
         $this->putJson('/api/profile', [
-            'phone' => '+963933333333',
+            'phone' => '0933333333',
             'full_name' => 'Hacker Name',
             'email' => 'hacked@profile.test',
             'gender' => 'female',
@@ -238,7 +238,7 @@ class ProfileCompletionTest extends TestCase
             'job_title' => 'CEO',
         ])
             ->assertOk()
-            ->assertJsonPath('data.phone', '+963933333333')
+            ->assertJsonPath('data.phone', '0933333333')
             ->assertJsonPath('data.full_name', 'Profile Employee')
             ->assertJsonPath('data.email', 'employee@profile.test')
             ->assertJsonPath('data.job_title', 'Developer');

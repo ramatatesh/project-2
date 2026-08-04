@@ -31,6 +31,10 @@ class EmployeeTemplateExport implements FromArray, WithEvents, WithHeadings, Wit
             'base_salary',
             'hire_date',
             'employment_type',
+            'gender',
+            'marital_status',
+            'nationality',
+            'residence',
         ];
     }
 
@@ -40,22 +44,26 @@ class EmployeeTemplateExport implements FromArray, WithEvents, WithHeadings, Wit
             [
                 'Ahmad Ali',
                 'ahmad@example.com',
-                '+963999999999',
+                '0999999999',
                 'Human Resources',
                 'Bachelor',
                 'Software Engineer',
                 1500,
                 '2026-07-14',
                 'full-time',
+                'male',
+                'single',
+                'Syrian',
+                'Damascus',
             ],
-            ['', '', '', '', '', '', '', '', ''],
+            ['', '', '', '', '', '', '', '', '', '', '', '', ''],
         ];
     }
 
     public function styles(Worksheet $sheet)
     {
-        $sheet->getStyle('A1:I1')->getFont()->setBold(true);
-        $sheet->getStyle('A1:I1')->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('DDDDDD');
+        $sheet->getStyle('A1:M1')->getFont()->setBold(true);
+        $sheet->getStyle('A1:M1')->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('DDDDDD');
 
         $sheet->getColumnDimension('A')->setWidth(25);
         $sheet->getColumnDimension('B')->setWidth(32);
@@ -66,6 +74,10 @@ class EmployeeTemplateExport implements FromArray, WithEvents, WithHeadings, Wit
         $sheet->getColumnDimension('G')->setWidth(14);
         $sheet->getColumnDimension('H')->setWidth(14);
         $sheet->getColumnDimension('I')->setWidth(18);
+        $sheet->getColumnDimension('J')->setWidth(14);
+        $sheet->getColumnDimension('K')->setWidth(18);
+        $sheet->getColumnDimension('L')->setWidth(18);
+        $sheet->getColumnDimension('M')->setWidth(20);
 
         $sheet->freezePane('A2');
     }
@@ -79,13 +91,17 @@ class EmployeeTemplateExport implements FromArray, WithEvents, WithHeadings, Wit
                 $comments = [
                     'A1' => 'Full name of the employee (required).',
                     'B1' => 'Unique email address (required).',
-                    'C1' => 'Phone number, optional.',
+                    'C1' => 'Phone number, optional. Must start with 09 and be 10 digits.',
                     'D1' => 'Department name as registered in your company (required).',
                     'E1' => 'Education level, optional.',
                     'F1' => 'Job title (required).',
                     'G1' => 'Base salary as a number, e.g. 1500 (required).',
-                    'H1' => 'Hire date as Y-m-d or d/m/Y, e.g. 2026-07-14 (required).',
+                    'H1' => 'Hire date as Y-m-d or d/m/Y, e.g. 2026-07-14 (required, cannot be in the future).',
                     'I1' => 'Employment type: full-time, part-time, contract or internship.',
+                    'J1' => 'Gender, optional: male or female.',
+                    'K1' => 'Marital status, optional: single, married, divorced or widowed.',
+                    'L1' => 'Nationality, optional, free text.',
+                    'M1' => 'Place of residence, optional, free text.',
                 ];
 
                 foreach ($comments as $cell => $text) {
@@ -107,6 +123,20 @@ class EmployeeTemplateExport implements FromArray, WithEvents, WithHeadings, Wit
                 $validation->setFormula1('"full-time,part-time,contract,internship"');
 
                 $sheet->setDataValidation('I2:I1000', $validation);
+
+                $genderValidation = clone $validation;
+                $genderValidation->setErrorTitle('Invalid gender');
+                $genderValidation->setPromptTitle('Gender');
+                $genderValidation->setPrompt('Choose a gender.');
+                $genderValidation->setFormula1('"male,female"');
+                $sheet->setDataValidation('J2:J1000', $genderValidation);
+
+                $maritalValidation = clone $validation;
+                $maritalValidation->setErrorTitle('Invalid marital status');
+                $maritalValidation->setPromptTitle('Marital status');
+                $maritalValidation->setPrompt('Choose a marital status.');
+                $maritalValidation->setFormula1('"single,married,divorced,widowed"');
+                $sheet->setDataValidation('K2:K1000', $maritalValidation);
             },
         ];
     }

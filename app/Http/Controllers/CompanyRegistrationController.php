@@ -23,7 +23,7 @@ class CompanyRegistrationController extends Controller
      *       @OA\Property(property="domain", type="string", nullable=true, example="acme.example.com"),
      *       @OA\Property(property="address", type="string", example="Damascus"),
      *       @OA\Property(property="contact_name", type="string", example="Ahmad"),
-     *       @OA\Property(property="phone", type="string", example="+963999999999"),
+     *       @OA\Property(property="phone", type="string", pattern="^09[0-9]{8}$", example="0999999999", description="يجب أن يبدأ بـ 09 ويتكون من 10 أرقام"),
      *       @OA\Property(property="plan_id", type="string", format="uuid", example="00000000-0000-0000-0000-000000000000"),
      *       @OA\Property(property="gender", type="string", enum={"male","female"}, nullable=true),
      *       @OA\Property(property="marital_status", type="string", enum={"single","married","divorced","widowed"}, nullable=true),
