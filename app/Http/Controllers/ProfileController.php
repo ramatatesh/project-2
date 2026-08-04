@@ -128,7 +128,8 @@ class ProfileController extends Controller
                 ], 403);
             }
 
-            $document = $employee->document ?? new EmployeeDocument(['employee_id' => $employee->id]);
+            $document = EmployeeDocument::where('employee_id', $employee->id)->first()
+                ?? new EmployeeDocument(['employee_id' => $employee->id]);
 
             if ($document->profile_image_path) {
                 Storage::disk('public')->delete($document->profile_image_path);
@@ -154,8 +155,8 @@ class ProfileController extends Controller
     /**
      * @OA\Post(
      *   path="/api/profile/documents",
-     *   summary="Upload identity and optional university certificate documents",
-     *   description="Uploads identity_image (required) and university_certificate (optional). Creates or updates the employee_documents row. Does not change phone, residence, or other profile fields. Sets profile_completed to true when both profile_image and identity_image are present.",
+     *   summary="Upload or update identity and/or university certificate documents",
+     *   description="identity_image is required only the first time (when no identity document is saved yet); once one exists, both fields become independently optional so the employee can update just one file (e.g. add/replace only the certificate) without resending the other. Any field omitted keeps its previously saved file untouched. Creates or updates the employee_documents row. Does not change phone, residence, or other profile fields. Sets profile_completed to true once both profile_image and identity_image exist.",
      *   tags={"Profile"},
      *   security={{"sanctum":{}}},
      *   @OA\RequestBody(
@@ -163,9 +164,8 @@ class ProfileController extends Controller
      *     @OA\MediaType(
      *       mediaType="multipart/form-data",
      *       @OA\Schema(
-     *         required={"identity_image"},
-     *         @OA\Property(property="identity_image", type="string", format="binary", description="Photo of the national ID / identity document"),
-     *         @OA\Property(property="university_certificate", type="string", format="binary", description="University certificate photo/scan (optional)")
+     *         @OA\Property(property="identity_image", type="string", format="binary", description="Photo or scan (jpg/jpeg/png/pdf, max 4MB) of the national ID / identity document. Required only if no identity document has been saved yet."),
+     *         @OA\Property(property="university_certificate", type="string", format="binary", description="University certificate photo or scan (jpg/jpeg/png/pdf, max 8MB), always optional.")
      *       )
      *     )
      *   ),
@@ -202,7 +202,8 @@ class ProfileController extends Controller
             ], 403);
         }
 
-        $document = $employee->document ?? new EmployeeDocument(['employee_id' => $employee->id]);
+        $document = EmployeeDocument::where('employee_id', $employee->id)->first()
+            ?? new EmployeeDocument(['employee_id' => $employee->id]);
 
         $fieldToColumn = [
             'identity_image' => 'identity_image_path',

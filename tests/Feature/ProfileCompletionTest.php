@@ -225,6 +225,77 @@ class ProfileCompletionTest extends TestCase
         $this->assertTrue($this->employeeUser->fresh()->profile_completed);
     }
 
+    public function test_identity_image_is_required_only_the_first_time(): void
+    {
+        Storage::fake('public');
+        $this->actingAs($this->employeeUser);
+
+        // No identity uploaded yet - omitting it must fail.
+        $this->post('/api/profile/documents', [
+            'university_certificate' => UploadedFile::fake()->create('certificate.pdf', 100, 'application/pdf'),
+        ])->assertStatus(422);
+
+        // Upload identity for the first time - succeeds.
+        $this->post('/api/profile/documents', [
+            'identity_image' => UploadedFile::fake()->image('id.jpg'),
+        ])->assertOk();
+
+        $identityPath = $this->employee->document()->first()->identity_image_path;
+        $this->assertNotNull($identityPath);
+
+        // Now that identity exists, uploading ONLY the certificate must succeed
+        // without resending identity_image, and must not touch the saved identity file.
+        $response = $this->post('/api/profile/documents', [
+            'university_certificate' => UploadedFile::fake()->create('certificate2.pdf', 100, 'application/pdf'),
+        ]);
+
+        $response->assertOk();
+        $this->assertNotNull($response->json('data.documents.university_certificate_url'));
+
+        $document = $this->employee->document()->first();
+        $this->assertSame($identityPath, $document->identity_image_path);
+        Storage::disk('public')->assertExists($identityPath);
+    }
+
+    public function test_identity_image_accepts_pdf(): void
+    {
+        Storage::fake('public');
+        $this->actingAs($this->employeeUser);
+
+        $response = $this->post('/api/profile/documents', [
+            'identity_image' => UploadedFile::fake()->create('id.pdf', 100, 'application/pdf'),
+        ]);
+
+        $response->assertOk();
+        $this->assertNotNull($response->json('data.documents.identity_image_url'));
+    }
+
+    public function test_updating_one_document_preserves_the_other(): void
+    {
+        Storage::fake('public');
+        $this->actingAs($this->employeeUser);
+
+        $this->post('/api/profile/documents', [
+            'identity_image' => UploadedFile::fake()->image('id.jpg'),
+            'university_certificate' => UploadedFile::fake()->create('certificate.pdf', 100, 'application/pdf'),
+        ])->assertOk();
+
+        $original = $this->employee->document()->first();
+        $originalIdentityPath = $original->identity_image_path;
+        $originalCertificatePath = $original->university_certificate_path;
+
+        // Re-upload only the identity image.
+        $this->post('/api/profile/documents', [
+            'identity_image' => UploadedFile::fake()->image('id-new.jpg'),
+        ])->assertOk();
+
+        $updated = $this->employee->document()->first();
+        $this->assertNotSame($originalIdentityPath, $updated->identity_image_path);
+        $this->assertSame($originalCertificatePath, $updated->university_certificate_path);
+        Storage::disk('public')->assertExists($updated->identity_image_path);
+        Storage::disk('public')->assertExists($originalCertificatePath);
+    }
+
     public function test_update_ignores_non_editable_fields(): void
     {
         $this->actingAs($this->employeeUser);

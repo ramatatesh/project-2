@@ -87,6 +87,7 @@ class EvaluationScoringController extends Controller
      * @OA\Post(
      *   path="/api/hr/evaluation-cycles/{cycle}/reviews/{review}/score",
      *   summary="Store HR scores for a completed review",
+     *   description="Rejected with 422 once the evaluation cycle has been closed - scores can no longer be entered or edited after close.",
      *   tags={"Evaluation Scoring"},
      *   security={{"sanctum":{}}},
      *

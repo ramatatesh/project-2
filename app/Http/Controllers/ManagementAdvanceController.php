@@ -189,6 +189,7 @@ class ManagementAdvanceController extends Controller
      *   ),
      *   @OA\Response(response=200, description="Action executed successfully"),
      *   @OA\Response(response=403, description="Unauthorized role or company mismatch"),
+     *   @OA\Response(response=404, description="Salary advance request not found"),
      *   @OA\Response(response=422, description="Invalid workflow state")
      * )
      */
@@ -208,7 +209,15 @@ class ManagementAdvanceController extends Controller
                     ->where('company_id', $companyId)
                     ->with(['employee.department', 'installments'])
                     ->lockForUpdate()
-                    ->firstOrFail();
+                    ->first();
+
+                if (! $advance) {
+                    return [
+                        'error' => true,
+                        'status' => 404,
+                        'message' => 'Salary advance request not found.',
+                    ];
+                }
 
                 if ($roleContext === 'manager') {
                     if ($user?->role !== Role::DepartmentManager->value) {

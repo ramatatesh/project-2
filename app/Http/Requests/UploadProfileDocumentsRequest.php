@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Models\EmployeeDocument;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
@@ -15,8 +16,11 @@ class UploadProfileDocumentsRequest extends FormRequest
 
     public function rules(): array
     {
-        $document = $this->user()?->employee?->document;
-        $hasIdentity = filled($document?->identity_image_path);
+        // Queried fresh (not via the cached $user->employee->document relation) so this is
+        // always correct even when the same request-scoped models are reused across calls.
+        $employeeId = $this->user()?->employee?->id;
+        $hasIdentity = $employeeId
+            && filled(EmployeeDocument::where('employee_id', $employeeId)->value('identity_image_path'));
 
         $identityRules = array_merge(
             $hasIdentity ? ['sometimes', 'nullable'] : ['required'],

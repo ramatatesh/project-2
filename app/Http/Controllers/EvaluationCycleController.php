@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Exceptions\EvaluationCycleAlreadyClosedException;
 use App\Http\Requests\StoreEvaluationCycleRequest;
 use App\Http\Requests\UpdateEvaluationCycleRequest;
 use App\Http\Resources\EvaluationCycleResource;
@@ -201,14 +202,19 @@ class EvaluationCycleController extends Controller
      *
      *   @OA\Parameter(name="cycle", in="path", required=true, @OA\Schema(type="string", format="uuid")),
      *
-     *   @OA\Response(response=200, description="Cycle closed successfully")
+     *   @OA\Response(response=200, description="Cycle closed successfully"),
+     *   @OA\Response(response=409, description="Cycle is already closed")
      * )
      */
     public function close(EvaluationCycle $cycle): JsonResponse
     {
         $this->evaluationService->ensureOwnsCompany($cycle, auth()->user()->company_id);
 
-        $closed = $this->evaluationService->closeCycle($cycle);
+        try {
+            $closed = $this->evaluationService->closeCycle($cycle);
+        } catch (EvaluationCycleAlreadyClosedException $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 409);
+        }
 
         return response()->json([
             'success' => true,

@@ -3,10 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\ApplySalaryAdvanceRequest;
+use App\Models\Employee;
 use App\Models\SalaryAdvance;
 use App\Services\SalaryAdvanceService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 /**
@@ -195,15 +197,6 @@ class EmployeeAdvanceController extends Controller
         $maxAllowedAmount = $this->salaryAdvanceService->maxAllowedAmount($employee, $policy);
         $requestedAmount = (float) $request->validated('requested_amount');
 
-        if (! $policy->allow_multiple_active_advances
-            && $this->salaryAdvanceService->hasActiveAdvance($employee->id, $companyId)
-        ) {
-            return response()->json([
-                'success' => false,
-                'message' => 'لا يمكنك تقديم طلب سلفة جديد لوجود سلفة نشطة قيد السداد',
-            ], 422);
-        }
-
         if ($requestedAmount > $maxAllowedAmount) {
             return response()->json([
                 'success' => false,
@@ -215,16 +208,36 @@ class EmployeeAdvanceController extends Controller
         $repaymentMonths = (int) $request->validated('repayment_months');
         $monthlyInstallment = round($requestedAmount / $repaymentMonths, 2);
 
-        $advance = SalaryAdvance::create([
-            'id' => Str::uuid()->toString(),
-            'company_id' => $companyId,
-            'employee_id' => $employee->id,
-            'requested_amount' => $requestedAmount,
-            'repayment_months' => $repaymentMonths,
-            'monthly_installment' => $monthlyInstallment,
-            'reason' => $request->validated('reason'),
-            'status' => SalaryAdvance::STATUS_PENDING_DEPARTMENT_MANAGER,
-        ]);
+        // Lock the (always-existing) employee row first so concurrent apply() requests for the
+        // same employee are serialized - this prevents two simultaneous requests from both
+        // passing the "no active advance" check before either one has been created.
+        $advance = DB::transaction(function () use ($employee, $companyId, $policy, $requestedAmount, $repaymentMonths, $monthlyInstallment, $request) {
+            Employee::where('id', $employee->id)->lockForUpdate()->first();
+
+            if (! $policy->allow_multiple_active_advances
+                && $this->salaryAdvanceService->hasActiveAdvance($employee->id, $companyId)
+            ) {
+                return null;
+            }
+
+            return SalaryAdvance::create([
+                'id' => Str::uuid()->toString(),
+                'company_id' => $companyId,
+                'employee_id' => $employee->id,
+                'requested_amount' => $requestedAmount,
+                'repayment_months' => $repaymentMonths,
+                'monthly_installment' => $monthlyInstallment,
+                'reason' => $request->validated('reason'),
+                'status' => SalaryAdvance::STATUS_PENDING_DEPARTMENT_MANAGER,
+            ]);
+        });
+
+        if (! $advance) {
+            return response()->json([
+                'success' => false,
+                'message' => 'لا يمكنك تقديم طلب سلفة جديد لوجود سلفة نشطة قيد السداد',
+            ], 422);
+        }
 
         return response()->json([
             'success' => true,

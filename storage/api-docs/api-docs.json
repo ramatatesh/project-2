@@ -3807,6 +3807,9 @@
                 "responses": {
                     "200": {
                         "description": "Cycle closed successfully"
+                    },
+                    "409": {
+                        "description": "Cycle is already closed"
                     }
                 },
                 "security": [
@@ -4065,6 +4068,7 @@
                     "Evaluation Results"
                 ],
                 "summary": "Get final score for a specific employee",
+                "description": "Read-only: never creates, updates, or changes the status of any score record - viewing a result has no side effects, so an already-finalized score stays finalized.",
                 "operationId": "2615e38ac2e59bd79eded9b46cc8bb2e",
                 "parameters": [
                     {
@@ -4341,6 +4345,7 @@
                     "Evaluation Scoring"
                 ],
                 "summary": "Store HR scores for a completed review",
+                "description": "Rejected with 422 once the evaluation cycle has been closed - scores can no longer be entered or edited after close.",
                 "operationId": "5bfe0ee64567e7de0605bbdaf99ab160",
                 "parameters": [
                     {
@@ -5989,6 +5994,9 @@
                     "403": {
                         "description": "Unauthorized role or company mismatch"
                     },
+                    "404": {
+                        "description": "Salary advance request not found"
+                    },
                     "422": {
                         "description": "Invalid workflow state"
                     }
@@ -7097,25 +7105,22 @@
                 "tags": [
                     "Profile"
                 ],
-                "summary": "Upload identity and optional university certificate documents",
-                "description": "Uploads identity_image (required) and university_certificate (optional). Creates or updates the employee_documents row. Does not change phone, residence, or other profile fields. Sets profile_completed to true when both profile_image and identity_image are present.",
+                "summary": "Upload or update identity and/or university certificate documents",
+                "description": "identity_image is required only the first time (when no identity document is saved yet); once one exists, both fields become independently optional so the employee can update just one file (e.g. add/replace only the certificate) without resending the other. Any field omitted keeps its previously saved file untouched. Creates or updates the employee_documents row. Does not change phone, residence, or other profile fields. Sets profile_completed to true once both profile_image and identity_image exist.",
                 "operationId": "c85b710ae9a190458b5e6fd057952a75",
                 "requestBody": {
                     "required": true,
                     "content": {
                         "multipart/form-data": {
                             "schema": {
-                                "required": [
-                                    "identity_image"
-                                ],
                                 "properties": {
                                     "identity_image": {
-                                        "description": "Photo of the national ID / identity document",
+                                        "description": "Photo or scan (jpg/jpeg/png/pdf, max 4MB) of the national ID / identity document. Required only if no identity document has been saved yet.",
                                         "type": "string",
                                         "format": "binary"
                                     },
                                     "university_certificate": {
-                                        "description": "University certificate photo/scan (optional)",
+                                        "description": "University certificate photo or scan (jpg/jpeg/png/pdf, max 8MB), always optional.",
                                         "type": "string",
                                         "format": "binary"
                                     }
