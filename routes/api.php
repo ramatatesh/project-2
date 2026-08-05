@@ -4,6 +4,7 @@ use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CompanyAdminController;
 use App\Http\Controllers\CompanyPolicyController;
+use App\Http\Controllers\CompanyProfileController;
 use App\Http\Controllers\CompanyRegistrationController;
 use App\Http\Controllers\CompanySettingsController;
 use App\Http\Controllers\DepartmentController;
@@ -52,6 +53,17 @@ Route::middleware('auth:sanctum')->prefix('profile')->group(function () {
     Route::get('/', [ProfileController::class, 'show'])->name('profile.show');
     Route::put('/', [ProfileController::class, 'update'])->name('profile.update');
     Route::post('/documents', [ProfileController::class, 'uploadDocuments'])->name('profile.documents');
+});
+
+// Company profile page (logo, tagline, about, contact info).
+// GET: any authenticated tenant user (General Manager, HR Manager, Department Manager, Employee) -
+// always scoped to auth()->user()->company_id, never a client-supplied company_id.
+// PUT: General Manager only.
+Route::middleware('auth:sanctum')->prefix('company/profile')->group(function () {
+    Route::get('/', [CompanyProfileController::class, 'show'])->name('company.profile.show');
+    Route::put('/', [CompanyProfileController::class, 'update'])
+        ->middleware('role:general_manager')
+        ->name('company.profile.update');
 });
 
 // Public self-registration for tenant companies (rate-limited).

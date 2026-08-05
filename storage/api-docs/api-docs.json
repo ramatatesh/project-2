@@ -1578,6 +1578,266 @@
                 ]
             }
         },
+        "/api/company/profile": {
+            "get": {
+                "tags": [
+                    "Company Profile"
+                ],
+                "summary": "Get the current user's company profile page (read-only)",
+                "description": "Available to any authenticated tenant user (General Manager, HR Manager, Department Manager, Employee). Always resolves the company from auth()->user()->company_id - no company_id is ever accepted from the client, so a user can never view another company's profile.",
+                "operationId": "45dd031020e98a7cad94d62180c6fbe6",
+                "responses": {
+                    "200": {
+                        "description": "Company profile retrieved successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "id": {
+                                                    "type": "string",
+                                                    "format": "uuid",
+                                                    "example": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+                                                },
+                                                "name": {
+                                                    "type": "string",
+                                                    "example": "Khibrat HR"
+                                                },
+                                                "logo_url": {
+                                                    "type": "string",
+                                                    "example": "http://localhost/storage/company_logos/a1b2c3d4-e5f6-7890-abcd-ef1234567890/logo.png",
+                                                    "nullable": true
+                                                },
+                                                "tagline": {
+                                                    "type": "string",
+                                                    "example": "شريك التمكين الرقمي المعتمد",
+                                                    "nullable": true
+                                                },
+                                                "about": {
+                                                    "type": "string",
+                                                    "example": "نبذة بسيطة عن الشركة ومجال عملها.",
+                                                    "nullable": true
+                                                },
+                                                "phone": {
+                                                    "type": "string",
+                                                    "example": "+963111222333"
+                                                },
+                                                "email": {
+                                                    "type": "string",
+                                                    "format": "email",
+                                                    "example": "info@khibrat.example"
+                                                },
+                                                "address": {
+                                                    "type": "string",
+                                                    "example": "دمشق، منطقة الروضة"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "Company Profile"
+                ],
+                "summary": "Update the company profile page (General Manager only)",
+                "description": "Only the General Manager of the company can edit this page. Updates name, phone, email, address, tagline, about, and optionally the logo. If no new logo file is sent, the previously saved logo is kept untouched; if a new one is sent, the old logo file is deleted from storage and replaced.",
+                "operationId": "89ecb0f5e80a13cca2bbb510e1a04b79",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "required": [
+                                    "name",
+                                    "phone",
+                                    "email",
+                                    "address"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "maxLength": 255,
+                                        "example": "Khibrat HR"
+                                    },
+                                    "phone": {
+                                        "type": "string",
+                                        "maxLength": 30,
+                                        "example": "+963111222333"
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "maxLength": 255,
+                                        "example": "info@khibrat.example"
+                                    },
+                                    "address": {
+                                        "type": "string",
+                                        "maxLength": 500,
+                                        "example": "دمشق، منطقة الروضة"
+                                    },
+                                    "tagline": {
+                                        "type": "string",
+                                        "maxLength": 255,
+                                        "example": "شريك التمكين الرقمي المعتمد",
+                                        "nullable": true
+                                    },
+                                    "about": {
+                                        "type": "string",
+                                        "maxLength": 3000,
+                                        "example": "نبذة بسيطة عن الشركة ومجال عملها.",
+                                        "nullable": true
+                                    },
+                                    "logo": {
+                                        "description": "jpg/jpeg/png/webp, max 4MB. Omit to keep the current logo.",
+                                        "type": "string",
+                                        "format": "binary",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        },
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "name",
+                                    "phone",
+                                    "email",
+                                    "address"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "maxLength": 255,
+                                        "example": "Khibrat HR"
+                                    },
+                                    "phone": {
+                                        "type": "string",
+                                        "maxLength": 30,
+                                        "example": "+963111222333"
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "maxLength": 255,
+                                        "example": "info@khibrat.example"
+                                    },
+                                    "address": {
+                                        "type": "string",
+                                        "maxLength": 500,
+                                        "example": "دمشق، منطقة الروضة"
+                                    },
+                                    "tagline": {
+                                        "type": "string",
+                                        "maxLength": 255,
+                                        "example": "شريك التمكين الرقمي المعتمد",
+                                        "nullable": true
+                                    },
+                                    "about": {
+                                        "type": "string",
+                                        "maxLength": 3000,
+                                        "example": "نبذة بسيطة عن الشركة ومجال عملها.",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Company profile updated successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Company profile updated successfully."
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "id": {
+                                                    "type": "string",
+                                                    "format": "uuid"
+                                                },
+                                                "name": {
+                                                    "type": "string",
+                                                    "example": "Khibrat HR"
+                                                },
+                                                "logo_url": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                },
+                                                "tagline": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                },
+                                                "about": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                },
+                                                "phone": {
+                                                    "type": "string"
+                                                },
+                                                "email": {
+                                                    "type": "string",
+                                                    "format": "email"
+                                                },
+                                                "address": {
+                                                    "type": "string"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "403": {
+                        "description": "Only the General Manager can edit the company profile"
+                    },
+                    "422": {
+                        "description": "Validation failed"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
         "/api/companies/register": {
             "post": {
                 "tags": [
@@ -7801,6 +8061,10 @@
         {
             "name": "Company Policies",
             "description": "Endpoints for leave types, salary rules and payroll settings for a tenant company"
+        },
+        {
+            "name": "Company Profile",
+            "description": "Company info page (logo, tagline, about, contact details). General Manager can view and edit; every other tenant role (HR Manager, Department Manager, Employee) can only view their own company's page."
         },
         {
             "name": "Departments",
