@@ -56,6 +56,7 @@ class EmployeeService
                 'marital_status' => $data['marital_status'] ?? null,
                 'nationality' => $data['nationality'] ?? null,
                 'residence' => $data['residence'] ?? null,
+                'birth_date' => $data['birth_date'] ?? null,
             ]);
 
             $employee = Employee::create([
@@ -90,7 +91,7 @@ class EmployeeService
     {
         return DB::transaction(function () use ($employee, $data) {
             $userUpdates = [];
-            foreach (['full_name', 'email', 'phone', 'gender', 'marital_status', 'nationality', 'residence'] as $field) {
+            foreach (['full_name', 'email', 'phone', 'gender', 'marital_status', 'nationality', 'residence', 'birth_date'] as $field) {
                 if (array_key_exists($field, $data)) {
                     $userUpdates[$field] = $data[$field];
                 }
@@ -372,7 +373,7 @@ class EmployeeService
      */
     protected function normalizeRowDates(array &$row): void
     {
-        foreach (['hire_date'] as $field) {
+        foreach (['hire_date', 'birth_date'] as $field) {
             if (array_key_exists($field, $row)) {
                 $row[$field] = $this->normalizeDate($row[$field]);
             }
@@ -491,6 +492,13 @@ class EmployeeService
         }
         if (! empty($row['marital_status']) && ! in_array($row['marital_status'], ['single', 'married', 'divorced', 'widowed'], true)) {
             $errors['marital_status'] = ['marital_status must be one of: single, married, divorced, widowed.'];
+        }
+        if (! empty($row['birth_date'])) {
+            if (! $this->isValidDate($row['birth_date'])) {
+                $errors['birth_date'] = ['birth_date must be a valid date (Y-m-d).'];
+            } elseif ($row['birth_date'] > now()->format('Y-m-d')) {
+                $errors['birth_date'] = ['birth_date cannot be in the future.'];
+            }
         }
 
         $departmentName = $row['department'] ?? null;

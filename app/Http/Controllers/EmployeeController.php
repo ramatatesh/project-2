@@ -126,7 +126,8 @@ class EmployeeController extends Controller
      *       @OA\Property(property="gender", type="string", enum={"male","female"}, nullable=true),
      *       @OA\Property(property="marital_status", type="string", enum={"single","married","divorced","widowed"}, nullable=true),
      *       @OA\Property(property="nationality", type="string", nullable=true, example="Syrian"),
-     *       @OA\Property(property="residence", type="string", nullable=true, example="Damascus, Syria")
+     *       @OA\Property(property="residence", type="string", nullable=true, example="Damascus, Syria"),
+     *       @OA\Property(property="birth_date", type="string", format="date", nullable=true, example="1995-05-20", description="لا يمكن أن يكون تاريخاً مستقبلياً")
      *     )
      *   ),
      *
@@ -212,7 +213,8 @@ class EmployeeController extends Controller
      *       @OA\Property(property="gender", type="string", enum={"male","female"}, nullable=true),
      *       @OA\Property(property="marital_status", type="string", enum={"single","married","divorced","widowed"}, nullable=true),
      *       @OA\Property(property="nationality", type="string", nullable=true),
-     *       @OA\Property(property="residence", type="string", nullable=true)
+     *       @OA\Property(property="residence", type="string", nullable=true),
+     *       @OA\Property(property="birth_date", type="string", format="date", nullable=true, description="لا يمكن أن يكون تاريخاً مستقبلياً")
      *     )
      *   ),
      *
@@ -306,7 +308,7 @@ class EmployeeController extends Controller
      * @OA\Post(
      *   path="/api/hr/employees/import",
      *   summary="استيراد موظفين من ملف Excel/CSV (All-or-nothing: إن وُجد خطأ لا يُدخل أي صف)",
-     *   description="بالإضافة للأعمدة الأساسية، يدعم الملف أعمدة اختيارية إضافية تُحفظ مباشرة عند إنشاء المستخدم: gender (male/female)، marital_status (single/married/divorced/widowed)، nationality، residence. صور الملف الشخصي/الهوية/الشهادة الجامعية لا تُستورد من الإكسل ويرفعها الموظف لاحقاً بنفسه.",
+     *   description="بالإضافة للأعمدة الأساسية، يدعم الملف أعمدة اختيارية إضافية تُحفظ مباشرة عند إنشاء المستخدم: gender (male/female)، marital_status (single/married/divorced/widowed)، nationality، residence، birth_date (تاريخ الميلاد، Y-m-d أو d/m/Y، لا يمكن أن يكون مستقبلياً). صور الملف الشخصي/الهوية/الشهادة الجامعية لا تُستورد من الإكسل ويرفعها الموظف لاحقاً بنفسه.",
      *   tags={"Employees"},
      *   security={{"sanctum":{}}},
      *

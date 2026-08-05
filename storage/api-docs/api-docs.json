@@ -2526,6 +2526,13 @@
                                         "type": "string",
                                         "example": "Damascus, Syria",
                                         "nullable": true
+                                    },
+                                    "birth_date": {
+                                        "description": "لا يمكن أن يكون تاريخاً مستقبلياً",
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "1990-03-10",
+                                        "nullable": true
                                     }
                                 },
                                 "type": "object"
@@ -3045,6 +3052,13 @@
                                         "type": "string",
                                         "example": "Damascus, Syria",
                                         "nullable": true
+                                    },
+                                    "birth_date": {
+                                        "description": "لا يمكن أن يكون تاريخاً مستقبلياً",
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "1995-05-20",
+                                        "nullable": true
                                     }
                                 },
                                 "type": "object"
@@ -3204,6 +3218,12 @@
                                     "residence": {
                                         "type": "string",
                                         "nullable": true
+                                    },
+                                    "birth_date": {
+                                        "description": "لا يمكن أن يكون تاريخاً مستقبلياً",
+                                        "type": "string",
+                                        "format": "date",
+                                        "nullable": true
                                     }
                                 },
                                 "type": "object"
@@ -3290,7 +3310,7 @@
                     "Employees"
                 ],
                 "summary": "استيراد موظفين من ملف Excel/CSV (All-or-nothing: إن وُجد خطأ لا يُدخل أي صف)",
-                "description": "بالإضافة للأعمدة الأساسية، يدعم الملف أعمدة اختيارية إضافية تُحفظ مباشرة عند إنشاء المستخدم: gender (male/female)، marital_status (single/married/divorced/widowed)، nationality، residence. صور الملف الشخصي/الهوية/الشهادة الجامعية لا تُستورد من الإكسل ويرفعها الموظف لاحقاً بنفسه.",
+                "description": "بالإضافة للأعمدة الأساسية، يدعم الملف أعمدة اختيارية إضافية تُحفظ مباشرة عند إنشاء المستخدم: gender (male/female)، marital_status (single/married/divorced/widowed)، nationality، residence، birth_date (تاريخ الميلاد، Y-m-d أو d/m/Y، لا يمكن أن يكون مستقبلياً). صور الملف الشخصي/الهوية/الشهادة الجامعية لا تُستورد من الإكسل ويرفعها الموظف لاحقاً بنفسه.",
                 "operationId": "6a70e41774051a7604e34cb286a1b210",
                 "requestBody": {
                     "required": true,
@@ -5687,6 +5707,13 @@
                                     "residence": {
                                         "type": "string",
                                         "example": "Damascus, Syria",
+                                        "nullable": true
+                                    },
+                                    "birth_date": {
+                                        "description": "لا يمكن أن يكون تاريخاً مستقبلياً",
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "1990-03-10",
                                         "nullable": true
                                     }
                                 },
