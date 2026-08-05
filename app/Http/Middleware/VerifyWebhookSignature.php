@@ -13,18 +13,22 @@ class VerifyWebhookSignature
     {
         $secret = config('services.payment.webhook_secret');
 
-        if (filled($secret)) {
-            $signature = $request->header('X-Webhook-Signature');
+        if (blank($secret)) {
+            Log::warning('Payment webhook rejected: PAYMENT_WEBHOOK_SECRET is not configured.', [
+                'ip' => $request->ip(),
+            ]);
 
-            if (! hash_equals($secret, (string) $signature)) {
-                Log::warning('Payment webhook rejected: invalid signature.', [
-                    'ip' => $request->ip(),
-                ]);
+            abort(500, 'Webhook secret is not configured.');
+        }
 
-                abort(403, 'Invalid webhook signature.');
-            }
-        } else {
-            Log::warning('Payment webhook accepted without signature verification (PAYMENT_WEBHOOK_SECRET not configured).');
+        $signature = $request->header('X-Webhook-Signature');
+
+        if (! hash_equals($secret, (string) $signature)) {
+            Log::warning('Payment webhook rejected: invalid signature.', [
+                'ip' => $request->ip(),
+            ]);
+
+            abort(403, 'Invalid webhook signature.');
         }
 
         return $next($request);

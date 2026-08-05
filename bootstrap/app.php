@@ -39,6 +39,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'role' => \App\Http\Middleware\RequireRole::class,
             'tenant' => \App\Http\Middleware\EnsureTenantMember::class,
             'webhook' => \App\Http\Middleware\VerifyWebhookSignature::class,
+            'company.active' => \App\Http\Middleware\EnsureCompanyIsNotFrozen::class,
         ]);
 
         // المشروع API-only ولا يوجد route اسمه login،

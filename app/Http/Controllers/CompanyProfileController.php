@@ -106,7 +106,7 @@ class CompanyProfileController extends Controller
      *     )
      *   ),
      *   @OA\Response(response=401, description="Unauthenticated"),
-     *   @OA\Response(response=403, description="Only the General Manager can edit the company profile"),
+     *   @OA\Response(response=403, description="Only the General Manager can edit the company profile, or the company is frozen (status=suspended) - message 'Company is frozen.'"),
      *   @OA\Response(response=422, description="Validation failed")
      * )
      */

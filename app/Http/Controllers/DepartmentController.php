@@ -76,14 +76,14 @@ class DepartmentController extends Controller
      *       required={"name"},
      *       @OA\Property(property="name", type="string", example="IT"),
      *       @OA\Property(property="is_active", type="boolean", example=true),
-     *       @OA\Property(property="manager_id", type="string", format="uuid", nullable=true)
+     *       @OA\Property(property="manager_id", type="string", format="uuid", nullable=true, description="Must be an employee id belonging to the current company; employees from another company are rejected with a validation error.")
      *     )
      *   ),
      *   @OA\Response(response=201, description="تم إنشاء القسم",
      *     @OA\JsonContent(@OA\Property(property="success", type="boolean"), @OA\Property(property="data", type="object"))
      *   ),
-     *   @OA\Response(response=422, description="Validation failed"),
-     *   @OA\Response(response=403, description="Forbidden (HR Manager only)")
+     *   @OA\Response(response=422, description="Validation failed (including manager_id belonging to another company)"),
+     *   @OA\Response(response=403, description="Forbidden (HR Manager only), or the company is frozen (status=suspended) - message 'Company is frozen.'")
      * )
      */
     public function store(StoreDepartmentRequest $request): JsonResponse
@@ -140,12 +140,13 @@ class DepartmentController extends Controller
      *     @OA\JsonContent(
      *       @OA\Property(property="name", type="string", example="IT Department"),
      *       @OA\Property(property="is_active", type="boolean", example=true),
-     *       @OA\Property(property="manager_id", type="string", format="uuid", nullable=true)
+     *       @OA\Property(property="manager_id", type="string", format="uuid", nullable=true, description="Must be an employee id belonging to the current company; employees from another company are rejected with a validation error.")
      *     )
      *   ),
      *   @OA\Response(response=200, description="تم التعديل"),
      *   @OA\Response(response=404, description="Not found / not in your company"),
-     *   @OA\Response(response=422, description="Validation failed")
+     *   @OA\Response(response=422, description="Validation failed (including manager_id belonging to another company)"),
+     *   @OA\Response(response=403, description="Company is frozen (status=suspended)")
      * )
      */
     public function update(UpdateDepartmentRequest $request, Department $department): JsonResponse

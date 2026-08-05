@@ -1825,7 +1825,7 @@
                         "description": "Unauthenticated"
                     },
                     "403": {
-                        "description": "Only the General Manager can edit the company profile"
+                        "description": "Only the General Manager can edit the company profile, or the company is frozen (status=suspended) - message 'Company is frozen.'"
                     },
                     "422": {
                         "description": "Validation failed"
@@ -1960,7 +1960,7 @@
                         }
                     },
                     "422": {
-                        "description": "Validation failed, or this email already used the Free plan before"
+                        "description": "Validation failed (including duplicate email - companies.email is unique), or this email already used the Free plan before"
                     }
                 }
             }
@@ -2222,6 +2222,7 @@
                                         "example": true
                                     },
                                     "manager_id": {
+                                        "description": "Must be an employee id belonging to the current company; employees from another company are rejected with a validation error.",
                                         "type": "string",
                                         "format": "uuid",
                                         "nullable": true
@@ -2252,10 +2253,10 @@
                         }
                     },
                     "422": {
-                        "description": "Validation failed"
+                        "description": "Validation failed (including manager_id belonging to another company)"
                     },
                     "403": {
-                        "description": "Forbidden (HR Manager only)"
+                        "description": "Forbidden (HR Manager only), or the company is frozen (status=suspended) - message 'Company is frozen.'"
                     }
                 },
                 "security": [
@@ -2329,6 +2330,7 @@
                                         "example": true
                                     },
                                     "manager_id": {
+                                        "description": "Must be an employee id belonging to the current company; employees from another company are rejected with a validation error.",
                                         "type": "string",
                                         "format": "uuid",
                                         "nullable": true
@@ -2347,7 +2349,10 @@
                         "description": "Not found / not in your company"
                     },
                     "422": {
-                        "description": "Validation failed"
+                        "description": "Validation failed (including manager_id belonging to another company)"
+                    },
+                    "403": {
+                        "description": "Company is frozen (status=suspended)"
                     }
                 },
                 "security": [
@@ -7153,6 +7158,12 @@
                                 }
                             }
                         }
+                    },
+                    "403": {
+                        "description": "Invalid webhook signature."
+                    },
+                    "500": {
+                        "description": "Webhook secret is not configured. The request is rejected outright and no payment/subscription logic runs."
                     }
                 }
             }

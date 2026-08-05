@@ -62,7 +62,7 @@ Route::middleware('auth:sanctum')->prefix('profile')->group(function () {
 Route::middleware('auth:sanctum')->prefix('company/profile')->group(function () {
     Route::get('/', [CompanyProfileController::class, 'show'])->name('company.profile.show');
     Route::put('/', [CompanyProfileController::class, 'update'])
-        ->middleware('role:general_manager')
+        ->middleware(['role:general_manager', 'company.active'])
         ->name('company.profile.update');
 });
 
@@ -100,7 +100,8 @@ Route::middleware(['auth:sanctum', 'role:super_admin'])->group(function () {
 });
 
 // Tenant area: company-scoped policy & setup (General Manager only, must belong to the company).
-Route::middleware(['auth:sanctum', 'tenant', 'role:general_manager'])->prefix('companies')->group(function () {
+// company.active blocks write actions (not GET) when the company is frozen/suspended; Super Admin is exempt.
+Route::middleware(['auth:sanctum', 'tenant', 'role:general_manager', 'company.active'])->prefix('companies')->group(function () {
     Route::get('/{company}/leave-types', [CompanyPolicyController::class, 'indexLeaveTypes']);
     Route::post('/{company}/leave-types', [CompanyPolicyController::class, 'storeLeaveTypes']);
     Route::put('/{company}/leave-types', [CompanyPolicyController::class, 'updateLeaveTypes']);
@@ -169,9 +170,9 @@ Route::middleware(['auth:sanctum', 'role:hr_manager,general_manager'])->prefix('
 // (no company_id is accepted from the client).
 Route::middleware(['auth:sanctum', 'role:hr_manager'])->prefix('hr')->group(function () {
     // Departments
-    Route::post('/departments', [DepartmentController::class, 'store']);
-    Route::put('/departments/{department}', [DepartmentController::class, 'update']);
-    Route::delete('/departments/{department}', [DepartmentController::class, 'destroy']);
+    Route::post('/departments', [DepartmentController::class, 'store'])->middleware('company.active');
+    Route::put('/departments/{department}', [DepartmentController::class, 'update'])->middleware('company.active');
+    Route::delete('/departments/{department}', [DepartmentController::class, 'destroy'])->middleware('company.active');
 
     // Employees
     Route::get('/employees/import/template', [EmployeeController::class, 'downloadTemplate']);
