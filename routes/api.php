@@ -157,12 +157,14 @@ Route::get('/stripe/checkout-sessions/{session_id}', [\App\Http\Controllers\Stri
     ->name('stripe.checkout-session.status')
     ->middleware('throttle:30,1');
 
-// Departments view (HR Manager & General Manager).
+// Departments & Employees viewing (HR Manager & General Manager).
 // Company isolation is enforced per-request from the authenticated user's company_id
 // (no company_id is accepted from the client).
 Route::middleware(['auth:sanctum', 'role:hr_manager,general_manager'])->prefix('hr')->group(function () {
     Route::get('/departments', [DepartmentController::class, 'index']);
     Route::get('/departments/{department}', [DepartmentController::class, 'show']);
+    Route::get('/departments/{department}/employees', [EmployeeController::class, 'byDepartment']);
+    Route::get('/employees', [EmployeeController::class, 'index']);
 });
 
 // HR Dashboard area: Departments & Employees management (HR Manager only).
@@ -176,7 +178,6 @@ Route::middleware(['auth:sanctum', 'role:hr_manager'])->prefix('hr')->group(func
 
     // Employees
     Route::get('/employees/import/template', [EmployeeController::class, 'downloadTemplate']);
-    Route::get('/employees', [EmployeeController::class, 'index']);
     Route::post('/employees', [EmployeeController::class, 'store']);
     Route::get('/employees/{employee}', [EmployeeController::class, 'show']);
     Route::put('/employees/{employee}', [EmployeeController::class, 'update']);

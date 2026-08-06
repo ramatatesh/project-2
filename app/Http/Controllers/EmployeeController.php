@@ -8,6 +8,7 @@ use App\Http\Requests\ImportEmployeesRequest;
 use App\Http\Requests\StoreEmployeeRequest;
 use App\Http\Requests\UpdateEmployeeRequest;
 use App\Http\Resources\EmployeeResource;
+use App\Models\Department;
 use App\Models\Employee;
 use App\Services\EmployeeService;
 use Illuminate\Http\JsonResponse;
@@ -58,7 +59,7 @@ class EmployeeController extends Controller
      *   ),
      *
      *   @OA\Response(response=401, description="Unauthenticated"),
-     *   @OA\Response(response=403, description="Forbidden (HR Manager only)")
+     *   @OA\Response(response=403, description="Forbidden (HR Manager or General Manager only)")
      * )
      */
     public function index(Request $request): JsonResponse
@@ -85,6 +86,77 @@ class EmployeeController extends Controller
 
         if ($departmentId = $request->input('department_id')) {
             $query->where('department_id', $departmentId);
+        }
+
+        if ($request->has('is_active')) {
+            $query->where('is_active', filter_var($request->input('is_active'), FILTER_VALIDATE_BOOLEAN));
+        }
+
+        $perPage = (int) ($request->input('per_page', 15));
+        $employees = $query->orderBy($sortBy, $sortDir)->paginate($perPage);
+
+        return response()->json([
+            'success' => true,
+            'data' => EmployeeResource::collection($employees),
+        ]);
+    }
+
+    /**
+     * @OA\Get(
+     *   path="/api/hr/departments/{department}/employees",
+     *   summary="عرض موظفي قسم محدد ضمن الشركة الحالية فقط (مع Pagination/Search/Sort/Filter)",
+     *   tags={"Employees"},
+     *   security={{"sanctum":{}}},
+     *
+     *   @OA\Parameter(name="department", in="path", required=true, @OA\Schema(type="string", format="uuid")),
+     *   @OA\Parameter(name="page", in="query", required=false, @OA\Schema(type="integer")),
+     *   @OA\Parameter(name="per_page", in="query", required=false, @OA\Schema(type="integer", default=15)),
+     *   @OA\Parameter(name="search", in="query", required=false, @OA\Schema(type="string"), description="بحث في الاسم والإيميل والمسمى الوظيفي"),
+     *   @OA\Parameter(name="is_active", in="query", required=false, @OA\Schema(type="boolean")),
+     *   @OA\Parameter(name="sort_by", in="query", required=false, @OA\Schema(type="string", default="hire_date")),
+     *   @OA\Parameter(name="sort_dir", in="query", required=false, @OA\Schema(type="string", default="desc")),
+     *
+     *   @OA\Response(
+     *     response=200,
+     *     description="قائمة موظفي القسم (نفس شكل استجابة GET /api/hr/employees)",
+     *
+     *     @OA\JsonContent(
+     *
+     *       @OA\Property(property="success", type="boolean", example=true),
+     *       @OA\Property(property="data", type="array", @OA\Items(type="object"))
+     *     )
+     *   ),
+     *
+     *   @OA\Response(response=401, description="Unauthenticated"),
+     *   @OA\Response(response=403, description="Forbidden (HR Manager or General Manager only)"),
+     *   @OA\Response(response=404, description="Department not found / not in your company")
+     * )
+     */
+    public function byDepartment(Request $request, Department $department): JsonResponse
+    {
+        $companyId = $this->currentUserCompanyId();
+
+        if ($department->company_id !== $companyId) {
+            abort(404, 'Department not found.');
+        }
+
+        $sortBy = in_array($request->input('sort_by'), ['hire_date', 'created_at', 'job_title', 'base_salary'], true)
+            ? $request->input('sort_by') : 'hire_date';
+        $sortDir = in_array(strtolower($request->input('sort_dir')), ['asc', 'desc'], true)
+            ? strtolower($request->input('sort_dir')) : 'desc';
+
+        $query = Employee::where('company_id', $companyId)
+            ->where('department_id', $department->id)
+            ->with(['user', 'department', 'document']);
+
+        if ($search = $request->input('search')) {
+            $query->where(function ($q) use ($search) {
+                $q->where('job_title', 'ilike', "%{$search}%")
+                    ->orWhereHas('user', function ($u) use ($search) {
+                        $u->where('full_name', 'ilike', "%{$search}%")
+                            ->orWhere('email', 'ilike', "%{$search}%");
+                    });
+            });
         }
 
         if ($request->has('is_active')) {
