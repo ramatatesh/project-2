@@ -178,7 +178,12 @@ class EmployeeAdvanceController extends Controller
             ], 422);
         }
 
-        if (! $this->salaryAdvanceService->employeeHasDepartmentManager($employee)) {
+        // A department manager applying for their own advance can't review their own request -
+        // skip the manager step and send it straight to HR instead of requiring a (different) manager.
+        $employee->loadMissing('department');
+        $isOwnDepartmentManager = (bool) ($employee->department && $employee->department->manager_id === $employee->id);
+
+        if (! $isOwnDepartmentManager && ! $this->salaryAdvanceService->employeeHasDepartmentManager($employee)) {
             return response()->json([
                 'success' => false,
                 'message' => 'Cannot apply: your department has no assigned manager.',
@@ -211,7 +216,7 @@ class EmployeeAdvanceController extends Controller
         // Lock the (always-existing) employee row first so concurrent apply() requests for the
         // same employee are serialized - this prevents two simultaneous requests from both
         // passing the "no active advance" check before either one has been created.
-        $advance = DB::transaction(function () use ($employee, $companyId, $policy, $requestedAmount, $repaymentMonths, $monthlyInstallment, $request) {
+        $advance = DB::transaction(function () use ($employee, $companyId, $policy, $requestedAmount, $repaymentMonths, $monthlyInstallment, $request, $isOwnDepartmentManager) {
             Employee::where('id', $employee->id)->lockForUpdate()->first();
 
             if (! $policy->allow_multiple_active_advances
@@ -228,7 +233,7 @@ class EmployeeAdvanceController extends Controller
                 'repayment_months' => $repaymentMonths,
                 'monthly_installment' => $monthlyInstallment,
                 'reason' => $request->validated('reason'),
-                'status' => SalaryAdvance::STATUS_PENDING_DEPARTMENT_MANAGER,
+                'status' => $isOwnDepartmentManager ? SalaryAdvance::STATUS_PENDING_HR : SalaryAdvance::STATUS_PENDING_DEPARTMENT_MANAGER,
             ]);
         });
 

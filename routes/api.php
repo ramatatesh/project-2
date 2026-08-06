@@ -236,7 +236,8 @@ Route::middleware(['auth:sanctum'])->prefix('evaluations')->group(function () {
 });
 
 // Employee self-service: leave management (tenant-specific dynamic leave types).
-Route::middleware(['auth:sanctum', 'role:employee'])->prefix('employee/leaves')->group(function () {
+// Department Manager also has an employee record and uses this exact self-service flow for themselves.
+Route::middleware(['auth:sanctum', 'role:employee,department_manager'])->prefix('employee/leaves')->group(function () {
     Route::get('/types', [EmployeeLeaveController::class, 'types']);
     Route::get('/dashboard', [EmployeeLeaveController::class, 'dashboard']);
     Route::post('/apply', [EmployeeLeaveController::class, 'apply']);
@@ -249,7 +250,8 @@ Route::middleware(['auth:sanctum', 'role:department_manager,hr_manager'])->prefi
 });
 
 // Employee self-service: salary advances (السُلف المالية).
-Route::middleware(['auth:sanctum', 'role:employee'])->prefix('employee/advances')->group(function () {
+// Department Manager also has an employee record and uses this exact self-service flow for themselves.
+Route::middleware(['auth:sanctum', 'role:employee,department_manager'])->prefix('employee/advances')->group(function () {
     Route::get('/', [EmployeeAdvanceController::class, 'index']);
     Route::get('/eligibility', [EmployeeAdvanceController::class, 'eligibility']);
     Route::post('/apply', [EmployeeAdvanceController::class, 'apply']);
@@ -264,7 +266,8 @@ Route::middleware(['auth:sanctum', 'role:department_manager,hr_manager'])->prefi
 });
 
 // Employee self-service: overtime requests.
-Route::middleware(['auth:sanctum', 'role:employee'])->prefix('employee/overtime')->group(function () {
+// Department Manager also has an employee record and uses this exact self-service flow for themselves.
+Route::middleware(['auth:sanctum', 'role:employee,department_manager'])->prefix('employee/overtime')->group(function () {
     Route::get('/', [EmployeeOvertimeController::class, 'index']);
     Route::get('/rates', [EmployeeOvertimeController::class, 'rates']);
     Route::get('/preview', [EmployeeOvertimeController::class, 'preview']);
@@ -280,7 +283,8 @@ Route::middleware(['auth:sanctum', 'role:department_manager,hr_manager'])->prefi
 });
 
 // Employee self-service: salary history / payslips.
-Route::middleware(['auth:sanctum', 'role:employee'])->prefix('employee/salaries')->group(function () {
+// Department Manager also has an employee record and uses this exact self-service flow for themselves.
+Route::middleware(['auth:sanctum', 'role:employee,department_manager'])->prefix('employee/salaries')->group(function () {
     Route::get('/', [EmployeeSalaryController::class, 'index']);
     Route::get('/{id}', [EmployeeSalaryController::class, 'show']);
 });
@@ -298,7 +302,8 @@ Route::middleware(['auth:sanctum', 'role:hr_manager'])->prefix('management/salar
 // Employee self-service: attendance check-in/check-out via rotating QR code + personal dashboard.
 // Company isolation is enforced per-request from the authenticated user's company_id
 // (no company_id is accepted from the client).
-Route::middleware(['auth:sanctum', 'role:employee'])->prefix('employee/attendance')->group(function () {
+// Department Manager also has an employee record and uses this exact self-service flow for themselves.
+Route::middleware(['auth:sanctum', 'role:employee,department_manager'])->prefix('employee/attendance')->group(function () {
     Route::post('/check-in', [AttendanceController::class, 'checkIn']);
     Route::post('/check-out', [AttendanceController::class, 'checkOut']);
     Route::get('/dashboard', [AttendanceController::class, 'dashboard']);

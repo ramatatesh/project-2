@@ -272,6 +272,11 @@ class EmployeeLeaveController extends Controller
             $attachmentUrl = Storage::disk('public')->url($path);
         }
 
+        // A department manager applying for their own leave can't review their own request -
+        // skip the manager step and send it straight to HR.
+        $employee->loadMissing('department');
+        $isOwnDepartmentManager = (bool) ($employee->department && $employee->department->manager_id === $employee->id);
+
         $leaveRequest = LeaveRequest::create([
             'id' => Str::uuid()->toString(),
             'company_id' => $companyId,
@@ -284,7 +289,7 @@ class EmployeeLeaveController extends Controller
             'requested_value' => $durationDays,
             'attachment_url' => $attachmentUrl,
             'reason' => $data['reason'] ?? null,
-            'status' => 'pending_department_manager',
+            'status' => $isOwnDepartmentManager ? 'pending_hr' : 'pending_department_manager',
         ]);
 
         return response()->json([

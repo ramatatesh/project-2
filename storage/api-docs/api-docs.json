@@ -2222,7 +2222,7 @@
                                         "example": true
                                     },
                                     "manager_id": {
-                                        "description": "Must be an employee id belonging to the current company; employees from another company are rejected with a validation error.",
+                                        "description": "Must be an employee id belonging to the current company and not already the manager of another department. Setting it promotes that employee's account to Department Manager.",
                                         "type": "string",
                                         "format": "uuid",
                                         "nullable": true
@@ -2253,7 +2253,7 @@
                         }
                     },
                     "422": {
-                        "description": "Validation failed (including manager_id belonging to another company)"
+                        "description": "Validation failed (including manager_id belonging to another company, or already managing a different department)"
                     },
                     "403": {
                         "description": "Forbidden (HR Manager only), or the company is frozen (status=suspended) - message 'Company is frozen.'"
@@ -2330,7 +2330,7 @@
                                         "example": true
                                     },
                                     "manager_id": {
-                                        "description": "Must be an employee id belonging to the current company; employees from another company are rejected with a validation error.",
+                                        "description": "Must be an employee who belongs to THIS department and is not already the manager of another department. Setting it promotes that employee's account to Department Manager; the previous manager (if different) is automatically demoted back to Employee (unless they still manage another department).",
                                         "type": "string",
                                         "format": "uuid",
                                         "nullable": true
@@ -2349,7 +2349,7 @@
                         "description": "Not found / not in your company"
                     },
                     "422": {
-                        "description": "Validation failed (including manager_id belonging to another company)"
+                        "description": "Validation failed (including manager_id not belonging to this department, or already managing a different department)"
                     },
                     "403": {
                         "description": "Company is frozen (status=suspended)"

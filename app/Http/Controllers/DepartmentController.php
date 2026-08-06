@@ -76,13 +76,13 @@ class DepartmentController extends Controller
      *       required={"name"},
      *       @OA\Property(property="name", type="string", example="IT"),
      *       @OA\Property(property="is_active", type="boolean", example=true),
-     *       @OA\Property(property="manager_id", type="string", format="uuid", nullable=true, description="Must be an employee id belonging to the current company; employees from another company are rejected with a validation error.")
+     *       @OA\Property(property="manager_id", type="string", format="uuid", nullable=true, description="Must be an employee id belonging to the current company and not already the manager of another department. Setting it promotes that employee's account to Department Manager.")
      *     )
      *   ),
      *   @OA\Response(response=201, description="تم إنشاء القسم",
      *     @OA\JsonContent(@OA\Property(property="success", type="boolean"), @OA\Property(property="data", type="object"))
      *   ),
-     *   @OA\Response(response=422, description="Validation failed (including manager_id belonging to another company)"),
+     *   @OA\Response(response=422, description="Validation failed (including manager_id belonging to another company, or already managing a different department)"),
      *   @OA\Response(response=403, description="Forbidden (HR Manager only), or the company is frozen (status=suspended) - message 'Company is frozen.'")
      * )
      */
@@ -90,13 +90,21 @@ class DepartmentController extends Controller
     {
         $data = $request->validated();
 
-        $department = Department::create([
-            'id' => Str::uuid()->toString(),
-            'company_id' => $this->currentUserCompanyId(),
-            'name' => $data['name'],
-            'is_active' => $data['is_active'] ?? true,
-            'manager_id' => $data['manager_id'] ?? null,
-        ]);
+        $department = DB::transaction(function () use ($data) {
+            $department = Department::create([
+                'id' => Str::uuid()->toString(),
+                'company_id' => $this->currentUserCompanyId(),
+                'name' => $data['name'],
+                'is_active' => $data['is_active'] ?? true,
+                'manager_id' => $data['manager_id'] ?? null,
+            ]);
+
+            if (! empty($data['manager_id'])) {
+                $this->promoteToDepartmentManager($data['manager_id']);
+            }
+
+            return $department;
+        });
 
         return response()->json([
             'success' => true,
@@ -140,12 +148,12 @@ class DepartmentController extends Controller
      *     @OA\JsonContent(
      *       @OA\Property(property="name", type="string", example="IT Department"),
      *       @OA\Property(property="is_active", type="boolean", example=true),
-     *       @OA\Property(property="manager_id", type="string", format="uuid", nullable=true, description="Must be an employee id belonging to the current company; employees from another company are rejected with a validation error.")
+     *       @OA\Property(property="manager_id", type="string", format="uuid", nullable=true, description="Must be an employee who belongs to THIS department and is not already the manager of another department. Setting it promotes that employee's account to Department Manager; the previous manager (if different) is automatically demoted back to Employee (unless they still manage another department).")
      *     )
      *   ),
      *   @OA\Response(response=200, description="تم التعديل"),
      *   @OA\Response(response=404, description="Not found / not in your company"),
-     *   @OA\Response(response=422, description="Validation failed (including manager_id belonging to another company)"),
+     *   @OA\Response(response=422, description="Validation failed (including manager_id not belonging to this department, or already managing a different department)"),
      *   @OA\Response(response=403, description="Company is frozen (status=suspended)")
      * )
      */
