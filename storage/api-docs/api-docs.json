@@ -2840,6 +2840,174 @@
                 ]
             }
         },
+        "/api/employee/company-policies": {
+            "get": {
+                "tags": [
+                    "Employee Company Policies"
+                ],
+                "summary": "Get the current user's company attendance & leave policies (read-only)",
+                "description": "Returns the attendance policy and the currently active leave types for the authenticated user's own company. Never accepts a company_id from the request. If no attendance policy has been configured yet, 'attendance_policy' is null; if there are no active leave types, 'leave_policies' is an empty array - both are still a 200 success response, never an error.",
+                "operationId": "a3bf94e9c671e1597ffbf346e9375eee",
+                "responses": {
+                    "200": {
+                        "description": "Company policies retrieved successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "attendance_policy": {
+                                                    "properties": {
+                                                        "work_start_time": {
+                                                            "type": "string",
+                                                            "example": "09:00:00"
+                                                        },
+                                                        "work_end_time": {
+                                                            "type": "string",
+                                                            "example": "17:00:00"
+                                                        },
+                                                        "allowed_late_minutes": {
+                                                            "type": "integer",
+                                                            "example": 15
+                                                        },
+                                                        "allowed_early_leave_minutes": {
+                                                            "type": "integer",
+                                                            "example": 15
+                                                        },
+                                                        "minimum_daily_hours": {
+                                                            "type": "number",
+                                                            "example": 8
+                                                        }
+                                                    },
+                                                    "type": "object",
+                                                    "nullable": true
+                                                },
+                                                "leave_policies": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "properties": {
+                                                            "id": {
+                                                                "type": "string",
+                                                                "format": "uuid"
+                                                            },
+                                                            "name": {
+                                                                "type": "string",
+                                                                "example": "Annual Leave"
+                                                            },
+                                                            "allocation_value": {
+                                                                "type": "integer",
+                                                                "example": 21
+                                                            },
+                                                            "allocation_unit": {
+                                                                "type": "string",
+                                                                "example": "day"
+                                                            },
+                                                            "requires_proof": {
+                                                                "type": "boolean",
+                                                                "example": false
+                                                            }
+                                                        },
+                                                        "type": "object"
+                                                    }
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "403": {
+                        "description": "Forbidden role"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/employee/company-holidays": {
+            "get": {
+                "tags": [
+                    "Employee Company Policies"
+                ],
+                "summary": "Get the current user's company official holidays (read-only)",
+                "description": "Returns the official holidays configured for the authenticated user's own company. Never accepts a company_id from the request. If no holidays are configured yet, returns an empty array - still a 200 success response, never an error.",
+                "operationId": "65fd2e316934304a4c140790f006c6c6",
+                "responses": {
+                    "200": {
+                        "description": "Company holidays retrieved successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "properties": {
+                                                    "id": {
+                                                        "type": "string",
+                                                        "format": "uuid"
+                                                    },
+                                                    "name": {
+                                                        "type": "string",
+                                                        "example": "عيد الاستقلال"
+                                                    },
+                                                    "start_date": {
+                                                        "type": "string",
+                                                        "format": "date",
+                                                        "example": "2026-04-17"
+                                                    },
+                                                    "end_date": {
+                                                        "type": "string",
+                                                        "format": "date",
+                                                        "example": null,
+                                                        "nullable": true
+                                                    },
+                                                    "repeats_annually": {
+                                                        "type": "boolean",
+                                                        "example": true
+                                                    }
+                                                },
+                                                "type": "object"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "403": {
+                        "description": "Forbidden role"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
         "/api/hr/employees": {
             "get": {
                 "tags": [
@@ -8225,6 +8393,10 @@
         {
             "name": "Employee Advances",
             "description": "Employee salary advance (السُلف المالية) self-service endpoints"
+        },
+        {
+            "name": "Employee Company Policies",
+            "description": "Read-only 'Company Policies & Holidays' page for the mobile employee app. Always resolves the company from auth()->user()->company_id - no company_id is ever accepted from the client. Available to Employee, HR Manager, Department Manager, and General Manager."
         },
         {
             "name": "Employees",

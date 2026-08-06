@@ -10,6 +10,7 @@ use App\Http\Controllers\CompanySettingsController;
 use App\Http\Controllers\DepartmentController;
 use App\Http\Controllers\DepartmentManagerController;
 use App\Http\Controllers\EmployeeAdvanceController;
+use App\Http\Controllers\EmployeeCompanyPolicyController;
 use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\EmployeeLeaveController;
 use App\Http\Controllers\EvaluationCycleController;
@@ -64,6 +65,14 @@ Route::middleware('auth:sanctum')->prefix('company/profile')->group(function () 
     Route::put('/', [CompanyProfileController::class, 'update'])
         ->middleware(['role:general_manager', 'company.active'])
         ->name('company.profile.update');
+});
+
+// Company policies & holidays page for the mobile employee app (read-only).
+// Available to Employee, HR Manager, Department Manager, and General Manager - always scoped to
+// auth()->user()->company_id, never a client-supplied company_id.
+Route::middleware(['auth:sanctum', 'role:employee,hr_manager,department_manager,general_manager'])->prefix('employee')->group(function () {
+    Route::get('/company-policies', [EmployeeCompanyPolicyController::class, 'policies'])->name('employee.company-policies');
+    Route::get('/company-holidays', [EmployeeCompanyPolicyController::class, 'holidays'])->name('employee.company-holidays');
 });
 
 // Public self-registration for tenant companies (rate-limited).
