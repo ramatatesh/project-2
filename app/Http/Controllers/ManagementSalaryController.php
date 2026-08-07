@@ -40,8 +40,8 @@ class ManagementSalaryController extends Controller
     public function index(Request $request): JsonResponse
     {
         $user = auth()->user();
-        if ($user?->role !== Role::HrManager->value) {
-            return response()->json(['success' => false, 'message' => 'HR access only.'], 403);
+        if (! $this->canViewSalaries($user)) {
+            return response()->json(['success' => false, 'message' => 'Access denied.'], 403);
         }
 
         $query = SalaryRecord::where('company_id', $user->company_id)
@@ -91,8 +91,8 @@ class ManagementSalaryController extends Controller
     public function show(string $id): JsonResponse
     {
         $user = auth()->user();
-        if ($user?->role !== Role::HrManager->value) {
-            return response()->json(['success' => false, 'message' => 'HR access only.'], 403);
+        if (! $this->canViewSalaries($user)) {
+            return response()->json(['success' => false, 'message' => 'Access denied.'], 403);
         }
 
         $record = SalaryRecord::where('id', $id)
@@ -128,8 +128,8 @@ class ManagementSalaryController extends Controller
     public function employeeHistory(Employee $employee): JsonResponse
     {
         $user = auth()->user();
-        if ($user?->role !== Role::HrManager->value) {
-            return response()->json(['success' => false, 'message' => 'HR access only.'], 403);
+        if (! $this->canViewSalaries($user)) {
+            return response()->json(['success' => false, 'message' => 'Access denied.'], 403);
         }
 
         if ($employee->company_id !== $user->company_id) {
@@ -176,8 +176,8 @@ class ManagementSalaryController extends Controller
     public function byMonth(Request $request): JsonResponse
     {
         $user = auth()->user();
-        if ($user?->role !== Role::HrManager->value) {
-            return response()->json(['success' => false, 'message' => 'HR access only.'], 403);
+        if (! $this->canViewSalaries($user)) {
+            return response()->json(['success' => false, 'message' => 'Access denied.'], 403);
         }
 
         $validator = Validator::make($request->all(), [
@@ -244,7 +244,7 @@ class ManagementSalaryController extends Controller
     public function generate(Request $request): JsonResponse
     {
         $user = auth()->user();
-        if ($user?->role !== Role::HrManager->value) {
+        if (! $this->canManageSalaries($user)) {
             return response()->json(['success' => false, 'message' => 'HR access only.'], 403);
         }
 
@@ -322,7 +322,7 @@ class ManagementSalaryController extends Controller
     public function pay(string $id): JsonResponse
     {
         $user = auth()->user();
-        if ($user?->role !== Role::HrManager->value) {
+        if (! $this->canManageSalaries($user)) {
             return response()->json(['success' => false, 'message' => 'HR access only.'], 403);
         }
 
@@ -344,5 +344,15 @@ class ManagementSalaryController extends Controller
             'message' => 'Salary marked as paid.',
             'data' => $this->salaryService->serializeDetails($record),
         ]);
+    }
+
+    protected function canViewSalaries(?object $user): bool
+    {
+        return in_array($user?->role, [Role::HrManager->value, Role::GeneralManager->value], true);
+    }
+
+    protected function canManageSalaries(?object $user): bool
+    {
+        return $user?->role === Role::HrManager->value;
     }
 }
