@@ -46,7 +46,8 @@ class DepartmentController extends Controller
         $companyId = $this->currentUserCompanyId();
 
         $query = Department::where('company_id', $companyId)
-            ->withCount('employees');
+            ->withCount('employees')
+            ->with('manager.user');
 
         if ($search = request('search')) {
             $query->where('name', 'ilike', "%{$search}%");

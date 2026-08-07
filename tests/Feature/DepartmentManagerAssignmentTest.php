@@ -92,6 +92,23 @@ class DepartmentManagerAssignmentTest extends TestCase
         ]);
     }
 
+    public function test_departments_index_includes_the_managers_full_name(): void
+    {
+        $employee = $this->makeEmployee($this->engineering, 'namecheck@assign.test');
+        $this->engineering->update(['manager_id' => $employee->id]);
+        $employee->user->update(['role' => Role::DepartmentManager->value]);
+
+        $response = $this->actingAs($this->hrManager)->getJson('/api/hr/departments');
+
+        $response->assertOk();
+        $departments = collect($response->json('data'));
+        $engineering = $departments->firstWhere('id', $this->engineering->id);
+
+        $this->assertSame($employee->id, $engineering['manager']['id']);
+        $this->assertSame('Employee namecheck@assign.test', $engineering['manager']['full_name']);
+        $this->assertSame('Staff', $engineering['manager']['job_title']);
+    }
+
     public function test_assigning_an_employee_from_the_department_promotes_them_to_manager(): void
     {
         $employee = $this->makeEmployee($this->engineering, 'promote1@assign.test');
