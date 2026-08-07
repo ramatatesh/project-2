@@ -42,7 +42,7 @@ class EmployeeLeaveRequest extends FormRequest
                 },
             ],
             'duration_type' => ['required', 'string', 'in:single_day,multiple_days'],
-            'start_date' => ['required', 'date', 'date_format:Y-m-d'],
+            'start_date' => ['required', 'date', 'date_format:Y-m-d', 'after_or_equal:today'],
             'end_date' => [
                 Rule::requiredIf($this->input('duration_type') === 'multiple_days'),
                 'nullable',

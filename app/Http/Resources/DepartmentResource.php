@@ -16,6 +16,7 @@ class DepartmentResource extends JsonResource
             'manager_id' => $this->manager_id,
             'manager' => $this->whenLoaded('manager', fn () => [
                 'id' => $this->manager->id,
+                'full_name' => $this->manager->user?->full_name,
                 'job_title' => $this->manager->job_title,
             ]),
             'employees_count' => $this->when(isset($this->employees_count), $this->employees_count),

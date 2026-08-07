@@ -10,7 +10,7 @@ class Company extends Model
 {
     use HasUuids;
 
-    protected $fillable = ['id', 'name', 'address', 'phone', 'email', 'domain', 'payroll_currency', 'status'];
+    protected $fillable = ['id', 'name', 'address', 'phone', 'email', 'domain', 'payroll_currency', 'status', 'logo_path', 'about', 'tagline'];
 
     protected $keyType = 'string';
 

@@ -17,6 +17,7 @@ use chillerlan\QRCode\Common\EccLevel;
 use chillerlan\QRCode\Output\QRGdImagePNG;
 use chillerlan\QRCode\QRCode;
 use chillerlan\QRCode\QROptions;
+use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -274,6 +275,20 @@ class AttendanceService
             $newCheckOut = array_key_exists('new_check_out', $data) && $data['new_check_out'] !== null
                 ? Carbon::parse($data['new_check_out'])
                 : $oldCheckOut;
+
+            if (! $newCheckIn && $newCheckOut) {
+                throw new HttpResponseException(response()->json([
+                    'success' => false,
+                    'message' => 'لا يمكن تسجيل وقت الانصراف بدون وجود تسجيل دخول لهذا اليوم.',
+                ], 422));
+            }
+
+            if ($newCheckIn && $newCheckOut && $newCheckOut->lessThanOrEqualTo($newCheckIn)) {
+                throw new HttpResponseException(response()->json([
+                    'success' => false,
+                    'message' => 'وقت الانصراف يجب أن يكون بعد وقت الدخول.',
+                ], 422));
+            }
 
             $policy = AttendancePolicy::where('company_id', $record->company_id)->first();
             $workDate = Carbon::parse($record->work_date);

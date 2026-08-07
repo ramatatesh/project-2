@@ -17,7 +17,7 @@ class CompanyRegistrationRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'email', 'max:255'],
+            'email' => ['required', 'email', 'max:255', 'unique:companies,email'],
             'domain' => ['nullable', 'string', 'max:255', 'unique:companies,domain'],
             'address' => ['required', 'string', 'max:255'],
             'contact_name' => ['required', 'string', 'max:255'],
@@ -35,6 +35,7 @@ class CompanyRegistrationRequest extends FormRequest
     {
         return [
             'phone.regex' => 'رقم الهاتف يجب أن يبدأ بـ 09 ويتكون من 10 أرقام.',
+            'email.unique' => 'البريد الإلكتروني مستخدم مسبقاً من قبل شركة أخرى.',
         ];
     }
 

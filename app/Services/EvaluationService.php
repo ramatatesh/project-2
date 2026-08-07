@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Exceptions\EvaluationCycleAlreadyClosedException;
 use App\Models\Employee;
 use App\Models\EvaluationAnswer;
 use App\Models\EvaluationCycle;
@@ -182,6 +183,10 @@ class EvaluationService
 
     public function closeCycle(EvaluationCycle $cycle): EvaluationCycle
     {
+        if ($cycle->status === EvaluationCycle::STATUS_CLOSED) {
+            throw new EvaluationCycleAlreadyClosedException('Evaluation cycle is already closed.');
+        }
+
         $cycle->update(['status' => EvaluationCycle::STATUS_CLOSED, 'updated_at' => now()]);
 
         return $cycle;
@@ -283,6 +288,10 @@ class EvaluationService
 
     public function scoreReview(EvaluationReview $review, array $scoresData): void
     {
+        if ($review->cycle->isClosed()) {
+            throw new RuntimeException('Cannot score a review after the evaluation cycle is closed.');
+        }
+
         $now = now();
 
         foreach ($scoresData as $scoreData) {
@@ -323,28 +332,7 @@ class EvaluationService
         $managerScore = $this->averageReviewScores($cycle->id, $employeeId, EvaluationReview::TYPE_MANAGER);
         $selfScore = $this->averageReviewScores($cycle->id, $employeeId, EvaluationReview::TYPE_SELF);
         $peerScore = $this->averageReviewScores($cycle->id, $employeeId, EvaluationReview::TYPE_PEER);
-
-        $managerWeight = 60;
-        $peerWeight = 30;
-        $selfWeight = 10;
-
-       $weights = [
-          'manager' => $managerWeight,
-          'peer' => $peerWeight,
-          'self' => $selfWeight,
-        ];
-
-        $weightedSum = 0;
-        $weightTotal = 0;
-
-        foreach (['manager' => $managerScore, 'self' => $selfScore, 'peer' => $peerScore] as $type => $score) {
-            if ($score !== null && $weights[$type] > 0) {
-                $weightedSum += $score * $weights[$type];
-                $weightTotal += $weights[$type];
-            }
-        }
-
-        $finalScore = $weightTotal > 0 ? round($weightedSum / $weightTotal, 2) : null;
+        $finalScore = $this->computeFinalScore($managerScore, $selfScore, $peerScore);
 
         return EvaluationScore::updateOrCreate(
             [
@@ -360,6 +348,70 @@ class EvaluationService
                 'status' => EvaluationScore::STATUS_PENDING,
             ]
         );
+    }
+
+    /**
+     * Pure read: never creates or updates a row, so viewing results has no side effects
+     * (in particular, it never reverts an already-finalized score back to pending).
+     * Returns the persisted score if one exists, otherwise a transient (unsaved)
+     * EvaluationScore computed live from current reviews for display purposes only.
+     */
+    public function getEmployeeScore(EvaluationCycle $cycle, string $employeeId): EvaluationScore
+    {
+        $existing = EvaluationScore::where('evaluation_cycle_id', $cycle->id)
+            ->where('employee_id', $employeeId)
+            ->first();
+
+        if ($existing) {
+            return $existing;
+        }
+
+        $managerScore = $this->averageReviewScores($cycle->id, $employeeId, EvaluationReview::TYPE_MANAGER);
+        $selfScore = $this->averageReviewScores($cycle->id, $employeeId, EvaluationReview::TYPE_SELF);
+        $peerScore = $this->averageReviewScores($cycle->id, $employeeId, EvaluationReview::TYPE_PEER);
+
+        return new EvaluationScore([
+            'evaluation_cycle_id' => $cycle->id,
+            'employee_id' => $employeeId,
+            'company_id' => $cycle->company_id,
+            'manager_score' => $managerScore,
+            'self_score' => $selfScore,
+            'peer_score' => $peerScore,
+            'final_score' => $this->computeFinalScore($managerScore, $selfScore, $peerScore),
+            'status' => EvaluationScore::STATUS_PENDING,
+        ]);
+    }
+
+    /**
+     * Weighted-average formula (Manager 60% / Peer 30% / Self 10%, renormalized over
+     * whichever review types actually have a score) - unchanged from the original logic,
+     * just extracted so both the write path and the read-only path use the exact same math.
+     */
+    private function computeFinalScore(?float $managerScore, ?float $selfScore, ?float $peerScore): ?float
+    {
+        $weights = [
+            'manager' => 60,
+            'peer' => 30,
+            'self' => 10,
+        ];
+
+        $scores = [
+            'manager' => $managerScore,
+            'self' => $selfScore,
+            'peer' => $peerScore,
+        ];
+
+        $weightedSum = 0;
+        $weightTotal = 0;
+
+        foreach ($scores as $type => $score) {
+            if ($score !== null && $weights[$type] > 0) {
+                $weightedSum += $score * $weights[$type];
+                $weightTotal += $weights[$type];
+            }
+        }
+
+        return $weightTotal > 0 ? round($weightedSum / $weightTotal, 2) : null;
     }
 
     public function getProgressForCycle(EvaluationCycle $cycle): Collection

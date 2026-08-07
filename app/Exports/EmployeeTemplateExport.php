@@ -35,6 +35,7 @@ class EmployeeTemplateExport implements FromArray, WithEvents, WithHeadings, Wit
             'marital_status',
             'nationality',
             'residence',
+            'birth_date',
         ];
     }
 
@@ -55,15 +56,16 @@ class EmployeeTemplateExport implements FromArray, WithEvents, WithHeadings, Wit
                 'single',
                 'Syrian',
                 'Damascus',
+                '1995-05-20',
             ],
-            ['', '', '', '', '', '', '', '', '', '', '', '', ''],
+            ['', '', '', '', '', '', '', '', '', '', '', '', '', ''],
         ];
     }
 
     public function styles(Worksheet $sheet)
     {
-        $sheet->getStyle('A1:M1')->getFont()->setBold(true);
-        $sheet->getStyle('A1:M1')->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('DDDDDD');
+        $sheet->getStyle('A1:N1')->getFont()->setBold(true);
+        $sheet->getStyle('A1:N1')->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('DDDDDD');
 
         $sheet->getColumnDimension('A')->setWidth(25);
         $sheet->getColumnDimension('B')->setWidth(32);
@@ -78,6 +80,7 @@ class EmployeeTemplateExport implements FromArray, WithEvents, WithHeadings, Wit
         $sheet->getColumnDimension('K')->setWidth(18);
         $sheet->getColumnDimension('L')->setWidth(18);
         $sheet->getColumnDimension('M')->setWidth(20);
+        $sheet->getColumnDimension('N')->setWidth(16);
 
         $sheet->freezePane('A2');
     }
@@ -102,6 +105,7 @@ class EmployeeTemplateExport implements FromArray, WithEvents, WithHeadings, Wit
                     'K1' => 'Marital status, optional: single, married, divorced or widowed.',
                     'L1' => 'Nationality, optional, free text.',
                     'M1' => 'Place of residence, optional, free text.',
+                    'N1' => 'Date of birth as Y-m-d or d/m/Y, e.g. 1995-05-20, optional (cannot be in the future).',
                 ];
 
                 foreach ($comments as $cell => $text) {

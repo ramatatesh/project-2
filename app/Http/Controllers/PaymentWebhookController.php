@@ -44,7 +44,9 @@ class PaymentWebhookController extends Controller
      * @OA\Property(property="success", type="boolean", example=false),
      * @OA\Property(property="message", type="string", example="Missing transaction_reference أو Payment failed.")
      * )
-     * )
+     * ),
+     * @OA\Response(response=403, description="Invalid webhook signature."),
+     * @OA\Response(response=500, description="Webhook secret is not configured. The request is rejected outright and no payment/subscription logic runs.")
      * )
      */
     public function callback(Request $request): JsonResponse

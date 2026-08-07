@@ -50,6 +50,7 @@ class EvaluationResultController extends Controller
      * @OA\Get(
      *   path="/api/hr/evaluation-cycles/{cycle}/final-results/{employee}",
      *   summary="Get final score for a specific employee",
+     *   description="Read-only: never creates, updates, or changes the status of any score record - viewing a result has no side effects, so an already-finalized score stays finalized.",
      *   tags={"Evaluation Results"},
      *   security={{"sanctum":{}}},
      *
@@ -67,7 +68,7 @@ class EvaluationResultController extends Controller
             return response()->json(['success' => false, 'message' => 'Employee not found for this company.'], 404);
         }
 
-        $score = $this->evaluationService->updateEmployeeScores($cycle, $employee->id);
+        $score = $this->evaluationService->getEmployeeScore($cycle, $employee->id);
 
         return response()->json([
             'success' => true,

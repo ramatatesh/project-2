@@ -284,6 +284,72 @@ class AttendanceTest extends TestCase
         ]);
     }
 
+    public function test_manual_adjustment_rejects_check_out_before_check_in(): void
+    {
+        $today = Carbon::today();
+
+        $record = AttendanceRecord::create([
+            'id' => Str::uuid()->toString(),
+            'company_id' => $this->company->id,
+            'employee_id' => $this->employee->id,
+            'work_date' => $today->toDateString(),
+            'check_in_time' => $today->copy()->setTime(9, 0),
+            'check_out_time' => null,
+            'late_minutes' => 0,
+            'early_leave_minutes' => 0,
+            'status' => AttendanceRecord::STATUS_CHECKED_IN,
+            'attendance_type' => AttendanceRecord::TYPE_PRESENT,
+        ]);
+
+        $this->actingAs($this->hrManager);
+
+        $response = $this->putJson("/api/management/attendance/{$record->id}/adjust", [
+            'new_check_in' => $today->copy()->setTime(15, 0)->toDateTimeString(),
+            'new_check_out' => $today->copy()->setTime(10, 0)->toDateTimeString(),
+            'reason' => 'Testing invalid times.',
+        ]);
+
+        $response->assertStatus(422);
+        $response->assertJsonPath('message', 'وقت الانصراف يجب أن يكون بعد وقت الدخول.');
+
+        $this->assertDatabaseMissing('attendance_adjustments', [
+            'attendance_record_id' => $record->id,
+        ]);
+    }
+
+    public function test_manual_adjustment_rejects_check_out_without_any_check_in(): void
+    {
+        $today = Carbon::today();
+
+        // An absence-job-created record: no check-in at all.
+        $record = AttendanceRecord::create([
+            'id' => Str::uuid()->toString(),
+            'company_id' => $this->company->id,
+            'employee_id' => $this->employee->id,
+            'work_date' => $today->toDateString(),
+            'check_in_time' => null,
+            'check_out_time' => null,
+            'late_minutes' => 0,
+            'early_leave_minutes' => 0,
+            'status' => AttendanceRecord::STATUS_ABSENT,
+            'attendance_type' => AttendanceRecord::TYPE_ABSENT,
+        ]);
+
+        $this->actingAs($this->hrManager);
+
+        $response = $this->putJson("/api/management/attendance/{$record->id}/adjust", [
+            'new_check_out' => $today->copy()->setTime(17, 0)->toDateTimeString(),
+            'reason' => 'Testing check-out without check-in.',
+        ]);
+
+        $response->assertStatus(422);
+        $response->assertJsonPath('message', 'لا يمكن تسجيل وقت الانصراف بدون وجود تسجيل دخول لهذا اليوم.');
+
+        $this->assertDatabaseMissing('attendance_adjustments', [
+            'attendance_record_id' => $record->id,
+        ]);
+    }
+
     public function test_absence_job_marks_absent_but_skips_approved_leave(): void
     {
         $leaveType = LeaveType::create([

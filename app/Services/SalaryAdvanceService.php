@@ -86,24 +86,29 @@ class SalaryAdvanceService
 
     /**
      * Replace any partial installment rows and regenerate the full schedule.
+     *
+     * Uses integer-cents arithmetic (not the rounded monthly_installment display value) so the
+     * schedule can never produce a negative last installment from accumulated rounding error,
+     * and the installments always sum exactly to requested_amount.
      */
     public function regenerateInstallments(SalaryAdvance $advance): void
     {
         $advance->installments()->delete();
 
-        $repaymentMonths = (int) $advance->repayment_months;
-        $baseInstallment = (float) $advance->monthly_installment;
-        $remaining = (float) $advance->requested_amount;
+        $repaymentMonths = max(1, (int) $advance->repayment_months);
+        $totalCents = (int) round(((float) $advance->requested_amount) * 100);
+        $baseCents = intdiv($totalCents, $repaymentMonths);
+        $allocatedCents = 0;
 
         for ($i = 1; $i <= $repaymentMonths; $i++) {
-            $amount = $i === $repaymentMonths ? $remaining : $baseInstallment;
-            $remaining -= $amount;
+            $amountCents = $i === $repaymentMonths ? ($totalCents - $allocatedCents) : $baseCents;
+            $allocatedCents += $amountCents;
 
             SalaryAdvanceInstallment::create([
                 'id' => Str::uuid()->toString(),
                 'salary_advance_id' => $advance->id,
                 'due_date' => Carbon::now()->addMonthNoOverflow($i)->startOfMonth()->toDateString(),
-                'amount' => round($amount, 2),
+                'amount' => $amountCents / 100,
                 'status' => SalaryAdvanceInstallment::STATUS_PENDING,
             ]);
         }

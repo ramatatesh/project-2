@@ -204,7 +204,12 @@ class EmployeeOvertimeController extends Controller
             ], 422);
         }
 
-        if (! $this->overtimeService->employeeHasDepartmentManager($employee)) {
+        // A department manager applying for their own overtime can't review their own request -
+        // skip the manager step and send it straight to HR instead of requiring a (different) manager.
+        $employee->loadMissing('department');
+        $isOwnDepartmentManager = (bool) ($employee->department && $employee->department->manager_id === $employee->id);
+
+        if (! $isOwnDepartmentManager && ! $this->overtimeService->employeeHasDepartmentManager($employee)) {
             return response()->json([
                 'success' => false,
                 'message' => 'Cannot apply: your department has no assigned manager.',
@@ -237,7 +242,7 @@ class EmployeeOvertimeController extends Controller
             'duration_type' => $durationType,
             'hours_requested' => $units,
             'reason' => $request->validated('reason'),
-            'status' => OvertimeRequest::STATUS_PENDING_DEPARTMENT_MANAGER,
+            'status' => $isOwnDepartmentManager ? OvertimeRequest::STATUS_PENDING_HR : OvertimeRequest::STATUS_PENDING_DEPARTMENT_MANAGER,
         ]);
 
         return response()->json([

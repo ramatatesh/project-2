@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Department;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
@@ -24,8 +25,26 @@ class UpdateDepartmentRequest extends FormRequest
                 ->where(fn ($q) => $q->where('company_id', $companyId))
                 ->ignore($departmentId, 'id')],
             'is_active' => ['sometimes', 'boolean'],
-            'manager_id' => ['sometimes', 'nullable', 'uuid', Rule::exists('employees', 'id')
-                ->where(fn ($q) => $q->where('company_id', $companyId))],
+            'manager_id' => [
+                'sometimes',
+                'nullable',
+                'uuid',
+                Rule::exists('employees', 'id')
+                    ->where(fn ($q) => $q->where('company_id', $companyId)->where('department_id', $departmentId)),
+                function ($attribute, $value, $fail) use ($departmentId) {
+                    if (! $value) {
+                        return;
+                    }
+
+                    $managesAnotherDepartment = Department::where('manager_id', $value)
+                        ->where('id', '!=', $departmentId)
+                        ->exists();
+
+                    if ($managesAnotherDepartment) {
+                        $fail('This employee is already the manager of another department. Remove them from that department first.');
+                    }
+                },
+            ],
         ];
     }
 
@@ -33,6 +52,7 @@ class UpdateDepartmentRequest extends FormRequest
     {
         return [
             'name.unique' => 'A department with this name already exists in your company.',
+            'manager_id.exists' => 'The selected employee must belong to this department.',
         ];
     }
 

@@ -285,6 +285,130 @@ class EvaluationSystemTest extends TestCase
         $response->assertStatus(403);
     }
 
+    public function test_scores_cannot_be_edited_after_cycle_is_closed(): void
+    {
+        [$cycle, $template] = $this->createLaunchedCycle();
+
+        $selfReview = EvaluationReview::where('evaluation_cycle_id', $cycle->id)
+            ->where('employee_id', $this->employee->id)
+            ->where('review_type', EvaluationReview::TYPE_SELF)
+            ->first();
+
+        $questionIds = $template->questions->pluck('id')->toArray();
+
+        $this->actingAs($this->employeeUser)
+            ->postJson("/api/evaluations/my-reviews/{$selfReview->id}/submit", [
+                'answers' => [
+                    ['question_id' => $questionIds[0], 'rating' => 4],
+                ],
+            ])
+            ->assertOk();
+
+        $this->actingAs($this->hrManager)
+            ->postJson("/api/hr/evaluation-cycles/{$cycle->id}/reviews/{$selfReview->id}/score", [
+                'scores' => [
+                    ['answer_id' => $this->getAnswerId($selfReview->id, $questionIds[0]), 'hr_score' => 8],
+                ],
+            ])
+            ->assertOk();
+
+        $cycle->update(['status' => EvaluationCycle::STATUS_CLOSED, 'updated_at' => now()]);
+
+        $answerId = $this->getAnswerId($selfReview->id, $questionIds[0]);
+
+        $response = $this->actingAs($this->hrManager)
+            ->postJson("/api/hr/evaluation-cycles/{$cycle->id}/reviews/{$selfReview->id}/score", [
+                'scores' => [
+                    ['answer_id' => $answerId, 'hr_score' => 2],
+                ],
+            ]);
+
+        $response->assertStatus(422);
+
+        // The score entered before closing must not have been overwritten.
+        $this->assertEquals(8, EvaluationAnswer::find($answerId)->hr_score);
+    }
+
+    public function test_viewing_final_results_does_not_revert_finalized_status(): void
+    {
+        [$cycle, $template] = $this->createLaunchedCycle();
+
+        $selfReview = EvaluationReview::where('evaluation_cycle_id', $cycle->id)
+            ->where('employee_id', $this->employee->id)
+            ->where('review_type', EvaluationReview::TYPE_SELF)
+            ->first();
+
+        $questionIds = $template->questions->pluck('id')->toArray();
+
+        $this->actingAs($this->employeeUser)
+            ->postJson("/api/evaluations/my-reviews/{$selfReview->id}/submit", [
+                'answers' => [
+                    ['question_id' => $questionIds[0], 'rating' => 4],
+                ],
+            ])
+            ->assertOk();
+
+        $this->actingAs($this->hrManager)
+            ->postJson("/api/hr/evaluation-cycles/{$cycle->id}/reviews/{$selfReview->id}/score", [
+                'scores' => [
+                    ['answer_id' => $this->getAnswerId($selfReview->id, $questionIds[0]), 'hr_score' => 8],
+                ],
+            ])
+            ->assertOk();
+
+        $this->actingAs($this->hrManager)
+            ->postJson("/api/hr/evaluation-cycles/{$cycle->id}/final-results/{$this->employee->id}/finalize")
+            ->assertOk()
+            ->assertJsonPath('data.status', EvaluationScore::STATUS_FINALIZED);
+
+        // Viewing the result (GET, twice) must be a pure read with no side effects.
+        for ($i = 0; $i < 2; $i++) {
+            $this->actingAs($this->hrManager)
+                ->getJson("/api/hr/evaluation-cycles/{$cycle->id}/final-results/{$this->employee->id}")
+                ->assertOk()
+                ->assertJsonPath('data.status', EvaluationScore::STATUS_FINALIZED);
+        }
+
+        $this->assertSame(
+            EvaluationScore::STATUS_FINALIZED,
+            EvaluationScore::where('evaluation_cycle_id', $cycle->id)
+                ->where('employee_id', $this->employee->id)
+                ->first()
+                ->status
+        );
+    }
+
+    public function test_viewing_unscored_employee_result_does_not_create_a_row(): void
+    {
+        [$cycle] = $this->createLaunchedCycle();
+
+        $this->actingAs($this->hrManager)
+            ->getJson("/api/hr/evaluation-cycles/{$cycle->id}/final-results/{$this->employee->id}")
+            ->assertOk()
+            ->assertJsonPath('data.status', EvaluationScore::STATUS_PENDING)
+            ->assertJsonPath('data.final_score', null);
+
+        $this->assertDatabaseMissing('evaluation_scores', [
+            'evaluation_cycle_id' => $cycle->id,
+            'employee_id' => $this->employee->id,
+        ]);
+    }
+
+    public function test_closing_an_already_closed_cycle_returns_409(): void
+    {
+        [$cycle] = $this->createLaunchedCycle();
+
+        $this->actingAs($this->hrManager)
+            ->postJson("/api/hr/evaluation-cycles/{$cycle->id}/close")
+            ->assertOk();
+
+        $response = $this->actingAs($this->hrManager)
+            ->postJson("/api/hr/evaluation-cycles/{$cycle->id}/close");
+
+        $response->assertStatus(409);
+        $response->assertJsonPath('message', 'Evaluation cycle is already closed.');
+    }
+
     public function test_progress_endpoint_returns_metrics(): void
     {
         [$cycle] = $this->createLaunchedCycle();

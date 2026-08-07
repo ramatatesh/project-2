@@ -46,6 +46,7 @@ class DepartmentManagerRequest extends FormRequest
             'marital_status' => ['sometimes', 'nullable', 'string', 'in:single,married,divorced,widowed'],
             'nationality' => ['sometimes', 'nullable', 'string', 'max:100'],
             'residence' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'birth_date' => ['sometimes', 'nullable', 'date', 'before_or_equal:today'],
         ];
     }
 
@@ -54,6 +55,7 @@ class DepartmentManagerRequest extends FormRequest
         return [
             'phone.regex' => 'رقم الهاتف يجب أن يبدأ بـ 09 ويتكون من 10 أرقام.',
             'hire_date.before_or_equal' => 'لا يمكن أن يكون تاريخ التعيين في المستقبل.',
+            'birth_date.before_or_equal' => 'لا يمكن أن يكون تاريخ الميلاد في المستقبل.',
         ];
     }
 

@@ -87,7 +87,8 @@ class DepartmentManagerController extends Controller
      *       @OA\Property(property="gender", type="string", enum={"male","female"}, nullable=true),
      *       @OA\Property(property="marital_status", type="string", enum={"single","married","divorced","widowed"}, nullable=true),
      *       @OA\Property(property="nationality", type="string", nullable=true, example="Syrian"),
-     *       @OA\Property(property="residence", type="string", nullable=true, example="Damascus, Syria")
+     *       @OA\Property(property="residence", type="string", nullable=true, example="Damascus, Syria"),
+     *       @OA\Property(property="birth_date", type="string", format="date", nullable=true, example="1990-03-10", description="لا يمكن أن يكون تاريخاً مستقبلياً")
      *     )
      *   ),
      *   @OA\Response(response=201, description="Department manager created successfully"),
@@ -120,6 +121,7 @@ class DepartmentManagerController extends Controller
                     'marital_status' => $data['marital_status'] ?? null,
                     'nationality' => $data['nationality'] ?? null,
                     'residence' => $data['residence'] ?? null,
+                    'birth_date' => $data['birth_date'] ?? null,
                 ]);
 
                 $employee = Employee::create([
@@ -223,7 +225,7 @@ class DepartmentManagerController extends Controller
                 if (array_key_exists('phone', $data)) {
                     $userUpdates['phone'] = $data['phone'];
                 }
-                foreach (['gender', 'marital_status', 'nationality', 'residence'] as $field) {
+                foreach (['gender', 'marital_status', 'nationality', 'residence', 'birth_date'] as $field) {
                     if (array_key_exists($field, $data)) {
                         $userUpdates[$field] = $data[$field];
                     }

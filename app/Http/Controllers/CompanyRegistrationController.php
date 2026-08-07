@@ -42,7 +42,7 @@ class CompanyRegistrationController extends Controller
      *       @OA\Property(property="transaction_reference", type="string", example="cs_test_a1b2c3")
      *     )
      *   ),
-     *   @OA\Response(response=422, description="Validation failed, or this email already used the Free plan before")
+     *   @OA\Response(response=422, description="Validation failed (including duplicate email - companies.email is unique), or this email already used the Free plan before")
      * )
      */
     public function __construct(private readonly SubscriptionService $subscriptionService)

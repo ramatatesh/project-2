@@ -32,6 +32,7 @@ class User extends Authenticatable
         'marital_status',
         'nationality',
         'residence',
+        'birth_date',
         'profile_completed',
     ];
 
