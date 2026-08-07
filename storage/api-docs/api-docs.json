@@ -5221,6 +5221,589 @@
                 ]
             }
         },
+        "/api/analytics/hr/turnover-rate": {
+            "get": {
+                "tags": [
+                    "HR Analytics"
+                ],
+                "summary": "استعلام معدل الدوران الوظيفي الربعي (Quarterly Turnover Rate)",
+                "description": "يحسب معدل دوران الموظفين لربع سنوي معين بناءً على عدد المغادرين ومتوسط الموظفين الفعالين.",
+                "operationId": "getTurnoverRate",
+                "parameters": [
+                    {
+                        "name": "year",
+                        "in": "query",
+                        "description": "السنة المراد جلب الإحصائية لها (افتراضياً السنة الحالية)",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 2026
+                        }
+                    },
+                    {
+                        "name": "quarter",
+                        "in": "query",
+                        "description": "الربع السنوي (1, 2, 3, 4)",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "enum": [
+                                1,
+                                2,
+                                3,
+                                4
+                            ],
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "تمت العملية بنجاح",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "year": {
+                                                    "type": "integer",
+                                                    "example": 2026
+                                                },
+                                                "quarter": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "departed_count": {
+                                                    "type": "integer",
+                                                    "example": 3
+                                                },
+                                                "average_active_employees": {
+                                                    "type": "number",
+                                                    "example": 50.5
+                                                },
+                                                "turnover_rate_percentage": {
+                                                    "type": "number",
+                                                    "example": 5.94
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "غير مصرح بالوصول - التوكن مفقود أو غير صالح"
+                    },
+                    "403": {
+                        "description": "غير مصرح - خاص بالمدير العام والـ HR فقط"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/analytics/hr/demographics": {
+            "get": {
+                "tags": [
+                    "HR Analytics"
+                ],
+                "summary": "استعلام إجمالي القوة البشرية (توزيع الجنس والأعمار)",
+                "description": "يعرض توزيع الموظفين الفعالين حسب الجنس والفئات العمرية.",
+                "operationId": "getDemographics",
+                "responses": {
+                    "200": {
+                        "description": "تمت العملية بنجاح",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "gender_distribution": {
+                                                    "properties": {
+                                                        "male": {
+                                                            "type": "integer",
+                                                            "example": 30
+                                                        },
+                                                        "female": {
+                                                            "type": "integer",
+                                                            "example": 20
+                                                        }
+                                                    },
+                                                    "type": "object"
+                                                },
+                                                "age_distribution": {
+                                                    "properties": {
+                                                        "under_25": {
+                                                            "type": "integer",
+                                                            "example": 5
+                                                        },
+                                                        "25_34": {
+                                                            "type": "integer",
+                                                            "example": 25
+                                                        },
+                                                        "35_44": {
+                                                            "type": "integer",
+                                                            "example": 15
+                                                        },
+                                                        "45_54": {
+                                                            "type": "integer",
+                                                            "example": 4
+                                                        },
+                                                        "55_plus": {
+                                                            "type": "integer",
+                                                            "example": 1
+                                                        }
+                                                    },
+                                                    "type": "object"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "غير مصرح بالوصول"
+                    },
+                    "403": {
+                        "description": "غير مصرح - خاص بالمدير العام والـ HR فقط"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/analytics/hr/department-budgets": {
+            "get": {
+                "tags": [
+                    "HR Analytics"
+                ],
+                "summary": "استعلام الأقسام الأكثر استهلاكاً للميزانية (ترتيب تصاعدي)",
+                "description": "يعرض استهلاك الميزانية لرواتب الأقسام لشهر محدد مرتبة تصاعدياً.",
+                "operationId": "getDepartmentBudgets",
+                "parameters": [
+                    {
+                        "name": "year",
+                        "in": "query",
+                        "description": "السنة",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 2026
+                        }
+                    },
+                    {
+                        "name": "month",
+                        "in": "query",
+                        "description": "الشهر (1-12)",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 8
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "تمت العملية بنجاح",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "properties": {
+                                                    "department_id": {
+                                                        "type": "string",
+                                                        "format": "uuid",
+                                                        "example": "bf5f9cbb-0dae-4..."
+                                                    },
+                                                    "department_name": {
+                                                        "type": "string",
+                                                        "example": "الموارد البشرية"
+                                                    },
+                                                    "total_budget_spent": {
+                                                        "type": "number",
+                                                        "example": 15000.5
+                                                    }
+                                                },
+                                                "type": "object"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "غير مصرح بالوصول"
+                    },
+                    "403": {
+                        "description": "غير مصرح - خاص بالمدير العام والـ HR فقط"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/analytics/hr/daily-verification-rate": {
+            "get": {
+                "tags": [
+                    "HR Analytics"
+                ],
+                "summary": "معدل الامتثال اليومي بالبصمة الرقمية (Daily Verification Rate)",
+                "description": "يعرض نسبة التحقق الرقمي عبر التطبيق (QR/GPS) مقارنة بالتعديلات والتحققات اليدوية.",
+                "operationId": "getDailyVerificationRate",
+                "parameters": [
+                    {
+                        "name": "date",
+                        "in": "query",
+                        "description": "التاريخ بصيغة (YYYY-MM-DD)",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date",
+                            "example": "2026-08-07"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "تمت العملية بنجاح",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "date": {
+                                                    "type": "string",
+                                                    "example": "2026-08-07"
+                                                },
+                                                "total_attendance_records": {
+                                                    "type": "integer",
+                                                    "example": 50
+                                                },
+                                                "digital_verifications": {
+                                                    "type": "integer",
+                                                    "example": 45
+                                                },
+                                                "manual_verifications": {
+                                                    "type": "integer",
+                                                    "example": 5
+                                                },
+                                                "digital_compliance_rate": {
+                                                    "type": "number",
+                                                    "example": 90
+                                                },
+                                                "manual_rate": {
+                                                    "type": "number",
+                                                    "example": 10
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "غير مصرح بالوصول"
+                    },
+                    "403": {
+                        "description": "غير مصرح - خاص بالمدير العام والـ HR فقط"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/analytics/hr/realtime-headcount": {
+            "get": {
+                "tags": [
+                    "HR Analytics"
+                ],
+                "summary": "عداد حالة القوة البشرية اللحظية (Real-time Headcount)",
+                "description": "عداد رقمي مفرس ومخزن مؤقتاً (Cache) يعرض الحاضرين المتواجدين الآن، المتأخرين، والموظفين في إجازات اليوم.",
+                "operationId": "getRealtimeHeadcount",
+                "responses": {
+                    "200": {
+                        "description": "تمت العملية بنجاح",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "timestamp": {
+                                                    "type": "string",
+                                                    "format": "date-time",
+                                                    "example": "2026-08-07T20:24:56+02:00"
+                                                },
+                                                "present_now": {
+                                                    "type": "integer",
+                                                    "example": 35
+                                                },
+                                                "late_today": {
+                                                    "type": "integer",
+                                                    "example": 4
+                                                },
+                                                "on_leave_today": {
+                                                    "type": "integer",
+                                                    "example": 3
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "غير مصرح بالوصول"
+                    },
+                    "403": {
+                        "description": "غير مصرح - خاص بالمدير العام والـ HR فقط"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/analytics/hr/performance-distribution": {
+            "get": {
+                "tags": [
+                    "HR Analytics"
+                ],
+                "summary": "منحنى تقييم الأداء العام للشركة (Performance Distribution Curve)",
+                "description": "توزيع أداء الموظفين حسـب مجموع العلامات إلى (ممتاز، جيد، مقبول، ضعيف).",
+                "operationId": "getPerformanceDistribution",
+                "parameters": [
+                    {
+                        "name": "year",
+                        "in": "query",
+                        "description": "السنة المراد عرض التقييم لها",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 2026
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "تمت العملية بنجاح",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "year": {
+                                                    "type": "integer",
+                                                    "example": 2026
+                                                },
+                                                "total_evaluations": {
+                                                    "type": "integer",
+                                                    "example": 100
+                                                },
+                                                "distribution": {
+                                                    "properties": {
+                                                        "excellent": {
+                                                            "properties": {
+                                                                "count": {
+                                                                    "type": "integer",
+                                                                    "example": 25
+                                                                },
+                                                                "percentage": {
+                                                                    "type": "number",
+                                                                    "example": 25
+                                                                }
+                                                            },
+                                                            "type": "object"
+                                                        },
+                                                        "good": {
+                                                            "properties": {
+                                                                "count": {
+                                                                    "type": "integer",
+                                                                    "example": 50
+                                                                },
+                                                                "percentage": {
+                                                                    "type": "number",
+                                                                    "example": 50
+                                                                }
+                                                            },
+                                                            "type": "object"
+                                                        },
+                                                        "acceptable": {
+                                                            "properties": {
+                                                                "count": {
+                                                                    "type": "integer",
+                                                                    "example": 20
+                                                                },
+                                                                "percentage": {
+                                                                    "type": "number",
+                                                                    "example": 20
+                                                                }
+                                                            },
+                                                            "type": "object"
+                                                        },
+                                                        "weak": {
+                                                            "properties": {
+                                                                "count": {
+                                                                    "type": "integer",
+                                                                    "example": 5
+                                                                },
+                                                                "percentage": {
+                                                                    "type": "number",
+                                                                    "example": 5
+                                                                }
+                                                            },
+                                                            "type": "object"
+                                                        }
+                                                    },
+                                                    "type": "object"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "غير مصرح بالوصول"
+                    },
+                    "403": {
+                        "description": "غير مصرح - خاص بالمدير العام والـ HR فقط"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/analytics/hr/training-progress": {
+            "get": {
+                "tags": [
+                    "HR Analytics"
+                ],
+                "summary": "نسبة إنجاز المسارات التدريبية (Training Progress Rate)",
+                "description": "نسبة الموظفين الذين أتموا الدورات الموكلة إليهم واجتازوا الاختبارات بنجاح.",
+                "operationId": "getTrainingProgress",
+                "responses": {
+                    "200": {
+                        "description": "تمت العملية بنجاح",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "total_enrollments": {
+                                                    "type": "integer",
+                                                    "example": 80
+                                                },
+                                                "completed_and_passed": {
+                                                    "type": "integer",
+                                                    "example": 60
+                                                },
+                                                "in_progress": {
+                                                    "type": "integer",
+                                                    "example": 15
+                                                },
+                                                "failed_or_not_passed": {
+                                                    "type": "integer",
+                                                    "example": 5
+                                                },
+                                                "completion_rate_percentage": {
+                                                    "type": "number",
+                                                    "example": 75
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "غير مصرح بالوصول"
+                    },
+                    "403": {
+                        "description": "غير مصرح - خاص بالمدير العام والـ HR فقط"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
         "/api/companies/{company}/holidays": {
             "get": {
                 "tags": [
@@ -7473,6 +8056,125 @@
                 }
             }
         },
+        "/api/v1/management/analytics/payroll": {
+            "get": {
+                "tags": [
+                    "Payroll Analytics"
+                ],
+                "summary": "Get Payroll Financial Analytics",
+                "description": "Returns total current monthly payroll, accumulated savings, and 12-month cost comparison for charts.",
+                "operationId": "7207f14e445e8f44e433de06171987a2",
+                "parameters": [
+                    {
+                        "name": "year",
+                        "in": "query",
+                        "description": "Year for analytics (default: current year)",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 2026
+                        }
+                    },
+                    {
+                        "name": "month",
+                        "in": "query",
+                        "description": "Month for current total (default: current month)",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 8
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "current_month_summary": {
+                                                    "properties": {
+                                                        "year": {
+                                                            "type": "integer",
+                                                            "example": 2026
+                                                        },
+                                                        "month": {
+                                                            "type": "integer",
+                                                            "example": 8
+                                                        },
+                                                        "total_net_payroll": {
+                                                            "type": "number",
+                                                            "format": "float",
+                                                            "example": 12500.5
+                                                        },
+                                                        "total_base_salary": {
+                                                            "type": "number",
+                                                            "format": "float",
+                                                            "example": 11000
+                                                        },
+                                                        "total_allowances": {
+                                                            "type": "number",
+                                                            "format": "float",
+                                                            "example": 2000
+                                                        },
+                                                        "total_deductions": {
+                                                            "type": "number",
+                                                            "format": "float",
+                                                            "example": 499.5
+                                                        }
+                                                    },
+                                                    "type": "object"
+                                                },
+                                                "total_savings": {
+                                                    "type": "number",
+                                                    "format": "float",
+                                                    "example": 1850.75
+                                                },
+                                                "monthly_cost_trend": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "properties": {
+                                                            "month": {
+                                                                "type": "integer",
+                                                                "example": 1
+                                                            },
+                                                            "month_name": {
+                                                                "type": "string",
+                                                                "example": "January"
+                                                            },
+                                                            "total_cost": {
+                                                                "type": "number",
+                                                                "format": "float",
+                                                                "example": 12000
+                                                            }
+                                                        },
+                                                        "type": "object"
+                                                    }
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
         "/api/profile": {
             "get": {
                 "tags": [
@@ -8443,6 +9145,10 @@
             "description": "Manage evaluation templates and their criteria"
         },
         {
+            "name": "HR Analytics",
+            "description": "إحصائيات ومؤشرات الموارد البشرية للمدير العام والـ HR"
+        },
+        {
             "name": "Holiday Policies",
             "description": "Endpoints for company holiday and evaluation policy management"
         },
@@ -8497,6 +9203,10 @@
         {
             "name": "بوابات الدفع والاشتراكات (Payments & Subscriptions)",
             "description": "بوابات الدفع والاشتراكات (Payments & Subscriptions)"
+        },
+        {
+            "name": "Payroll Analytics",
+            "description": "Payroll Analytics"
         }
     ]
 }
