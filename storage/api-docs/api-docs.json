@@ -5740,70 +5740,6 @@
                 ]
             }
         },
-        "/api/analytics/hr/training-progress": {
-            "get": {
-                "tags": [
-                    "HR Analytics"
-                ],
-                "summary": "نسبة إنجاز المسارات التدريبية (Training Progress Rate)",
-                "description": "نسبة الموظفين الذين أتموا الدورات الموكلة إليهم واجتازوا الاختبارات بنجاح.",
-                "operationId": "getTrainingProgress",
-                "responses": {
-                    "200": {
-                        "description": "تمت العملية بنجاح",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "success": {
-                                            "type": "boolean",
-                                            "example": true
-                                        },
-                                        "data": {
-                                            "properties": {
-                                                "total_enrollments": {
-                                                    "type": "integer",
-                                                    "example": 80
-                                                },
-                                                "completed_and_passed": {
-                                                    "type": "integer",
-                                                    "example": 60
-                                                },
-                                                "in_progress": {
-                                                    "type": "integer",
-                                                    "example": 15
-                                                },
-                                                "failed_or_not_passed": {
-                                                    "type": "integer",
-                                                    "example": 5
-                                                },
-                                                "completion_rate_percentage": {
-                                                    "type": "number",
-                                                    "example": 75
-                                                }
-                                            },
-                                            "type": "object"
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
-                    },
-                    "401": {
-                        "description": "غير مصرح بالوصول"
-                    },
-                    "403": {
-                        "description": "غير مصرح - خاص بالمدير العام والـ HR فقط"
-                    }
-                },
-                "security": [
-                    {
-                        "sanctum": []
-                    }
-                ]
-            }
-        },
         "/api/companies/{company}/holidays": {
             "get": {
                 "tags": [
@@ -8056,14 +7992,14 @@
                 }
             }
         },
-        "/api/v1/management/analytics/payroll": {
+        "/api/payrolls/analytics": {
             "get": {
                 "tags": [
                     "Payroll Analytics"
                 ],
                 "summary": "Get Payroll Financial Analytics",
                 "description": "Returns total current monthly payroll, accumulated savings, and 12-month cost comparison for charts.",
-                "operationId": "7207f14e445e8f44e433de06171987a2",
+                "operationId": "ee29d290f67a97ff54c372010f02d9b7",
                 "parameters": [
                     {
                         "name": "year",

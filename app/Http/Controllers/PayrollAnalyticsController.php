@@ -17,7 +17,7 @@ class PayrollAnalyticsController extends Controller
 
     /**
      * @OA\Get(
-     *     path="/api/v1/management/analytics/payroll",
+     *     path="/api/payrolls/analytics",
      *     summary="Get Payroll Financial Analytics",
      *     description="Returns total current monthly payroll, accumulated savings, and 12-month cost comparison for charts.",
      *     tags={"Payroll Analytics"},
