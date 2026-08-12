@@ -119,7 +119,15 @@ class ManagementOvertimeController extends Controller
      *   summary="Get overtime request details",
      *   tags={"Management Overtime"},
      *   security={{"sanctum":{}}},
-     *   @OA\Response(response=200, description="Overtime request details")
+     *   @OA\Parameter(
+     *     name="id",
+     *     in="path",
+     *     required=true,
+     *     description="Overtime request UUID",
+     *     @OA\Schema(type="string", format="uuid", example="bf5f9cbb-0dae-407e-8d49-712d0089a21a")
+     *   ),
+     *   @OA\Response(response=200, description="Overtime request details"),
+     *   @OA\Response(response=404, description="Overtime request not found")
      * )
      */
     public function show(string $id): JsonResponse
@@ -189,6 +197,13 @@ class ManagementOvertimeController extends Controller
      *   summary="Approve or reject an overtime request",
      *   tags={"Management Overtime"},
      *   security={{"sanctum":{}}},
+     *   @OA\Parameter(
+     *     name="id",
+     *     in="path",
+     *     required=true,
+     *     description="Overtime request UUID",
+     *     @OA\Schema(type="string", format="uuid", example="bf5f9cbb-0dae-407e-8d49-712d0089a21a")
+     *   ),
      *   @OA\RequestBody(
      *     required=true,
      *     @OA\JsonContent(
