@@ -60,6 +60,11 @@ class User extends Authenticatable
         return $this->hasOne(Employee::class, 'user_id');
     }
 
+    public function assistantSessions()
+    {
+        return $this->hasMany(EmployeeAssistantSession::class, 'user_id');
+    }
+
     public function evaluationReviews()
     {
         return $this->hasMany(EvaluationReview::class, 'reviewer_id');

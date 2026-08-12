@@ -10,6 +10,7 @@ use App\Http\Controllers\CompanySettingsController;
 use App\Http\Controllers\DepartmentController;
 use App\Http\Controllers\DepartmentManagerController;
 use App\Http\Controllers\EmployeeAdvanceController;
+use App\Http\Controllers\EmployeeAssistantController;
 use App\Http\Controllers\EmployeeCompanyPolicyController;
 use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\EmployeeLeaveController;
@@ -75,6 +76,24 @@ Route::middleware('auth:sanctum')->prefix('company/profile')->group(function () 
 Route::middleware(['auth:sanctum', 'role:employee,hr_manager,department_manager,general_manager'])->prefix('employee')->group(function () {
     Route::get('/company-policies', [EmployeeCompanyPolicyController::class, 'policies'])->name('employee.company-policies');
     Route::get('/company-holidays', [EmployeeCompanyPolicyController::class, 'holidays'])->name('employee.company-holidays');
+
+    // Generic Employee AI Assistant (Gemini). Identity is always taken from auth()->user().
+    // Legacy one-shot chat remains available; session APIs add conversational history.
+    Route::post('/assistant/chat', [EmployeeAssistantController::class, 'chat'])
+        ->middleware('throttle:employee-assistant')
+        ->name('employee.assistant.chat');
+
+    Route::get('/assistant/sessions', [EmployeeAssistantController::class, 'indexSessions'])
+        ->name('employee.assistant.sessions.index');
+    Route::post('/assistant/sessions', [EmployeeAssistantController::class, 'storeSession'])
+        ->name('employee.assistant.sessions.store');
+    Route::get('/assistant/sessions/{session}', [EmployeeAssistantController::class, 'showSession'])
+        ->name('employee.assistant.sessions.show');
+    Route::delete('/assistant/sessions/{session}', [EmployeeAssistantController::class, 'destroySession'])
+        ->name('employee.assistant.sessions.destroy');
+    Route::post('/assistant/sessions/{session}/messages', [EmployeeAssistantController::class, 'storeMessage'])
+        ->middleware('throttle:employee-assistant')
+        ->name('employee.assistant.sessions.messages.store');
 });
 
 // Public self-registration for tenant companies (rate-limited).

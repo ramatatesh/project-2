@@ -2840,6 +2840,389 @@
                 ]
             }
         },
+        "/api/employee/assistant/sessions": {
+            "get": {
+                "tags": [
+                    "Employee AI Assistant"
+                ],
+                "summary": "List the authenticated employee's chat sessions",
+                "operationId": "a67c764eb42e5ece836b2904bc011a56",
+                "parameters": [
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 15
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Paginated sessions"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "403": {
+                        "description": "No employee record found"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Employee AI Assistant"
+                ],
+                "summary": "Start a new assistant chat session",
+                "description": "Creates a session owned by auth()->user() and stores a one-time Arabic welcome greeting. Do not send user_id/employee_id/company_id.",
+                "operationId": "8fc76e140f6df3503309667f834b2f94",
+                "responses": {
+                    "201": {
+                        "description": "Session created with welcome message",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "id": {
+                                                    "type": "string",
+                                                    "format": "uuid"
+                                                },
+                                                "title": {
+                                                    "type": "string",
+                                                    "example": null,
+                                                    "nullable": true
+                                                },
+                                                "created_at": {
+                                                    "type": "string",
+                                                    "format": "date-time"
+                                                },
+                                                "updated_at": {
+                                                    "type": "string",
+                                                    "format": "date-time"
+                                                },
+                                                "messages": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "properties": {
+                                                            "id": {
+                                                                "type": "string",
+                                                                "format": "uuid"
+                                                            },
+                                                            "role": {
+                                                                "type": "string",
+                                                                "example": "assistant"
+                                                            },
+                                                            "message": {
+                                                                "type": "string",
+                                                                "example": "أهلاً بك، أحمد 👋\\nكيف يمكنني مساعدتك؟"
+                                                            },
+                                                            "created_at": {
+                                                                "type": "string",
+                                                                "format": "date-time"
+                                                            }
+                                                        },
+                                                        "type": "object"
+                                                    }
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "403": {
+                        "description": "No employee record found"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/employee/assistant/sessions/{session}": {
+            "get": {
+                "tags": [
+                    "Employee AI Assistant"
+                ],
+                "summary": "Get a chat session with its messages",
+                "description": "Only the session owner can access it. Returns 404 if the session does not belong to auth()->user().",
+                "operationId": "9daf1ea991d960a333be1ee6c8098341",
+                "parameters": [
+                    {
+                        "name": "session",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 50
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Session with paginated messages"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "403": {
+                        "description": "No employee record found"
+                    },
+                    "404": {
+                        "description": "Session not found"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Employee AI Assistant"
+                ],
+                "summary": "Delete a chat session owned by the authenticated employee",
+                "description": "Deletes only chat history for this session. Does not delete HR data.",
+                "operationId": "ee07ded7756ecb593632fbe10da42712",
+                "parameters": [
+                    {
+                        "name": "session",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Deleted"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "403": {
+                        "description": "No employee record found"
+                    },
+                    "404": {
+                        "description": "Session not found"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/employee/assistant/sessions/{session}/messages": {
+            "post": {
+                "tags": [
+                    "Employee AI Assistant"
+                ],
+                "summary": "Send a message in a chat session",
+                "description": "Saves the user message, builds current authorized employee context (source of truth), sends limited chat history + context to Gemini, saves the assistant reply. Example: 'كم بقي من رصيد إجازاتي؟' then 'طيب منها كم يوم سنوية؟'.",
+                "operationId": "bddeb0f1371709c21b6e8969f8832b7d",
+                "parameters": [
+                    {
+                        "name": "session",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "message"
+                                ],
+                                "properties": {
+                                    "message": {
+                                        "type": "string",
+                                        "maxLength": 2000,
+                                        "example": "كم بقي من رصيد إجازاتي؟"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Assistant answer with persisted messages",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "answer": {
+                                                    "type": "string",
+                                                    "example": "بقي لديك 12 يوم إجازة."
+                                                },
+                                                "session_id": {
+                                                    "type": "string",
+                                                    "format": "uuid"
+                                                },
+                                                "user_message": {
+                                                    "type": "object"
+                                                },
+                                                "assistant_message": {
+                                                    "type": "object"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "403": {
+                        "description": "No employee record found"
+                    },
+                    "404": {
+                        "description": "Session not found"
+                    },
+                    "422": {
+                        "description": "Validation failed"
+                    },
+                    "429": {
+                        "description": "Too many requests"
+                    },
+                    "503": {
+                        "description": "AI service unavailable or misconfigured"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/employee/assistant/chat": {
+            "post": {
+                "tags": [
+                    "Employee AI Assistant"
+                ],
+                "summary": "Ask the employee AI assistant a one-shot question (legacy, no session)",
+                "description": "Backward-compatible endpoint without chat history. Prefer session-based messaging for conversational context. Identity always from auth()->user().",
+                "operationId": "c2c9ddbc0a2b481ba21e62f1d10e36f4",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "message"
+                                ],
+                                "properties": {
+                                    "message": {
+                                        "type": "string",
+                                        "maxLength": 2000,
+                                        "example": "كم بقي لي من رصيد الإجازات؟"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Assistant answer",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "answer": {
+                                                    "type": "string"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "403": {
+                        "description": "No employee record found"
+                    },
+                    "422": {
+                        "description": "Validation failed"
+                    },
+                    "429": {
+                        "description": "Too many requests"
+                    },
+                    "503": {
+                        "description": "AI service unavailable or misconfigured"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
         "/api/employee/company-policies": {
             "get": {
                 "tags": [
@@ -9103,6 +9486,10 @@
         {
             "name": "Employee Advances",
             "description": "Employee salary advance (السُلف المالية) self-service endpoints"
+        },
+        {
+            "name": "Employee AI Assistant",
+            "description": "Authenticated employee HR assistant (Gemini) with chat sessions + history. Context providers remain Laravel-authorized and are the source of truth; chat history is conversational context only."
         },
         {
             "name": "Employee Company Policies",
