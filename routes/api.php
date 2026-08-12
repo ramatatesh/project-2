@@ -176,6 +176,7 @@ Route::middleware(['auth:sanctum', 'role:hr_manager,general_manager'])->prefix('
     Route::get('/departments/{department}', [DepartmentController::class, 'show']);
     Route::get('/departments/{department}/employees', [EmployeeController::class, 'byDepartment']);
     Route::get('/employees', [EmployeeController::class, 'index']);
+    Route::get('/employees/{employee}', [EmployeeController::class, 'show']);
     Route::delete('/employees/{employee}', [EmployeeController::class, 'destroy']);
 
 });
