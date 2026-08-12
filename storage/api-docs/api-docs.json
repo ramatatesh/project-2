@@ -5227,7 +5227,7 @@
                     "HR Analytics"
                 ],
                 "summary": "استعلام معدل الدوران الوظيفي الربعي (Quarterly Turnover Rate)",
-                "description": "يحسب معدل دوران الموظفين لربع سنوي معين بناءً على عدد المغادرين ومتوسط الموظفين الفعالين.",
+                "description": "يحسب معدل دوران الموظفين. يمكن جلب ربع معين أو إرجاع الأربعة أرباع كاملة للسنة لإظهار المنحنى البياني.",
                 "operationId": "getTurnoverRate",
                 "parameters": [
                     {
@@ -5243,7 +5243,7 @@
                     {
                         "name": "quarter",
                         "in": "query",
-                        "description": "الربع السنوي (1, 2, 3, 4)",
+                        "description": "الربع السنوي (اختياري: 1, 2, 3, 4). في حال عدم تمريره يتم إرجاع الأرباع الأربعة",
                         "required": false,
                         "schema": {
                             "type": "integer",
@@ -5274,21 +5274,33 @@
                                                     "type": "integer",
                                                     "example": 2026
                                                 },
-                                                "quarter": {
-                                                    "type": "integer",
-                                                    "example": 1
-                                                },
-                                                "departed_count": {
-                                                    "type": "integer",
-                                                    "example": 3
-                                                },
-                                                "average_active_employees": {
-                                                    "type": "number",
-                                                    "example": 50.5
-                                                },
-                                                "turnover_rate_percentage": {
-                                                    "type": "number",
-                                                    "example": 5.94
+                                                "quarters": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "properties": {
+                                                            "quarter": {
+                                                                "type": "string",
+                                                                "example": "Q1"
+                                                            },
+                                                            "quarter_number": {
+                                                                "type": "integer",
+                                                                "example": 1
+                                                            },
+                                                            "departed_count": {
+                                                                "type": "integer",
+                                                                "example": 3
+                                                            },
+                                                            "average_active_employees": {
+                                                                "type": "number",
+                                                                "example": 50.5
+                                                            },
+                                                            "turnover_rate_percentage": {
+                                                                "type": "number",
+                                                                "example": 5.94
+                                                            }
+                                                        },
+                                                        "type": "object"
+                                                    }
                                                 }
                                             },
                                             "type": "object"
@@ -5319,7 +5331,7 @@
                     "HR Analytics"
                 ],
                 "summary": "استعلام إجمالي القوة البشرية (توزيع الجنس والأعمار)",
-                "description": "يعرض توزيع الموظفين الفعالين حسب الجنس والفئات العمرية.",
+                "description": "يعرض توزيع الموظفين الفعالين حسب الجنس والفئات العمرية مع ضمان البنية الثابتة للفرونت إند.",
                 "operationId": "getDemographics",
                 "responses": {
                     "200": {
@@ -5343,6 +5355,10 @@
                                                         "female": {
                                                             "type": "integer",
                                                             "example": 20
+                                                        },
+                                                        "unspecified": {
+                                                            "type": "integer",
+                                                            "example": 0
                                                         }
                                                     },
                                                     "type": "object"
@@ -5483,13 +5499,24 @@
                     "HR Analytics"
                 ],
                 "summary": "معدل الامتثال اليومي بالبصمة الرقمية (Daily Verification Rate)",
-                "description": "يعرض نسبة التحقق الرقمي عبر التطبيق (QR/GPS) مقارنة بالتعديلات والتحققات اليدوية.",
+                "description": "يعرض نسبة التحقق الرقمي عبر التطبيق (QR/GPS) مقارنة بالتعديلات والتحققات اليدوية. يدعم تاريخ فردي أو نطاق زمني.",
                 "operationId": "getDailyVerificationRate",
                 "parameters": [
                     {
                         "name": "date",
                         "in": "query",
-                        "description": "التاريخ بصيغة (YYYY-MM-DD)",
+                        "description": "التاريخ الأساسي أو بداية النطاق بصيغة (YYYY-MM-DD)",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date",
+                            "example": "2026-08-01"
+                        }
+                    },
+                    {
+                        "name": "end_date",
+                        "in": "query",
+                        "description": "تاريخ نهاية النطاق الزمني لرسومات البيانية (اختياري)",
                         "required": false,
                         "schema": {
                             "type": "string",
@@ -5511,29 +5538,45 @@
                                         },
                                         "data": {
                                             "properties": {
-                                                "date": {
+                                                "start_date": {
+                                                    "type": "string",
+                                                    "example": "2026-08-01"
+                                                },
+                                                "end_date": {
                                                     "type": "string",
                                                     "example": "2026-08-07"
                                                 },
-                                                "total_attendance_records": {
-                                                    "type": "integer",
-                                                    "example": 50
-                                                },
-                                                "digital_verifications": {
-                                                    "type": "integer",
-                                                    "example": 45
-                                                },
-                                                "manual_verifications": {
-                                                    "type": "integer",
-                                                    "example": 5
-                                                },
-                                                "digital_compliance_rate": {
-                                                    "type": "number",
-                                                    "example": 90
-                                                },
-                                                "manual_rate": {
-                                                    "type": "number",
-                                                    "example": 10
+                                                "timeline": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "properties": {
+                                                            "date": {
+                                                                "type": "string",
+                                                                "example": "2026-08-07"
+                                                            },
+                                                            "total_attendance_records": {
+                                                                "type": "integer",
+                                                                "example": 50
+                                                            },
+                                                            "digital_verifications": {
+                                                                "type": "integer",
+                                                                "example": 45
+                                                            },
+                                                            "manual_verifications": {
+                                                                "type": "integer",
+                                                                "example": 5
+                                                            },
+                                                            "digital_compliance_rate": {
+                                                                "type": "number",
+                                                                "example": 90
+                                                            },
+                                                            "manual_rate": {
+                                                                "type": "number",
+                                                                "example": 10
+                                                            }
+                                                        },
+                                                        "type": "object"
+                                                    }
                                                 }
                                             },
                                             "type": "object"
@@ -5564,7 +5607,7 @@
                     "HR Analytics"
                 ],
                 "summary": "عداد حالة القوة البشرية اللحظية (Real-time Headcount)",
-                "description": "عداد رقمي مفرس ومخزن مؤقتاً (Cache) يعرض الحاضرين المتواجدين الآن، المتأخرين، والموظفين في إجازات اليوم.",
+                "description": "عداد رقمي مخزن مؤقتاً (Cache) يعرض الحاضرين المتواجدين الآن، المتأخرين، والموظفين في إجازات اليوم.",
                 "operationId": "getRealtimeHeadcount",
                 "responses": {
                     "200": {
@@ -5625,7 +5668,7 @@
                     "HR Analytics"
                 ],
                 "summary": "منحنى تقييم الأداء العام للشركة (Performance Distribution Curve)",
-                "description": "توزيع أداء الموظفين حسـب مجموع العلامات إلى (ممتاز، جيد، مقبول، ضعيف).",
+                "description": "توزيع أداء الموظفين حسب مجموع العلامات إلى (ممتاز، جيد، مقبول، ضعيف).",
                 "operationId": "getPerformanceDistribution",
                 "parameters": [
                     {
@@ -7613,9 +7656,25 @@
                 ],
                 "summary": "Get overtime request details",
                 "operationId": "d6d548d381b5e553627d69b96bf7058e",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "Overtime request UUID",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid",
+                            "example": "bf5f9cbb-0dae-407e-8d49-712d0089a21a"
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "Overtime request details"
+                    },
+                    "404": {
+                        "description": "Overtime request not found"
                     }
                 },
                 "security": [
@@ -7632,6 +7691,19 @@
                 ],
                 "summary": "Approve or reject an overtime request",
                 "operationId": "60e33fc934e01fef57326f6ef15d37fa",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "Overtime request UUID",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid",
+                            "example": "bf5f9cbb-0dae-407e-8d49-712d0089a21a"
+                        }
+                    }
+                ],
                 "requestBody": {
                     "required": true,
                     "content": {
