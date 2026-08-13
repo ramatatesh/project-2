@@ -3,6 +3,8 @@
 namespace App\Services;
 
 use App\Models\Employee;
+use App\Models\EvaluationPolicy;
+use App\Models\EvaluationScore;
 use App\Models\SalaryAdvance;
 use App\Models\SalaryAdvanceInstallment;
 use App\Models\SalaryRecord;
@@ -89,6 +91,7 @@ class SalaryService
     /**
      * Ensure a draft salary row exists for employee + month/year.
      * Pulls advance installments due that month into loan_deduction.
+     * Applies finalized evaluation bonus/deduction when the company policy enables it.
      */
     public function ensureDraftRecord(Employee $employee, int $month, int $year): SalaryRecord
     {
@@ -103,6 +106,7 @@ class SalaryService
         }
 
         $loanDeduction = $this->sumAdvanceInstallmentsDue($employee->id, $month, $year);
+        $evaluation = $this->resolveEvaluationAdjustment($employee);
 
         if (! $record) {
             $base = (float) $employee->base_salary;
@@ -114,18 +118,22 @@ class SalaryService
                 'year' => $year,
                 'base_salary' => $base,
                 'overtime_amount' => 0,
-                'bonus_amount' => 0,
+                'bonus_amount' => $evaluation['bonus'],
                 'late_deduction' => 0,
                 'absent_deduction' => 0,
                 'loan_deduction' => $loanDeduction,
                 'manual_bonus' => 0,
-                'manual_deduction' => 0,
-                'net_salary' => round($base - $loanDeduction, 2),
+                'manual_deduction' => $evaluation['deduction'],
+                'evaluation_bonus_amount' => $evaluation['bonus'],
+                'evaluation_deduction_amount' => $evaluation['deduction'],
+                'net_salary' => 0,
                 'status' => SalaryRecord::STATUS_DRAFT,
             ]);
+            $record->net_salary = $this->recalculateNet($record);
+            $record->save();
         } else {
-            // Keep overtime/bonuses already applied; refresh loan deduction from due installments.
             $record->loan_deduction = $loanDeduction;
+            $this->replaceEvaluationAdjustment($record, $evaluation['bonus'], $evaluation['deduction']);
             $record->net_salary = $this->recalculateNet($record);
             $record->save();
         }
@@ -280,5 +288,72 @@ class SalaryService
             ->whereBetween('due_date', [$start, $end])
             ->where('status', SalaryAdvanceInstallment::STATUS_PENDING)
             ->sum('amount');
+    }
+
+    /**
+     * @return array{bonus: float, deduction: float}
+     */
+    private function resolveEvaluationAdjustment(Employee $employee): array
+    {
+        $none = ['bonus' => 0.0, 'deduction' => 0.0];
+
+        $policy = EvaluationPolicy::where('company_id', $employee->company_id)->first();
+
+        if (! $policy || ! $policy->apply_review_to_salary) {
+            return $none;
+        }
+
+        $score = EvaluationScore::where('company_id', $employee->company_id)
+            ->where('employee_id', $employee->id)
+            ->where('status', EvaluationScore::STATUS_FINALIZED)
+            ->whereNotNull('final_score')
+            ->whereNotNull('finalized_at')
+            ->orderByDesc('finalized_at')
+            ->first();
+
+        if (! $score) {
+            return $none;
+        }
+
+        $finalScore = (float) $score->final_score;
+        $base = (float) $employee->base_salary;
+        $percent = 0.0;
+        $kind = null;
+
+        if ($finalScore >= 8) {
+            $percent = (float) ($policy->excellent_bonus_percent ?? 0);
+            $kind = 'bonus';
+        } elseif ($finalScore >= 6) {
+            $percent = (float) ($policy->good_bonus_percent ?? 0);
+            $kind = 'bonus';
+        } elseif ($finalScore >= 4) {
+            return $none;
+        } else {
+            $percent = (float) ($policy->poor_deduction_percent ?? 0);
+            $kind = 'deduction';
+        }
+
+        if ($percent <= 0) {
+            return $none;
+        }
+
+        $amount = round($base * $percent / 100, 2);
+
+        if ($kind === 'bonus') {
+            return ['bonus' => $amount, 'deduction' => 0.0];
+        }
+
+        return ['bonus' => 0.0, 'deduction' => $amount];
+    }
+
+    private function replaceEvaluationAdjustment(SalaryRecord $record, float $bonus, float $deduction): void
+    {
+        $previousBonus = (float) ($record->evaluation_bonus_amount ?? 0);
+        $previousDeduction = (float) ($record->evaluation_deduction_amount ?? 0);
+
+        $record->bonus_amount = round((float) $record->bonus_amount - $previousBonus + $bonus, 2);
+        $record->manual_deduction = round((float) $record->manual_deduction - $previousDeduction + $deduction, 2);
+        $record->evaluation_bonus_amount = $bonus;
+        $record->evaluation_deduction_amount = $deduction;
     }
 }

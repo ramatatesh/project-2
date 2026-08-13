@@ -97,7 +97,11 @@ class EvaluationResultController extends Controller
             return response()->json(['success' => false, 'message' => 'Employee not found for this company.'], 404);
         }
 
-        $score = $this->evaluationService->finalizeEmployeeScore($cycle, $employee->id, auth()->id());
+        try {
+            $score = $this->evaluationService->finalizeEmployeeScore($cycle, $employee->id, auth()->id());
+        } catch (\Throwable $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
+        }
 
         return response()->json([
             'success' => true,

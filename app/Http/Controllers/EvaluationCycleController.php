@@ -156,7 +156,12 @@ class EvaluationCycleController extends Controller
     public function destroy(EvaluationCycle $cycle): JsonResponse
     {
         $this->evaluationService->ensureOwnsCompany($cycle, auth()->user()->company_id);
-        $this->evaluationService->deleteCycle($cycle);
+
+        try {
+            $this->evaluationService->deleteCycle($cycle);
+        } catch (\Throwable $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
+        }
 
         return response()->json([
             'success' => true,

@@ -16,7 +16,7 @@ class SubmitEvaluationReviewRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'answers' => ['required', 'array'],
+            'answers' => ['required', 'array', 'min:1'],
             'answers.*.question_id' => ['required', 'string', 'uuid', 'exists:evaluation_template_questions,id'],
             'answers.*.rating' => ['nullable', 'integer', 'min:1', 'max:5'],
             'answers.*.comment' => ['nullable', 'string'],

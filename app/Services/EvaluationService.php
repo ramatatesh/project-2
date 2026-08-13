@@ -123,6 +123,10 @@ class EvaluationService
 
     public function deleteCycle(EvaluationCycle $cycle): void
     {
+        if ($cycle->status !== EvaluationCycle::STATUS_DRAFT || $cycle->reviews()->exists()) {
+            throw new RuntimeException('Cannot delete an evaluation cycle after it has started.');
+        }
+
         $cycle->delete();
     }
 
@@ -209,7 +213,26 @@ class EvaluationService
             throw new RuntimeException('Only pending evaluation reviews can be submitted.');
         }
 
-        $allowedQuestionIds = $review->cycle->template->questions->pluck('id')->toArray();
+        $questions = $review->cycle->template->questions;
+        $allowedQuestionIds = $questions->pluck('id')->all();
+
+        if ($answersData === []) {
+            throw new InvalidArgumentException('At least one answer is required.');
+        }
+
+        $ratingQuestionIds = $questions
+            ->where('response_type', EvaluationTemplateQuestion::RESPONSE_TYPE_RATING)
+            ->pluck('id');
+
+        $answeredRatingIds = collect($answersData)
+            ->filter(fn (array $answerData) => array_key_exists('rating', $answerData) && $answerData['rating'] !== null)
+            ->pluck('question_id')
+            ->unique();
+
+        if ($ratingQuestionIds->isNotEmpty() && $ratingQuestionIds->diff($answeredRatingIds)->isNotEmpty()) {
+            throw new InvalidArgumentException('All rating questions must be answered before submitting the review.');
+        }
+
         $now = now();
 
         foreach ($answersData as $answerData) {
@@ -288,8 +311,23 @@ class EvaluationService
 
     public function scoreReview(EvaluationReview $review, array $scoresData): void
     {
+        $review->loadMissing('cycle');
+
         if ($review->cycle->isClosed()) {
             throw new RuntimeException('Cannot score a review after the evaluation cycle is closed.');
+        }
+
+        if ($review->status !== EvaluationReview::STATUS_COMPLETED) {
+            throw new RuntimeException('Cannot score a review that has not been completed.');
+        }
+
+        $finalizedScore = EvaluationScore::where('evaluation_cycle_id', $review->evaluation_cycle_id)
+            ->where('employee_id', $review->employee_id)
+            ->where('status', EvaluationScore::STATUS_FINALIZED)
+            ->exists();
+
+        if ($finalizedScore) {
+            throw new RuntimeException('Cannot score a review after the employee result has been finalized.');
         }
 
         $now = now();
@@ -297,10 +335,15 @@ class EvaluationService
         foreach ($scoresData as $scoreData) {
             $answer = EvaluationAnswer::where('id', $scoreData['answer_id'])
                 ->where('evaluation_review_id', $review->id)
+                ->with('question')
                 ->first();
 
             if (! $answer) {
                 throw new InvalidArgumentException('Answer does not belong to this review.');
+            }
+
+            if ($answer->question?->response_type !== EvaluationTemplateQuestion::RESPONSE_TYPE_RATING) {
+                throw new InvalidArgumentException('HR scores can only be applied to rating questions.');
             }
 
             $answer->update([
@@ -329,6 +372,14 @@ class EvaluationService
 
     public function updateEmployeeScores(EvaluationCycle $cycle, string $employeeId): EvaluationScore
     {
+        $existing = EvaluationScore::where('evaluation_cycle_id', $cycle->id)
+            ->where('employee_id', $employeeId)
+            ->first();
+
+        if ($existing && $existing->status === EvaluationScore::STATUS_FINALIZED) {
+            return $existing;
+        }
+
         $managerScore = $this->averageReviewScores($cycle->id, $employeeId, EvaluationReview::TYPE_MANAGER);
         $selfScore = $this->averageReviewScores($cycle->id, $employeeId, EvaluationReview::TYPE_SELF);
         $peerScore = $this->averageReviewScores($cycle->id, $employeeId, EvaluationReview::TYPE_PEER);
@@ -452,13 +503,7 @@ class EvaluationService
         $readyIds = [];
 
         foreach ($employeeIds as $employeeId) {
-            $total = $cycle->reviews()->where('employee_id', $employeeId)->count();
-            $completed = $cycle->reviews()
-                ->where('employee_id', $employeeId)
-                ->where('status', EvaluationReview::STATUS_COMPLETED)
-                ->count();
-
-            if ($total > 0 && $completed === $total) {
+            if ($this->employeeHasAllReviewsCompleted($cycle, $employeeId)) {
                 $readyIds[] = $employeeId;
             }
         }
@@ -466,6 +511,17 @@ class EvaluationService
         return Employee::whereIn('id', $readyIds)
             ->with(['user', 'department'])
             ->get();
+    }
+
+    public function employeeHasAllReviewsCompleted(EvaluationCycle $cycle, string $employeeId): bool
+    {
+        $total = $cycle->reviews()->where('employee_id', $employeeId)->count();
+        $completed = $cycle->reviews()
+            ->where('employee_id', $employeeId)
+            ->where('status', EvaluationReview::STATUS_COMPLETED)
+            ->count();
+
+        return $total > 0 && $completed === $total;
     }
 
    public function getReviewDetails(EvaluationReview $review): EvaluationReview
@@ -495,6 +551,15 @@ class EvaluationService
 
     public function finalizeEmployeeScore(EvaluationCycle $cycle, string $employeeId, string $finalizedByUserId): EvaluationScore
     {
+        if (! $this->employeeHasAllReviewsCompleted($cycle, $employeeId)) {
+            throw new RuntimeException('Cannot finalize an employee score before all required reviews are completed.');
+        }
+
+        $computed = $this->getEmployeeScore($cycle, $employeeId);
+        if ($computed->final_score === null) {
+            throw new RuntimeException('Cannot finalize an employee score because no final score is available.');
+        }
+
         $score = $this->updateEmployeeScores($cycle, $employeeId);
         $score->update([
             'status' => EvaluationScore::STATUS_FINALIZED,
