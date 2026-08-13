@@ -338,15 +338,15 @@ class EvaluationSystemTest extends TestCase
             ->where('review_type', EvaluationReview::TYPE_SELF)
             ->first();
 
+        $managerReview = EvaluationReview::where('evaluation_cycle_id', $cycle->id)
+            ->where('employee_id', $this->employee->id)
+            ->where('review_type', EvaluationReview::TYPE_MANAGER)
+            ->first();
+
         $questionIds = $template->questions->pluck('id')->toArray();
 
-        $this->actingAs($this->employeeUser)
-            ->postJson("/api/evaluations/my-reviews/{$selfReview->id}/submit", [
-                'answers' => [
-                    ['question_id' => $questionIds[0], 'rating' => 4],
-                ],
-            ])
-            ->assertOk();
+        $this->submitCompletedReview($selfReview, $this->employeeUser, $questionIds, 4, 'Self');
+        $this->submitCompletedReview($managerReview, $this->managerUser, $questionIds, 5, 'Manager');
 
         $this->actingAs($this->hrManager)
             ->postJson("/api/hr/evaluation-cycles/{$cycle->id}/reviews/{$selfReview->id}/score", [
@@ -581,5 +581,267 @@ class EvaluationSystemTest extends TestCase
             ->where('evaluation_template_question_id', $questionId)
             ->first()
             ->id;
+    }
+
+    private function submitCompletedReview(
+        EvaluationReview $review,
+        User $reviewer,
+        array $questionIds,
+        int $rating,
+        string $comment,
+    ): void {
+        $this->actingAs($reviewer)
+            ->postJson("/api/evaluations/my-reviews/{$review->id}/submit", [
+                'answers' => [
+                    ['question_id' => $questionIds[0], 'rating' => $rating],
+                    ['question_id' => $questionIds[1], 'comment' => $comment],
+                ],
+            ])
+            ->assertOk();
+    }
+
+    public function test_empty_answers_array_is_rejected(): void
+    {
+        [$cycle] = $this->createLaunchedCycle();
+
+        $selfReview = EvaluationReview::where('evaluation_cycle_id', $cycle->id)
+            ->where('employee_id', $this->employee->id)
+            ->where('review_type', EvaluationReview::TYPE_SELF)
+            ->first();
+
+        $this->actingAs($this->employeeUser)
+            ->postJson("/api/evaluations/my-reviews/{$selfReview->id}/submit", [
+                'answers' => [],
+            ])
+            ->assertStatus(422);
+
+        $this->assertSame(EvaluationReview::STATUS_PENDING, $selfReview->fresh()->status);
+    }
+
+    public function test_submit_without_rating_answers_is_rejected(): void
+    {
+        [$cycle, $template] = $this->createLaunchedCycle();
+
+        $selfReview = EvaluationReview::where('evaluation_cycle_id', $cycle->id)
+            ->where('employee_id', $this->employee->id)
+            ->where('review_type', EvaluationReview::TYPE_SELF)
+            ->first();
+
+        $textQuestionId = $template->questions
+            ->firstWhere('response_type', EvaluationTemplateQuestion::RESPONSE_TYPE_TEXT)
+            ->id;
+
+        $this->actingAs($this->employeeUser)
+            ->postJson("/api/evaluations/my-reviews/{$selfReview->id}/submit", [
+                'answers' => [
+                    ['question_id' => $textQuestionId, 'comment' => 'Only text'],
+                ],
+            ])
+            ->assertStatus(403);
+
+        $this->assertSame(EvaluationReview::STATUS_PENDING, $selfReview->fresh()->status);
+    }
+
+    public function test_cannot_score_pending_review(): void
+    {
+        [$cycle, $template] = $this->createLaunchedCycle();
+
+        $selfReview = EvaluationReview::where('evaluation_cycle_id', $cycle->id)
+            ->where('employee_id', $this->employee->id)
+            ->where('review_type', EvaluationReview::TYPE_SELF)
+            ->first();
+
+        EvaluationAnswer::create([
+            'id' => Str::uuid()->toString(),
+            'evaluation_review_id' => $selfReview->id,
+            'evaluation_template_question_id' => $template->questions->first()->id,
+            'rating' => 4,
+        ]);
+
+        $this->actingAs($this->hrManager)
+            ->postJson("/api/hr/evaluation-cycles/{$cycle->id}/reviews/{$selfReview->id}/score", [
+                'scores' => [
+                    ['answer_id' => $this->getAnswerId($selfReview->id, $template->questions->first()->id), 'hr_score' => 8],
+                ],
+            ])
+            ->assertStatus(422)
+            ->assertJsonPath('message', 'Cannot score a review that has not been completed.');
+    }
+
+    public function test_cannot_score_text_question(): void
+    {
+        [$cycle, $template] = $this->createLaunchedCycle();
+
+        $selfReview = EvaluationReview::where('evaluation_cycle_id', $cycle->id)
+            ->where('employee_id', $this->employee->id)
+            ->where('review_type', EvaluationReview::TYPE_SELF)
+            ->first();
+
+        $questionIds = $template->questions->pluck('id')->toArray();
+        $this->submitCompletedReview($selfReview, $this->employeeUser, $questionIds, 4, 'Self');
+
+        $textQuestionId = $template->questions
+            ->firstWhere('response_type', EvaluationTemplateQuestion::RESPONSE_TYPE_TEXT)
+            ->id;
+
+        $this->actingAs($this->hrManager)
+            ->postJson("/api/hr/evaluation-cycles/{$cycle->id}/reviews/{$selfReview->id}/score", [
+                'scores' => [
+                    ['answer_id' => $this->getAnswerId($selfReview->id, $textQuestionId), 'hr_score' => 8],
+                ],
+            ])
+            ->assertStatus(422)
+            ->assertJsonPath('message', 'HR scores can only be applied to rating questions.');
+    }
+
+    public function test_empty_scores_array_is_rejected(): void
+    {
+        [$cycle] = $this->createLaunchedCycle();
+
+        $selfReview = EvaluationReview::where('evaluation_cycle_id', $cycle->id)
+            ->where('employee_id', $this->employee->id)
+            ->where('review_type', EvaluationReview::TYPE_SELF)
+            ->first();
+
+        $this->actingAs($this->hrManager)
+            ->postJson("/api/hr/evaluation-cycles/{$cycle->id}/reviews/{$selfReview->id}/score", [
+                'scores' => [],
+            ])
+            ->assertStatus(422);
+    }
+
+    public function test_cannot_score_after_finalization(): void
+    {
+        [$cycle, $template] = $this->createLaunchedCycle();
+        $questionIds = $template->questions->pluck('id')->toArray();
+
+        $selfReview = EvaluationReview::where('evaluation_cycle_id', $cycle->id)
+            ->where('employee_id', $this->employee->id)
+            ->where('review_type', EvaluationReview::TYPE_SELF)
+            ->first();
+        $managerReview = EvaluationReview::where('evaluation_cycle_id', $cycle->id)
+            ->where('employee_id', $this->employee->id)
+            ->where('review_type', EvaluationReview::TYPE_MANAGER)
+            ->first();
+
+        $this->submitCompletedReview($selfReview, $this->employeeUser, $questionIds, 4, 'Self');
+        $this->submitCompletedReview($managerReview, $this->managerUser, $questionIds, 5, 'Manager');
+
+        $this->actingAs($this->hrManager)
+            ->postJson("/api/hr/evaluation-cycles/{$cycle->id}/reviews/{$selfReview->id}/score", [
+                'scores' => [
+                    ['answer_id' => $this->getAnswerId($selfReview->id, $questionIds[0]), 'hr_score' => 8],
+                ],
+            ])
+            ->assertOk();
+
+        $this->actingAs($this->hrManager)
+            ->postJson("/api/hr/evaluation-cycles/{$cycle->id}/final-results/{$this->employee->id}/finalize")
+            ->assertOk();
+
+        $this->actingAs($this->hrManager)
+            ->postJson("/api/hr/evaluation-cycles/{$cycle->id}/reviews/{$selfReview->id}/score", [
+                'scores' => [
+                    ['answer_id' => $this->getAnswerId($selfReview->id, $questionIds[0]), 'hr_score' => 2],
+                ],
+            ])
+            ->assertStatus(422)
+            ->assertJsonPath('message', 'Cannot score a review after the employee result has been finalized.');
+
+        $this->assertSame(
+            EvaluationScore::STATUS_FINALIZED,
+            EvaluationScore::where('evaluation_cycle_id', $cycle->id)
+                ->where('employee_id', $this->employee->id)
+                ->value('status')
+        );
+        $this->assertEquals(8, EvaluationAnswer::find($this->getAnswerId($selfReview->id, $questionIds[0]))->hr_score);
+    }
+
+    public function test_cannot_finalize_before_all_reviews_are_completed(): void
+    {
+        [$cycle, $template] = $this->createLaunchedCycle();
+        $questionIds = $template->questions->pluck('id')->toArray();
+
+        $selfReview = EvaluationReview::where('evaluation_cycle_id', $cycle->id)
+            ->where('employee_id', $this->employee->id)
+            ->where('review_type', EvaluationReview::TYPE_SELF)
+            ->first();
+
+        $this->submitCompletedReview($selfReview, $this->employeeUser, $questionIds, 4, 'Self');
+
+        $this->actingAs($this->hrManager)
+            ->postJson("/api/hr/evaluation-cycles/{$cycle->id}/reviews/{$selfReview->id}/score", [
+                'scores' => [
+                    ['answer_id' => $this->getAnswerId($selfReview->id, $questionIds[0]), 'hr_score' => 8],
+                ],
+            ])
+            ->assertOk();
+
+        $this->actingAs($this->hrManager)
+            ->postJson("/api/hr/evaluation-cycles/{$cycle->id}/final-results/{$this->employee->id}/finalize")
+            ->assertStatus(422)
+            ->assertJsonPath('message', 'Cannot finalize an employee score before all required reviews are completed.');
+    }
+
+    public function test_cannot_finalize_without_a_final_score(): void
+    {
+        [$cycle, $template] = $this->createLaunchedCycle();
+        $questionIds = $template->questions->pluck('id')->toArray();
+
+        $selfReview = EvaluationReview::where('evaluation_cycle_id', $cycle->id)
+            ->where('employee_id', $this->employee->id)
+            ->where('review_type', EvaluationReview::TYPE_SELF)
+            ->first();
+        $managerReview = EvaluationReview::where('evaluation_cycle_id', $cycle->id)
+            ->where('employee_id', $this->employee->id)
+            ->where('review_type', EvaluationReview::TYPE_MANAGER)
+            ->first();
+
+        $this->submitCompletedReview($selfReview, $this->employeeUser, $questionIds, 4, 'Self');
+        $this->submitCompletedReview($managerReview, $this->managerUser, $questionIds, 5, 'Manager');
+
+        $this->actingAs($this->hrManager)
+            ->postJson("/api/hr/evaluation-cycles/{$cycle->id}/final-results/{$this->employee->id}/finalize")
+            ->assertStatus(422)
+            ->assertJsonPath('message', 'Cannot finalize an employee score because no final score is available.');
+
+        $this->assertDatabaseMissing('evaluation_scores', [
+            'evaluation_cycle_id' => $cycle->id,
+            'employee_id' => $this->employee->id,
+        ]);
+    }
+
+    public function test_cannot_delete_launched_cycle(): void
+    {
+        [$cycle] = $this->createLaunchedCycle();
+
+        $this->actingAs($this->hrManager)
+            ->deleteJson("/api/hr/evaluation-cycles/{$cycle->id}")
+            ->assertStatus(422)
+            ->assertJsonPath('message', 'Cannot delete an evaluation cycle after it has started.');
+
+        $this->assertDatabaseHas('evaluation_cycles', ['id' => $cycle->id]);
+    }
+
+    public function test_draft_cycle_without_reviews_can_be_deleted(): void
+    {
+        $template = $this->createTemplate('Draft Template');
+
+        $cycle = EvaluationCycle::create([
+            'id' => Str::uuid()->toString(),
+            'company_id' => $this->company->id,
+            'evaluation_template_id' => $template->id,
+            'name' => 'Draft Cycle',
+            'start_date' => now()->subDay(),
+            'end_date' => now()->addWeek(),
+            'status' => EvaluationCycle::STATUS_DRAFT,
+            'updated_at' => now(),
+        ]);
+
+        $this->actingAs($this->hrManager)
+            ->deleteJson("/api/hr/evaluation-cycles/{$cycle->id}")
+            ->assertOk();
+
+        $this->assertDatabaseMissing('evaluation_cycles', ['id' => $cycle->id]);
     }
 }

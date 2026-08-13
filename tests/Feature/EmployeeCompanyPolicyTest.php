@@ -6,6 +6,7 @@ use App\Enums\Role;
 use App\Models\AttendancePolicy;
 use App\Models\Company;
 use App\Models\Holiday;
+use App\Models\HolidayPolicy;
 use App\Models\LeaveType;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -259,5 +260,107 @@ class EmployeeCompanyPolicyTest extends TestCase
             ->getJson('/api/employee/company-holidays')
             ->assertOk()
             ->assertJsonCount(0, 'data');
+    }
+
+    public function test_employee_sees_weekly_holidays_only(): void
+    {
+        HolidayPolicy::create([
+            'id' => Str::uuid()->toString(),
+            'company_id' => $this->company->id,
+            'weekly_holidays' => ['friday', 'saturday'],
+        ]);
+
+        $response = $this->actingAs($this->employeeUser)->getJson('/api/employee/company-holidays');
+
+        $response->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonCount(2, 'data')
+            ->assertJsonPath('data.0.name', 'Saturday')
+            ->assertJsonPath('data.0.start_date', null)
+            ->assertJsonPath('data.0.end_date', null)
+            ->assertJsonPath('data.0.repeats_annually', true)
+            ->assertJsonPath('data.1.name', 'Friday');
+
+        $this->assertNotEmpty($response->json('data.0.id'));
+        $this->assertArrayHasKey('id', $response->json('data.0'));
+        $this->assertArrayHasKey('name', $response->json('data.0'));
+        $this->assertArrayHasKey('start_date', $response->json('data.0'));
+        $this->assertArrayHasKey('end_date', $response->json('data.0'));
+        $this->assertArrayHasKey('repeats_annually', $response->json('data.0'));
+    }
+
+    public function test_employee_sees_official_and_weekly_holidays_together(): void
+    {
+        Holiday::create([
+            'id' => Str::uuid()->toString(),
+            'company_id' => $this->company->id,
+            'name' => 'عيد الاستقلال',
+            'holiday_type' => 'single_day',
+            'start_date' => '2026-04-17',
+            'repeats_annually' => true,
+            'is_default' => true,
+        ]);
+
+        HolidayPolicy::create([
+            'id' => Str::uuid()->toString(),
+            'company_id' => $this->company->id,
+            'weekly_holidays' => ['friday', 'friday', 'saturday'],
+        ]);
+
+        $response = $this->actingAs($this->employeeUser)->getJson('/api/employee/company-holidays');
+
+        $response->assertOk()
+            ->assertJsonCount(3, 'data')
+            ->assertJsonPath('data.0.name', 'عيد الاستقلال')
+            ->assertJsonPath('data.0.start_date', '2026-04-17')
+            ->assertJsonPath('data.1.name', 'Saturday')
+            ->assertJsonPath('data.2.name', 'Friday');
+    }
+
+    public function test_employee_cannot_see_another_companys_weekly_holidays(): void
+    {
+        $otherCompany = Company::create([
+            'id' => Str::uuid()->toString(),
+            'name' => 'Other Co Weekly',
+            'email' => 'other-weekly@policy.test',
+            'address' => 'Address',
+            'phone' => '0944444444',
+            'status' => 'active',
+        ]);
+
+        HolidayPolicy::create([
+            'id' => Str::uuid()->toString(),
+            'company_id' => $otherCompany->id,
+            'weekly_holidays' => ['sunday'],
+        ]);
+
+        HolidayPolicy::create([
+            'id' => Str::uuid()->toString(),
+            'company_id' => $this->company->id,
+            'weekly_holidays' => ['friday'],
+        ]);
+
+        $otherEmployee = User::create([
+            'id' => Str::uuid()->toString(),
+            'company_id' => $otherCompany->id,
+            'full_name' => 'Other Weekly Employee',
+            'email' => 'otherweekly@policy.test',
+            'password_hash' => bcrypt('password'),
+            'role' => Role::Employee->value,
+            'status' => 'active',
+            'is_first_login' => false,
+        ]);
+
+        $this->actingAs($this->employeeUser)
+            ->getJson('/api/employee/company-holidays')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.name', 'Friday');
+
+        $this->actingAs($otherEmployee)
+            ->getJson('/api/employee/company-holidays')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.name', 'Sunday');
     }
 }

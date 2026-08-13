@@ -16,8 +16,8 @@ class StoreEvaluationScoreRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'scores' => ['required', 'array'],
-            'scores.*.answer_id' => ['required', 'string', 'uuid', 'exists:evaluation_answers,id'],
+            'scores' => ['required', 'array', 'min:1'],
+            'scores.*.answer_id' => ['required', 'string', 'uuid', 'distinct', 'exists:evaluation_answers,id'],
             'scores.*.hr_score' => ['required', 'integer', 'min:1', 'max:10'],
         ];
     }

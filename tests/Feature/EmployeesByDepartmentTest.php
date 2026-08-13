@@ -144,6 +144,30 @@ class EmployeesByDepartmentTest extends TestCase
             ->assertStatus(403);
     }
 
+    public function test_general_manager_can_view_a_single_employees_details(): void
+    {
+        $employee = Employee::where('company_id', $this->company->id)
+            ->where('job_title', 'Developer')
+            ->first();
+
+        $this->actingAs($this->generalManager)
+            ->getJson("/api/hr/employees/{$employee->id}")
+            ->assertOk()
+            ->assertJsonPath('data.job_title', 'Developer');
+    }
+
+    public function test_hr_manager_can_view_a_single_employees_details(): void
+    {
+        $employee = Employee::where('company_id', $this->company->id)
+            ->where('job_title', 'Sales Rep')
+            ->first();
+
+        $this->actingAs($this->hrManager)
+            ->getJson("/api/hr/employees/{$employee->id}")
+            ->assertOk()
+            ->assertJsonPath('data.job_title', 'Sales Rep');
+    }
+
     public function test_general_manager_can_list_employees_of_a_specific_department(): void
     {
         $response = $this->actingAs($this->generalManager)
