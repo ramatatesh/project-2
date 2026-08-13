@@ -134,7 +134,14 @@ class CompanyAdminController extends Controller
      */
     public function activate(Company $company): JsonResponse
     {
-        $this->subscriptionService->activateCompany($company);
+        try {
+            $this->subscriptionService->activateCompany($company);
+        } catch (\RuntimeException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 409);
+        }
 
         return response()->json([
             'success' => true,
@@ -159,6 +166,13 @@ class CompanyAdminController extends Controller
      */
     public function destroy(Company $company): JsonResponse
     {
+        if (! $this->subscriptionService->canPermanentlyDelete($company)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Cannot delete an active company with an active subscription or existing business data.',
+            ], 409);
+        }
+
         $company->delete();
 
         return response()->json([

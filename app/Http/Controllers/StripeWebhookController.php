@@ -61,7 +61,10 @@ class StripeWebhookController extends Controller
             $session = $event->data->object;
 
             if ($session->payment_status === 'paid') {
-                $result = $this->subscriptionService->activateCompanyFromStripeSession($session);
+                $purpose = $session->metadata['purpose'] ?? 'registration';
+                $result = $purpose === 'renewal'
+                    ? $this->subscriptionService->renewCompanyFromStripeSession($session)
+                    : $this->subscriptionService->activateCompanyFromStripeSession($session);
 
                 // Always acknowledge with 200 once the signature is verified, so Stripe does not
                 // keep retrying a permanently-failing event (e.g. missing plan). Failures are logged

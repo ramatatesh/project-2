@@ -31,6 +31,9 @@ return Application::configure(basePath: dirname(__DIR__))
         // Expire pending evaluation reviews whose due_date (end of day) has passed.
         // Hourly so status flips soon after the deadline without waiting until next midnight.
         $schedule->command('evaluations:expire-pending-reviews')->hourly();
+
+        // Freeze companies whose paid/free subscription end_date has passed.
+        $schedule->command('subscriptions:expire-overdue')->dailyAt('00:05');
     })
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->append(\Illuminate\Http\Middleware\HandleCors::class);
