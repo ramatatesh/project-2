@@ -4,8 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Models\AttendancePolicy;
 use App\Models\Holiday;
+use App\Models\HolidayPolicy;
 use App\Models\LeaveType;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Str;
+use Ramsey\Uuid\Uuid;
 
 /**
  * @OA\Tag(
@@ -88,8 +91,8 @@ class EmployeeCompanyPolicyController extends Controller
     /**
      * @OA\Get(
      *   path="/api/employee/company-holidays",
-     *   summary="Get the current user's company official holidays (read-only)",
-     *   description="Returns the official holidays configured for the authenticated user's own company. Never accepts a company_id from the request. If no holidays are configured yet, returns an empty array - still a 200 success response, never an error.",
+     *   summary="Get the current user's company holidays (read-only)",
+     *   description="Returns official/default holidays plus company weekly holidays for the authenticated user's own company. Never accepts a company_id from the request. If no holidays are configured yet, returns an empty array - still a 200 success response, never an error.",
      *   tags={"Employee Company Policies"},
      *   security={{"sanctum":{}}},
      *   @OA\Response(
@@ -116,7 +119,7 @@ class EmployeeCompanyPolicyController extends Controller
     {
         $companyId = auth()->user()->company_id;
 
-        $holidays = Holiday::where('company_id', $companyId)
+        $officialHolidays = Holiday::where('company_id', $companyId)
             ->orderBy('start_date')
             ->get()
             ->map(fn (Holiday $holiday) => [
@@ -124,13 +127,43 @@ class EmployeeCompanyPolicyController extends Controller
                 'name' => $holiday->name,
                 'start_date' => $holiday->start_date?->toDateString(),
                 'end_date' => $holiday->end_date?->toDateString(),
-                'repeats_annually' => $holiday->repeats_annually,
-            ])
-            ->values();
+                'repeats_annually' => (bool) $holiday->repeats_annually,
+            ]);
 
         return response()->json([
             'success' => true,
-            'data' => $holidays,
+            'data' => $officialHolidays->concat($this->weeklyHolidaysForCompany($companyId))->values(),
         ]);
+    }
+
+    /**
+     * Weekly holidays are stored on holiday_policies.weekly_holidays as lowercase weekday names.
+     * They are appended with the same response fields as official holidays.
+     *
+     * @return list<array{id: string, name: string, start_date: null, end_date: null, repeats_annually: true}>
+     */
+    private function weeklyHolidaysForCompany(string $companyId): array
+    {
+        $policy = HolidayPolicy::where('company_id', $companyId)->first();
+        $weekOrder = ['saturday', 'sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
+
+        return collect($policy?->weekly_holidays ?? [])
+            ->filter(fn ($day) => is_string($day) && $day !== '')
+            ->map(fn (string $day) => strtolower($day))
+            ->unique()
+            ->sortBy(function (string $day) use ($weekOrder) {
+                $index = array_search($day, $weekOrder, true);
+
+                return $index === false ? 99 : $index;
+            })
+            ->values()
+            ->map(fn (string $day) => [
+                'id' => Uuid::uuid5(Uuid::NAMESPACE_OID, $companyId.'|weekly-holiday|'.$day)->toString(),
+                'name' => Str::ucfirst($day),
+                'start_date' => null,
+                'end_date' => null,
+                'repeats_annually' => true,
+            ])
+            ->all();
     }
 }
