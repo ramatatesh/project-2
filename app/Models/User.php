@@ -34,6 +34,7 @@ class User extends Authenticatable
         'residence',
         'birth_date',
         'profile_completed',
+        'two_factor_enabled',
     ];
 
     protected $hidden = [
@@ -47,6 +48,7 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'is_first_login' => 'boolean',
             'profile_completed' => 'boolean',
+            'two_factor_enabled' => 'boolean',
         ];
     }
 

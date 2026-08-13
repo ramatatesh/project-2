@@ -23,6 +23,7 @@ use App\Http\Controllers\EvaluationReviewController;
 use App\Http\Controllers\EvaluationScoringController;
 use App\Http\Controllers\EvaluationTemplateController;
 use App\Http\Controllers\HolidayPolicyController;
+use App\Http\Controllers\HRAnalyticsController;
 use App\Http\Controllers\ManagementAdvanceController;
 use App\Http\Controllers\ManagementAttendanceController;
 use App\Http\Controllers\ManagementLeaveController;
@@ -32,15 +33,15 @@ use App\Http\Controllers\EmployeeSalaryController;
 use App\Http\Controllers\HrManagerController;
 use App\Http\Controllers\ManagementSalaryController;
 use App\Http\Controllers\PaymentWebhookController;
+use App\Http\Controllers\PayrollAnalyticsController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SalaryAdvancePolicyController;
 use App\Http\Controllers\SubscriptionPlanController;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\PayrollAnalyticsController;
-use App\Http\Controllers\HRAnalyticsController;
 
 Route::middleware('guest')->prefix('auth')->group(function () {
     Route::post('/login', [AuthController::class, 'login'])->name('auth.login')->middleware('throttle:5,1');
+    Route::post('/verify-login-otp', [AuthController::class, 'verifyLoginOtp'])->name('auth.verify-login-otp')->middleware('throttle:5,1');
     Route::post('/forgot-password', [AuthController::class, 'forgotPassword'])->name('auth.forgot-password')->middleware('throttle:3,1');
     Route::post('/verify-otp',[AuthController::class,'verifyOtp']);
     Route::post('/resend-otp', [AuthController::class, 'resendOtp']);
@@ -50,6 +51,7 @@ Route::middleware('guest')->prefix('auth')->group(function () {
 Route::middleware(['auth:sanctum', 'company.active'])->prefix('auth')->group(function () {
     Route::post('/complete-first-login', [AuthController::class, 'completeFirstLogin'])->name('auth.complete-first-login');
     Route::post('/logout', [AuthController::class, 'logout'])->name('auth.logout');
+    Route::post('/two-factor', [AuthController::class, 'toggleTwoFactor'])->name('auth.two-factor');
 });
 
 // Profile: view / update / documents upload.
@@ -197,15 +199,12 @@ Route::get('/stripe/checkout-sessions/{session_id}', [\App\Http\Controllers\Stri
 
 // Departments & Employees viewing (HR Manager & General Manager).
 // Company isolation is enforced per-request from the authenticated user's company_id
-// (no company_id is accepted from the client).s
+// (no company_id is accepted from the client).
 Route::middleware(['auth:sanctum', 'company.active', 'role:hr_manager,general_manager'])->prefix('hr')->group(function () {
     Route::get('/departments', [DepartmentController::class, 'index']);
     Route::get('/departments/{department}', [DepartmentController::class, 'show']);
     Route::get('/departments/{department}/employees', [EmployeeController::class, 'byDepartment']);
     Route::get('/employees', [EmployeeController::class, 'index']);
-    Route::get('/employees/{employee}', [EmployeeController::class, 'show']);
-    Route::delete('/employees/{employee}', [EmployeeController::class, 'destroy']);
-
 });
 
 // HR Dashboard area: Departments & Employees management (HR Manager only).
@@ -220,7 +219,9 @@ Route::middleware(['auth:sanctum', 'company.active', 'role:hr_manager'])->prefix
     // Employees
     Route::get('/employees/import/template', [EmployeeController::class, 'downloadTemplate']);
     Route::post('/employees', [EmployeeController::class, 'store']);
+    Route::get('/employees/{employee}', [EmployeeController::class, 'show']);
     Route::put('/employees/{employee}', [EmployeeController::class, 'update']);
+    Route::delete('/employees/{employee}', [EmployeeController::class, 'destroy']);
     Route::post('/employees/import', [EmployeeController::class, 'import']);
 
     // Department Managers
@@ -365,7 +366,6 @@ Route::middleware(['auth:sanctum', 'company.active', 'role:hr_manager,general_ma
     Route::get('/qr-code', [ManagementAttendanceController::class, 'qrCode']);
     Route::put('/{attendanceRecord}/adjust', [ManagementAttendanceController::class, 'adjust']);
 });
-
 
 Route::middleware(['auth:sanctum', 'company.active', 'role:hr_manager,general_manager'])->group(function () {
     Route::get('/payrolls/analytics', [PayrollAnalyticsController::class, 'index']);
