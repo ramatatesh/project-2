@@ -316,6 +316,48 @@
                 }
             }
         },
+        "/api/auth/verify-login-otp": {
+            "post": {
+                "tags": [
+                    "المصادقة (Authentication)"
+                ],
+                "summary": "التحقق من رمز الدخول بخطوتين وإصدار التوكن",
+                "operationId": "aa1103c3bbc8672843dfee37e8755c54",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "email",
+                                    "otp"
+                                ],
+                                "properties": {
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "example": "hr@khibrat.com"
+                                    },
+                                    "otp": {
+                                        "type": "string",
+                                        "example": "1234"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "تم تسجيل الدخول بنجاح وإعادة الـ Token"
+                    },
+                    "400": {
+                        "description": "رمز التحقق غير صحيح أو منتهي الصلاحية"
+                    }
+                }
+            }
+        },
         "/api/auth/forgot-password": {
             "post": {
                 "tags": [
@@ -638,6 +680,76 @@
                     },
                     "401": {
                         "description": "المستخدم غير مصادق عليه (Unauthenticated)"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/auth/two-factor": {
+            "post": {
+                "tags": [
+                    "المصادقة (Authentication)"
+                ],
+                "summary": "تفعيل أو تعطيل التحقق بخطوتين للحساب الحالي",
+                "operationId": "7daf945664b0af96f023818de689d6e8",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "enabled"
+                                ],
+                                "properties": {
+                                    "enabled": {
+                                        "type": "boolean",
+                                        "example": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "تم تحديث حالة التحقق بخطوتين بنجاح",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Two-factor authentication setting updated."
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "two_factor_enabled": {
+                                                    "type": "boolean",
+                                                    "example": true
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "المستخدم غير مصادق عليه (Unauthenticated) - يجب وضع التوكن في زر Authorize فوق"
+                    },
+                    "422": {
+                        "description": "خطأ في التحقق من المدخلات"
                     }
                 },
                 "security": [

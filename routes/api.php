@@ -34,11 +34,10 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SalaryAdvancePolicyController;
 use App\Http\Controllers\SubscriptionPlanController;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\PayrollAnalyticsController;
-use App\Http\Controllers\HRAnalyticsController;
 
 Route::middleware('guest')->prefix('auth')->group(function () {
     Route::post('/login', [AuthController::class, 'login'])->name('auth.login')->middleware('throttle:5,1');
+    Route::post('/verify-login-otp', [AuthController::class, 'verifyLoginOtp'])->name('auth.verify-login-otp')->middleware('throttle:5,1');
     Route::post('/forgot-password', [AuthController::class, 'forgotPassword'])->name('auth.forgot-password')->middleware('throttle:3,1');
     Route::post('/verify-otp',[AuthController::class,'verifyOtp']);
     Route::post('/resend-otp', [AuthController::class, 'resendOtp']);
@@ -48,6 +47,7 @@ Route::middleware('guest')->prefix('auth')->group(function () {
 Route::middleware('auth:sanctum')->prefix('auth')->group(function () {
     Route::post('/complete-first-login', [AuthController::class, 'completeFirstLogin'])->name('auth.complete-first-login');
     Route::post('/logout', [AuthController::class, 'logout'])->name('auth.logout');
+    Route::post('/two-factor', [AuthController::class, 'toggleTwoFactor'])->name('auth.two-factor');
 });
 
 // Profile: view / update / documents upload.
@@ -170,14 +170,12 @@ Route::get('/stripe/checkout-sessions/{session_id}', [\App\Http\Controllers\Stri
 
 // Departments & Employees viewing (HR Manager & General Manager).
 // Company isolation is enforced per-request from the authenticated user's company_id
-// (no company_id is accepted from the client).s
+// (no company_id is accepted from the client).
 Route::middleware(['auth:sanctum', 'role:hr_manager,general_manager'])->prefix('hr')->group(function () {
     Route::get('/departments', [DepartmentController::class, 'index']);
     Route::get('/departments/{department}', [DepartmentController::class, 'show']);
     Route::get('/departments/{department}/employees', [EmployeeController::class, 'byDepartment']);
     Route::get('/employees', [EmployeeController::class, 'index']);
-    Route::delete('/employees/{employee}', [EmployeeController::class, 'destroy']);
-
 });
 
 // HR Dashboard area: Departments & Employees management (HR Manager only).
@@ -192,7 +190,9 @@ Route::middleware(['auth:sanctum', 'role:hr_manager'])->prefix('hr')->group(func
     // Employees
     Route::get('/employees/import/template', [EmployeeController::class, 'downloadTemplate']);
     Route::post('/employees', [EmployeeController::class, 'store']);
+    Route::get('/employees/{employee}', [EmployeeController::class, 'show']);
     Route::put('/employees/{employee}', [EmployeeController::class, 'update']);
+    Route::delete('/employees/{employee}', [EmployeeController::class, 'destroy']);
     Route::post('/employees/import', [EmployeeController::class, 'import']);
 
     // Department Managers
@@ -336,18 +336,4 @@ Route::middleware(['auth:sanctum', 'role:hr_manager,general_manager,department_m
 Route::middleware(['auth:sanctum', 'role:hr_manager,general_manager'])->prefix('management/attendance')->group(function () {
     Route::get('/qr-code', [ManagementAttendanceController::class, 'qrCode']);
     Route::put('/{attendanceRecord}/adjust', [ManagementAttendanceController::class, 'adjust']);
-});
-
-
-Route::middleware(['auth:sanctum', 'role:hr_manager,general_manager'])->group(function () {
-    Route::get('/payrolls/analytics', [PayrollAnalyticsController::class, 'index']);
-});
-
-Route::middleware(['auth:sanctum'])->prefix('analytics/hr')->group(function () {
-    Route::get('/turnover-rate', [HRAnalyticsController::class, 'getTurnoverRate']);
-    Route::get('/demographics', [HRAnalyticsController::class, 'getDemographics']);
-    Route::get('/department-budgets', [HRAnalyticsController::class, 'getDepartmentBudgets']);
-    Route::get('/daily-verification-rate', [HRAnalyticsController::class, 'getDailyVerificationRate']);
-    Route::get('/realtime-headcount', [HRAnalyticsController::class, 'getRealtimeHeadcount']);
-    Route::get('/performance-distribution', [HRAnalyticsController::class, 'getPerformanceDistribution']);
 });

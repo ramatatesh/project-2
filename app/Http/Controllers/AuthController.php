@@ -5,11 +5,14 @@ namespace App\Http\Controllers;
 use App\Http\Requests\Auth\ForgotPasswordRequest;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Requests\Auth\ResetPasswordRequest;
+use App\Http\Requests\Auth\VerifyLoginOtpRequest;
 use App\Http\Requests\VerifyOtpRequest;
 //use App\Jobs\SendPasswordResetEmailJob;
 use App\Models\User;
 use App\Models\PasswordResetOtp;
+use App\Models\LoginOtp;
 use App\Jobs\SendPasswordResetOtpJob;
+use App\Jobs\SendLoginOtpJob;
 //use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 //use Illuminate\Support\Facades\DB;
@@ -97,6 +100,25 @@ class AuthController extends Controller
                 return $this->errorResponse('User account is inactive.', 403);
             }
 
+            if ($user->two_factor_enabled) {
+                $otp = rand(1000, 9999);
+
+                LoginOtp::where('email', $user->email)->delete();
+
+                LoginOtp::create([
+                    'email' => $user->email,
+                    'otp' => (string) $otp,
+                    'expires_at' => now()->addMinutes(10),
+                ]);
+
+                SendLoginOtpJob::dispatch($user->email, (string) $otp);
+
+                return $this->successResponse('Verification code sent to your email.', [
+                    'requires_2fa' => true,
+                    'email' => $user->email,
+                ]);
+            }
+
             $token = $user->createToken('auth-token', [$user->role])->plainTextToken;
 
             $user->load('company');
@@ -122,6 +144,76 @@ class AuthController extends Controller
             Log::error('Auth login failed', ['error' => $th->getMessage()]);
 
             return $this->errorResponse('Unable to process login request.', 500);
+        }
+    }
+
+    /**
+     * @OA\Post(
+     * path="/api/auth/verify-login-otp",
+     * summary="التحقق من رمز الدخول بخطوتين وإصدار التوكن",
+     * tags={"المصادقة (Authentication)"},
+     * @OA\RequestBody(
+     * required=true,
+     * @OA\JsonContent(
+     * required={"email","otp"},
+     * @OA\Property(property="email", type="string", format="email", example="hr@khibrat.com"),
+     * @OA\Property(property="otp", type="string", example="1234")
+     * )
+     * ),
+     * @OA\Response(response=200, description="تم تسجيل الدخول بنجاح وإعادة الـ Token"),
+     * @OA\Response(response=400, description="رمز التحقق غير صحيح أو منتهي الصلاحية")
+     * )
+     */
+    public function verifyLoginOtp(VerifyLoginOtpRequest $request): JsonResponse
+    {
+        try {
+            $otp = LoginOtp::where('email', $request->email)
+                ->where('otp', $request->otp)
+                ->where('expires_at', '>', now())
+                ->latest()
+                ->first();
+
+            if (! $otp) {
+                return $this->errorResponse('Invalid or expired verification code.', 400);
+            }
+
+            $user = User::where('email', $request->email)->first();
+
+            if (! $user) {
+                return $this->errorResponse('User not found.', 404);
+            }
+
+            if ($user->status !== 'active') {
+                return $this->errorResponse('User account is inactive.', 403);
+            }
+
+            LoginOtp::where('email', $request->email)->delete();
+
+            $token = $user->createToken('auth-token', [$user->role])->plainTextToken;
+
+            $user->load('company');
+
+            return $this->successResponse('Login successful.', [
+                'user' => [
+                    'id' => $user->id,
+                    'company_id' => $user->company_id,
+                    'full_name' => $user->full_name,
+                    'email' => $user->email,
+                    'role' => $user->role,
+                    'status' => $user->status,
+                    'is_first_login' => $user->is_first_login,
+                    'profile_completed' => $user->profile_completed,
+                ],
+                'company' => $user->company ? [
+                    'id' => $user->company->id,
+                    'name' => $user->company->name,
+                ] : null,
+                'token' => $token,
+            ]);
+        } catch (\Throwable $th) {
+            Log::error('Login OTP verification failed', ['error' => $th->getMessage()]);
+
+            return $this->errorResponse('Unable to verify the code.', 500);
         }
     }
 
@@ -520,6 +612,65 @@ public function resendOtp(ForgotPasswordRequest $request): JsonResponse
             Log::error('Logout failed', ['error' => $th->getMessage()]);
 
             return $this->errorResponse('Unable to process logout request.', 500);
+        }
+    }
+
+    /**
+     * @OA\Post(
+     *     path="/api/auth/two-factor",
+     *     summary="تفعيل أو تعطيل التحقق بخطوتين للحساب الحالي",
+     *     tags={"المصادقة (Authentication)"},
+     *     security={{"sanctum":{}}},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"enabled"},
+     *             @OA\Property(property="enabled", type="boolean", example=true)
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="تم تحديث حالة التحقق بخطوتين بنجاح",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Two-factor authentication setting updated."),
+     *             @OA\Property(property="data", type="object",
+     *                 @OA\Property(property="two_factor_enabled", type="boolean", example=true)
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(response=401, description="المستخدم غير مصادق عليه (Unauthenticated) - يجب وضع التوكن في زر Authorize فوق"),
+     *     @OA\Response(response=422, description="خطأ في التحقق من المدخلات")
+     * )
+     */
+    public function toggleTwoFactor(\Illuminate\Http\Request $request): JsonResponse
+    {
+        try {
+            $validator = \Illuminate\Support\Facades\Validator::make($request->all(), [
+                'enabled' => ['required', 'boolean'],
+            ]);
+
+            if ($validator->fails()) {
+                return $this->errorResponse('Validation error', 422, $validator->errors());
+            }
+
+            $user = auth()->user();
+
+            if (! $user) {
+                return $this->errorResponse('Unauthenticated.', 401);
+            }
+
+            $user->update([
+                'two_factor_enabled' => $request->boolean('enabled'),
+            ]);
+
+            return $this->successResponse('Two-factor authentication setting updated.', [
+                'two_factor_enabled' => $user->two_factor_enabled,
+            ]);
+        } catch (\Throwable $th) {
+            Log::error('Toggle two-factor failed', ['error' => $th->getMessage()]);
+
+            return $this->errorResponse('Unable to update two-factor setting.', 500);
         }
     }
 
