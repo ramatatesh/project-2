@@ -290,6 +290,14 @@ Route::middleware(['auth:sanctum', 'company.active', 'role:department_manager,hr
     Route::post('/{id}/action', [ManagementLeaveController::class, 'action']);
 });
 
+// Department Manager: view employees within the department(s) they manage only.
+// Company/department isolation is enforced per-request from the authenticated user's
+// own employee record (department.manager_id) - no department_id is accepted from the client.
+Route::middleware(['auth:sanctum', 'company.active', 'role:department_manager'])->prefix('management/employees')->group(function () {
+    Route::get('/', [EmployeeController::class, 'myDepartmentEmployees']);
+    Route::get('/{employee}', [EmployeeController::class, 'showMyDepartmentEmployee']);
+});
+
 // Employee self-service: salary advances (السُلف المالية).
 // Department Manager also has an employee record and uses this exact self-service flow for themselves.
 Route::middleware(['auth:sanctum', 'company.active', 'role:employee,department_manager'])->prefix('employee/advances')->group(function () {
