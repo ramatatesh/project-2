@@ -3438,8 +3438,8 @@
                 "tags": [
                     "Employee Company Policies"
                 ],
-                "summary": "Get the current user's company official holidays (read-only)",
-                "description": "Returns the official holidays configured for the authenticated user's own company. Never accepts a company_id from the request. If no holidays are configured yet, returns an empty array - still a 200 success response, never an error.",
+                "summary": "Get the current user's company holidays (read-only)",
+                "description": "Returns official/default holidays plus company weekly holidays for the authenticated user's own company. Never accepts a company_id from the request. If no holidays are configured yet, returns an empty array - still a 200 success response, never an error.",
                 "operationId": "65fd2e316934304a4c140790f006c6c6",
                 "responses": {
                     "200": {
@@ -4190,38 +4190,17 @@
                                         "data": {
                                             "properties": {
                                                 "total_allowed_days": {
-                                                    "description": "Paid Free Days Leave Allocation only",
                                                     "type": "integer"
                                                 },
                                                 "total_used_days": {
-                                                    "description": "Paid Free Days Leave Allocation only",
                                                     "type": "integer"
                                                 },
                                                 "remaining_days": {
-                                                    "description": "Paid Free Days Leave Allocation only",
                                                     "type": "integer"
                                                 },
                                                 "balances": {
                                                     "type": "array",
                                                     "items": {
-                                                        "properties": {
-                                                            "id": {
-                                                                "type": "string",
-                                                                "format": "uuid"
-                                                            },
-                                                            "name": {
-                                                                "type": "string"
-                                                            },
-                                                            "allocation_value": {
-                                                                "type": "integer"
-                                                            },
-                                                            "used_value": {
-                                                                "type": "integer"
-                                                            },
-                                                            "remaining_value": {
-                                                                "type": "integer"
-                                                            }
-                                                        },
                                                         "type": "object"
                                                     }
                                                 },
@@ -4245,6 +4224,10 @@
                                                             },
                                                             "status": {
                                                                 "type": "string"
+                                                            },
+                                                            "attachment_url": {
+                                                                "type": "string",
+                                                                "nullable": true
                                                             }
                                                         },
                                                         "type": "object"
@@ -4258,12 +4241,6 @@
                                 }
                             }
                         }
-                    },
-                    "401": {
-                        "description": "Unauthenticated"
-                    },
-                    "403": {
-                        "description": "No employee record found"
                     }
                 },
                 "security": [
@@ -4401,6 +4378,39 @@
                     },
                     "422": {
                         "description": "Validation failed or insufficient balance"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/employee/leaves/{id}/cancel": {
+            "post": {
+                "tags": [
+                    "Employee Leaves"
+                ],
+                "summary": "Cancel a leave request",
+                "operationId": "dac5c889484a8a3508099706838cd813",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Leave request cancelled successfully"
+                    },
+                    "422": {
+                        "description": "Cannot cancel completed or past leaves"
                     }
                 },
                 "security": [
@@ -8017,6 +8027,10 @@
                                                         "type": "string",
                                                         "nullable": true
                                                     },
+                                                    "attachment_url": {
+                                                        "type": "string",
+                                                        "nullable": true
+                                                    },
                                                     "status": {
                                                         "type": "string"
                                                     },
@@ -8032,80 +8046,6 @@
                                 }
                             }
                         }
-                    },
-                    "403": {
-                        "description": "Forbidden"
-                    }
-                },
-                "security": [
-                    {
-                        "sanctum": []
-                    }
-                ]
-            }
-        },
-        "/api/management/leaves/{id}/action": {
-            "post": {
-                "tags": [
-                    "Management Leaves"
-                ],
-                "summary": "Execute a workflow action on a leave request",
-                "operationId": "3f51fcf7b35f902d3dba4a4bd080845f",
-                "parameters": [
-                    {
-                        "name": "id",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "string",
-                            "format": "uuid"
-                        }
-                    }
-                ],
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "required": [
-                                    "action",
-                                    "role_context"
-                                ],
-                                "properties": {
-                                    "action": {
-                                        "type": "string",
-                                        "enum": [
-                                            "approve",
-                                            "reject"
-                                        ]
-                                    },
-                                    "role_context": {
-                                        "type": "string",
-                                        "enum": [
-                                            "manager",
-                                            "hr"
-                                        ]
-                                    },
-                                    "rejection_reason": {
-                                        "type": "string",
-                                        "example": "Insufficient coverage",
-                                        "nullable": true
-                                    }
-                                },
-                                "type": "object"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "200": {
-                        "description": "Action executed successfully"
-                    },
-                    "403": {
-                        "description": "Unauthorized role or company mismatch"
-                    },
-                    "422": {
-                        "description": "Invalid workflow state"
                     }
                 },
                 "security": [

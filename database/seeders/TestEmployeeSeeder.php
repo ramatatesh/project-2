@@ -202,6 +202,7 @@ class TestEmployeeSeeder extends Seeder
         $this->command->info('HR Dept ID                  : ' . $hrDept->id);
         $this->command->info('--------------------------------------------------');
         $this->command->info('Engineering Dept Manager Employee ID : ' . $deptManagerEmployee->id);
+        $this->command->info('Engineering Dept Manager Token       : ' . $departmentManagerToken);
         $this->command->info('HR Dept Manager Employee ID          : ' . $hrEmployee->id);
         $this->command->info('--------------------------------------------------');
         $this->command->info('General Manager Employee ID : ' . $gmEmployee->id);
@@ -211,6 +212,11 @@ class TestEmployeeSeeder extends Seeder
         $this->command->info('HR Manager Employee ID      : ' . $hrEmployee->id);
         $this->command->info('HR Manager User ID          : ' . $hrManagerUser->id);
         $this->command->info('HR Manager Token            : ' . $hrManagerToken);
+        $this->command->info('--------------------------------------------------');
+        $this->command->info('Employee User ID            : ' . $user->id);            // 👈 أضيف للطباعة
+        $this->command->info('Employee Employee ID        : ' . $employee->id);        // 👈 أضيف للطباعة
+        $this->command->info('Employee Email              : ' . $uniqueEmail);         // 👈 أضيف للطباعة
+        $this->command->info('Employee Token              : ' . $token);                // 👈 أضيف للطباعة
         $this->command->info('==================================================');
     }
 }

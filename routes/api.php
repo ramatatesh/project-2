@@ -195,12 +195,12 @@ Route::middleware(['auth:sanctum', 'role:hr_manager,general_manager'])->prefix('
     Route::get('/departments/{department}', [DepartmentController::class, 'show']);
     Route::get('/departments/{department}/employees', [EmployeeController::class, 'byDepartment']);
     Route::get('/employees', [EmployeeController::class, 'index']);
-<<<<<<< HEAD
-=======
+
+
     Route::get('/employees/{employee}', [EmployeeController::class, 'show']);
     Route::delete('/employees/{employee}', [EmployeeController::class, 'destroy']);
 
->>>>>>> afeb6e50a97e0b52f1efc2d516495d6a5796a135
+
 });
 
 // HR Dashboard area: Departments & Employees management (HR Manager only).
@@ -278,6 +278,7 @@ Route::middleware(['auth:sanctum', 'role:employee,department_manager'])->prefix(
     Route::get('/types', [EmployeeLeaveController::class, 'types']);
     Route::get('/dashboard', [EmployeeLeaveController::class, 'dashboard']);
     Route::post('/apply', [EmployeeLeaveController::class, 'apply']);
+    Route::post('/{id}/cancel', [EmployeeLeaveController::class, 'cancel']);
 });
 
 // Management approval workflow for leave requests.
