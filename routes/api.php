@@ -205,16 +205,13 @@ Route::middleware(['auth:sanctum', 'company.active', 'role:hr_manager,general_ma
     Route::get('/departments/{department}', [DepartmentController::class, 'show']);
     Route::get('/departments/{department}/employees', [EmployeeController::class, 'byDepartment']);
     Route::get('/employees', [EmployeeController::class, 'index']);
-<<<<<<< HEAD
 
 
     Route::get('/employees/{employee}', [EmployeeController::class, 'show']);
     Route::delete('/employees/{employee}', [EmployeeController::class, 'destroy']);
 
 
-=======
     Route::get('/employees/{employee}', [EmployeeController::class, 'show']);
->>>>>>> 29aee38c12367c4186aef38f9232f518868af4a5
 });
 
 // HR Dashboard area: Departments & Employees management (HR Manager only).
@@ -352,6 +349,7 @@ Route::middleware(['auth:sanctum', 'company.active', 'role:hr_manager,general_ma
 Route::middleware(['auth:sanctum', 'company.active', 'role:hr_manager'])->prefix('management/salaries')->group(function () {
     Route::post('/generate', [ManagementSalaryController::class, 'generate']);
     Route::post('/{id}/pay', [ManagementSalaryController::class, 'pay']);
+    Route::post('/{id}/adjustments', [ManagementSalaryController::class, 'addAdjustment']);
 });
 
 // Employee self-service: attendance check-in/check-out via rotating QR code + personal dashboard.

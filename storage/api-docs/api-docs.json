@@ -8543,6 +8543,68 @@
                 ]
             }
         },
+        "/api/management/salaries/{id}/adjustments": {
+            "post": {
+                "tags": [
+                    "Management Salaries"
+                ],
+                "summary": "Add manual addition or deduction to salary record",
+                "operationId": "68c3b1d2e66615683ddbd1106f215d34",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "type",
+                                    "amount",
+                                    "reason"
+                                ],
+                                "properties": {
+                                    "type": {
+                                        "type": "string",
+                                        "enum": [
+                                            "addition",
+                                            "deduction"
+                                        ]
+                                    },
+                                    "amount": {
+                                        "type": "number",
+                                        "example": 100
+                                    },
+                                    "reason": {
+                                        "type": "string",
+                                        "example": "Spot Bonus / Damage penalty"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Adjustment applied successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
         "/api/payments/callback": {
             "post": {
                 "tags": [
