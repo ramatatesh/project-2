@@ -205,6 +205,7 @@ Route::middleware(['auth:sanctum', 'company.active', 'role:hr_manager,general_ma
     Route::get('/departments/{department}', [DepartmentController::class, 'show']);
     Route::get('/departments/{department}/employees', [EmployeeController::class, 'byDepartment']);
     Route::get('/employees', [EmployeeController::class, 'index']);
+    Route::get('/employees/{employee}', [EmployeeController::class, 'show']);
 });
 
 // HR Dashboard area: Departments & Employees management (HR Manager only).
@@ -219,7 +220,6 @@ Route::middleware(['auth:sanctum', 'company.active', 'role:hr_manager'])->prefix
     // Employees
     Route::get('/employees/import/template', [EmployeeController::class, 'downloadTemplate']);
     Route::post('/employees', [EmployeeController::class, 'store']);
-    Route::get('/employees/{employee}', [EmployeeController::class, 'show']);
     Route::put('/employees/{employee}', [EmployeeController::class, 'update']);
     Route::delete('/employees/{employee}', [EmployeeController::class, 'destroy']);
     Route::post('/employees/import', [EmployeeController::class, 'import']);
