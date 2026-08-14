@@ -356,4 +356,37 @@ class SalaryService
         $record->evaluation_bonus_amount = $bonus;
         $record->evaluation_deduction_amount = $deduction;
     }
+
+    /**
+     * Add a manual adjustment (addition/deduction) to a salary record.
+     */
+    public function addAdjustment(SalaryRecord $record, array $data, string $createdById): SalaryRecord
+    {
+        $type = $data['type']; // 'addition' or 'deduction'
+        $amount = (float) $data['amount'];
+        $reason = $data['reason'] ?? 'Manual adjustment';
+
+        // 1. تحديث الحقول التراكمية المباشرة في جدول الرواتب
+        if ($type === 'addition') {
+            $record->manual_bonus = round((float) $record->manual_bonus + $amount, 2);
+        } else {
+            $record->manual_deduction = round((float) $record->manual_deduction + $amount, 2);
+        }
+
+        // 2. إنشاء سجل تفصيلي لعملية التدقيق (Audit Trail)
+        $record->salaryAdjustments()->create([
+            'id' => Str::uuid()->toString(),
+            'company_id' => $record->company_id,
+            'type' => $type,
+            'amount' => $type === 'deduction' ? -$amount : $amount, // يُخزن كقيمة سالبة للخصم إن كان جدول التعديلات يعتمد ذلك
+            'description' => $reason,
+            'created_by' => $createdById,
+        ]);
+
+        // 3. إعادة احتساب الصافي والحفظ
+        $record->net_salary = $this->recalculateNet($record);
+        $record->save();
+
+        return $record->fresh('salaryAdjustments');
+    }
 }

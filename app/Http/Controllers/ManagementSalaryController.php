@@ -355,4 +355,73 @@ class ManagementSalaryController extends Controller
     {
         return $user?->role === Role::HrManager->value;
     }
+
+    /**
+     * @OA\Post(
+     *    path="/api/management/salaries/{id}/adjustments",
+     *    summary="Add manual addition or deduction to salary record",
+     *    tags={"Management Salaries"},
+     *    security={{"sanctum":{}}},
+     *    @OA\Parameter(
+     *      name="id",
+     *      in="path",
+     *      required=true,
+     *      @OA\Schema(type="string", format="uuid")
+     *    ),
+     *    @OA\RequestBody(
+     *      required=true,
+     *      @OA\JsonContent(
+     *        required={"type","amount","reason"},
+     *        @OA\Property(property="type", type="string", enum={"addition","deduction"}),
+     *        @OA\Property(property="amount", type="number", example=100.00),
+     *        @OA\Property(property="reason", type="string", example="Spot Bonus / Damage penalty")
+     *      )
+     *    ),
+     *    @OA\Response(response=200, description="Adjustment applied successfully")
+     * )
+     */
+    public function addAdjustment(Request $request, string $id): JsonResponse
+    {
+        $user = auth()->user();
+        if (! $this->canManageSalaries($user)) {
+            return response()->json(['success' => false, 'message' => 'HR access only.'], 403);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'type' => ['required', 'string', 'in:addition,deduction'],
+            'amount' => ['required', 'numeric', 'min:0.01'],
+            'reason' => ['required', 'string', 'max:255'],
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed.',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        $record = SalaryRecord::where('id', $id)
+            ->where('company_id', $user->company_id)
+            ->firstOrFail();
+
+        if ($this->salaryService->isPaid($record)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Cannot modify an already paid/closed salary record.',
+            ], 422);
+        }
+
+        $updatedRecord = $this->salaryService->addAdjustment(
+            $record,
+            $validator->validated(),
+            $user->id
+        );
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Salary adjustment applied successfully.',
+            'data' => $this->salaryService->serializeDetails($updatedRecord),
+        ]);
+    }
 }

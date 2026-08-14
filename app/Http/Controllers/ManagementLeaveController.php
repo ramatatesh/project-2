@@ -11,8 +11,8 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * @OA\Tag(
- *   name="Management Leaves",
- *   description="Leave request approval workflow for department managers and HR"
+ *    name="Management Leaves",
+ *    description="Leave request approval workflow for department managers and HR"
  * )
  */
 class ManagementLeaveController extends Controller
@@ -24,32 +24,32 @@ class ManagementLeaveController extends Controller
 
     /**
      * @OA\Get(
-     *   path="/api/management/leaves/inbox",
-     *   summary="Inbox of leave requests awaiting the current reviewer's decision",
-     *   tags={"Management Leaves"},
-     *   security={{"sanctum":{}}},
-     *   @OA\Response(
-     *     response=200,
-     *     description="Pending leave requests for the authenticated manager or HR",
-     *     @OA\JsonContent(
-     *       @OA\Property(property="success", type="boolean", example=true),
-     *       @OA\Property(property="data", type="array",
-     *         @OA\Items(
-     *           @OA\Property(property="id", type="string", format="uuid"),
-     *           @OA\Property(property="employee_name", type="string"),
-     *           @OA\Property(property="department_name", type="string", nullable=true),
-     *           @OA\Property(property="leave_type_name", type="string"),
-     *           @OA\Property(property="start_date", type="string", format="date"),
-     *           @OA\Property(property="end_date", type="string", format="date"),
-     *           @OA\Property(property="duration_days", type="integer"),
-     *           @OA\Property(property="reason", type="string", nullable=true),
-     *           @OA\Property(property="status", type="string"),
-     *           @OA\Property(property="remaining_balance_days", type="integer")
-     *         )
-     *       )
-     *     )
-     *   ),
-     *   @OA\Response(response=403, description="Forbidden")
+     *    path="/api/management/leaves/inbox",
+     *    summary="Inbox of leave requests awaiting the current reviewer's decision",
+     *    tags={"Management Leaves"},
+     *    security={{"sanctum":{}}},
+     *    @OA\Response(
+     *      response=200,
+     *      description="Pending leave requests for the authenticated manager or HR",
+     *      @OA\JsonContent(
+     *        @OA\Property(property="success", type="boolean", example=true),
+     *        @OA\Property(property="data", type="array",
+     *          @OA\Items(
+     *            @OA\Property(property="id", type="string", format="uuid"),
+     *            @OA\Property(property="employee_name", type="string"),
+     *            @OA\Property(property="department_name", type="string", nullable=true),
+     *            @OA\Property(property="leave_type_name", type="string"),
+     *            @OA\Property(property="start_date", type="string", format="date"),
+     *            @OA\Property(property="end_date", type="string", format="date"),
+     *            @OA\Property(property="duration_days", type="integer"),
+     *            @OA\Property(property="reason", type="string", nullable=true),
+     *            @OA\Property(property="attachment_url", type="string", nullable=true),
+     *            @OA\Property(property="status", type="string"),
+     *            @OA\Property(property="remaining_balance_days", type="integer")
+     *          )
+     *        )
+     *      )
+     *    )
      * )
      */
     public function inbox(): JsonResponse
@@ -92,6 +92,7 @@ class ManagementLeaveController extends Controller
                     'end_date' => $leaveRequest->end_date?->toDateString(),
                     'duration_days' => (int) $leaveRequest->requested_value,
                     'reason' => $leaveRequest->reason,
+                    'attachment_url' => $leaveRequest->attachment_url, // تم إضافته هنا
                     'status' => $leaveRequest->status,
                     'remaining_balance_days' => $this->calculateRemainingBalance($leaveRequest),
                 ];
@@ -103,35 +104,6 @@ class ManagementLeaveController extends Controller
         ]);
     }
 
-    /**
-     * @OA\Post(
-     *   path="/api/management/leaves/{id}/action",
-     *   summary="Execute a workflow action on a leave request",
-     *   tags={"Management Leaves"},
-     *   security={{"sanctum":{}}},
-     *   @OA\Parameter(
-     *     name="id",
-     *     in="path",
-     *     required=true,
-     *     @OA\Schema(type="string", format="uuid")
-     *   ),
-     *   @OA\RequestBody(
-     *     required=true,
-     *     @OA\JsonContent(
-     *       required={"action","role_context"},
-     *       @OA\Property(property="action", type="string", enum={"approve","reject"}),
-     *       @OA\Property(property="role_context", type="string", enum={"manager","hr"}),
-     *       @OA\Property(property="rejection_reason", type="string", nullable=true, example="Insufficient coverage")
-     *     )
-     *   ),
-     *   @OA\Response(
-     *     response=200,
-     *     description="Action executed successfully"
-     *   ),
-     *   @OA\Response(response=403, description="Unauthorized role or company mismatch"),
-     *   @OA\Response(response=422, description="Invalid workflow state")
-     * )
-     */
     public function action(ManagementLeaveActionRequest $request, string $id): JsonResponse
     {
         $user = auth()->user();
@@ -252,6 +224,7 @@ class ManagementLeaveController extends Controller
             $leaveRequest->reviewed_at = now();
             $leaveRequest->save();
 
+            // تحديث الرصيد فور الموافقة النهائية من HR
             if ($leaveRequest->status === 'approved' && $leaveRequest->employee && $leaveRequest->leaveType) {
                 $this->leaveBalanceService->syncUsedDays(
                     $leaveRequest->employee,

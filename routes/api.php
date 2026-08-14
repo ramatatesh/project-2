@@ -205,6 +205,12 @@ Route::middleware(['auth:sanctum', 'company.active', 'role:hr_manager,general_ma
     Route::get('/departments/{department}', [DepartmentController::class, 'show']);
     Route::get('/departments/{department}/employees', [EmployeeController::class, 'byDepartment']);
     Route::get('/employees', [EmployeeController::class, 'index']);
+
+
+    Route::get('/employees/{employee}', [EmployeeController::class, 'show']);
+    Route::delete('/employees/{employee}', [EmployeeController::class, 'destroy']);
+
+
     Route::get('/employees/{employee}', [EmployeeController::class, 'show']);
 });
 
@@ -282,6 +288,7 @@ Route::middleware(['auth:sanctum', 'company.active', 'role:employee,department_m
     Route::get('/types', [EmployeeLeaveController::class, 'types']);
     Route::get('/dashboard', [EmployeeLeaveController::class, 'dashboard']);
     Route::post('/apply', [EmployeeLeaveController::class, 'apply']);
+    Route::post('/{id}/cancel', [EmployeeLeaveController::class, 'cancel']);
 });
 
 // Management approval workflow for leave requests.
@@ -350,6 +357,7 @@ Route::middleware(['auth:sanctum', 'company.active', 'role:hr_manager,general_ma
 Route::middleware(['auth:sanctum', 'company.active', 'role:hr_manager'])->prefix('management/salaries')->group(function () {
     Route::post('/generate', [ManagementSalaryController::class, 'generate']);
     Route::post('/{id}/pay', [ManagementSalaryController::class, 'pay']);
+    Route::post('/{id}/adjustments', [ManagementSalaryController::class, 'addAdjustment']);
 });
 
 // Employee self-service: attendance check-in/check-out via rotating QR code + personal dashboard.
