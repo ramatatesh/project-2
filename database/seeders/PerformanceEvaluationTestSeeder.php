@@ -545,9 +545,7 @@ class PerformanceEvaluationTestSeeder extends Seeder
         // For closed cycles, scoreReview is blocked — write hr_score + totals manually.
         if ($review->cycle->isClosed()) {
             foreach ($review->answers as $answer) {
-                if ($answer->question?->response_type === EvaluationTemplateQuestion::RESPONSE_TYPE_RATING) {
-                    $answer->update(['hr_score' => $hrScore, 'updated_at' => now()]);
-                }
+                $answer->update(['hr_score' => $hrScore, 'updated_at' => now()]);
             }
             $this->evaluationService->computeReviewScore($review->fresh());
             $this->evaluationService->updateEmployeeScores($review->cycle, $review->employee_id);
@@ -556,7 +554,7 @@ class PerformanceEvaluationTestSeeder extends Seeder
         }
 
         $scores = $review->answers
-            ->filter(fn (EvaluationAnswer $a) => $a->question?->response_type === EvaluationTemplateQuestion::RESPONSE_TYPE_RATING)
+            ->filter(fn (EvaluationAnswer $a) => $a->question !== null)
             ->map(fn (EvaluationAnswer $a) => [
                 'answer_id' => $a->id,
                 'hr_score' => $hrScore,

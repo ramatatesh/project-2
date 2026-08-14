@@ -156,6 +156,7 @@ class CompanyProfileController extends Controller
             'phone' => $company->phone,
             'email' => $company->email,
             'address' => $company->address,
+            'status' => $company->status,
         ];
     }
 }

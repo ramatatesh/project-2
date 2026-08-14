@@ -27,6 +27,10 @@ class EnsureCompanyIsNotFrozen
             return $next($request);
         }
 
+        if ($this->isExemptWritePath($request)) {
+            return $next($request);
+        }
+
         $company = $request->route('company');
         if (! $company instanceof Company) {
             $company = $user->company_id ? Company::find($user->company_id) : null;
@@ -37,5 +41,13 @@ class EnsureCompanyIsNotFrozen
         }
 
         return $next($request);
+    }
+
+    private function isExemptWritePath(Request $request): bool
+    {
+        return $request->is(
+            'api/auth/*',
+            'api/company/subscription/renew',
+        );
     }
 }

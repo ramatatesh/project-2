@@ -257,46 +257,243 @@ class SubscriptionService
 
     protected function calculateSubscriptionEndDate(string $billingPeriod): \Carbon\Carbon
     {
+        return $this->calculateSubscriptionEndDateFrom(now()->startOfDay(), $billingPeriod);
+    }
+
+    public function calculateSubscriptionEndDateFrom(\Carbon\CarbonInterface $from, ?string $billingPeriod): \Carbon\Carbon
+    {
+        $from = \Carbon\Carbon::parse($from)->startOfDay();
+
         return match ($billingPeriod) {
-            'quarter' => now()->addMonths(3)->startOfDay(),
-            'year' => now()->addYear()->startOfDay(),
-            default => now()->addMonth()->startOfDay(),
+            'quarter' => $from->copy()->addMonths(3),
+            'year' => $from->copy()->addYear(),
+            default => $from->copy()->addMonth(),
         };
+    }
+
+    public function expireOverdueSubscriptions(): int
+    {
+        $expiredCount = 0;
+
+        Subscription::query()
+            ->where('status', 'active')
+            ->whereNotNull('end_date')
+            ->whereDate('end_date', '<', now()->toDateString())
+            ->orderBy('id')
+            ->chunkById(100, function ($subscriptions) use (&$expiredCount) {
+                $companyIds = [];
+
+                foreach ($subscriptions as $subscription) {
+                    $subscription->update(['status' => 'expired']);
+                    $expiredCount++;
+                    $companyIds[] = $subscription->company_id;
+                }
+
+                foreach (array_unique($companyIds) as $companyId) {
+                    $company = Company::find($companyId);
+                    if ($company) {
+                        $this->refreshCompanySubscriptionStatus($company);
+                    }
+                }
+            });
+
+        return $expiredCount;
     }
 
     public function refreshCompanySubscriptionStatus(Company $company): void
     {
-        $activeSubscription = $company->subscriptions()->where('status', 'active')->latest('end_date')->first();
+        $company->subscriptions()
+            ->where('status', 'active')
+            ->whereNotNull('end_date')
+            ->whereDate('end_date', '<', now()->toDateString())
+            ->update(['status' => 'expired']);
 
-        if ($activeSubscription && $activeSubscription->end_date && $activeSubscription->end_date->lt(now()->startOfDay())) {
-            $activeSubscription->update(['status' => 'expired']); // أحرف صغيرة
-            $company->update(['status' => 'suspended']); // أحرف صغيرة
+        $hasValidSubscription = $company->subscriptions()
+            ->where('status', 'active')
+            ->where(function ($query) {
+                $query->whereNull('end_date')
+                    ->orWhereDate('end_date', '>=', now()->toDateString());
+            })
+            ->exists();
+
+        if ($hasValidSubscription) {
             return;
         }
 
-        if (! $activeSubscription) {
-            $company->update(['status' => 'suspended']); // أحرف صغيرة
+        if ($company->subscriptions()->exists()) {
+            $company->update(['status' => 'suspended']);
         }
     }
 
+    public function startRenewalCheckout(Company $company, string $planId): array
+    {
+        $plan = SubscriptionPlan::find($planId);
+
+        if (! $plan || ! $plan->is_active) {
+            return ['success' => false, 'message' => 'The selected subscription plan is not available.'];
+        }
+
+        if ((float) $plan->price <= 0) {
+            return ['success' => false, 'message' => 'Renewal requires a paid subscription plan.'];
+        }
+
+        $session = $this->stripeService->createRenewalCheckoutSession($company, $plan);
+
+        return [
+            'success' => true,
+            'payment_required' => true,
+            'payment_url' => $session->url,
+            'transaction_reference' => $session->id,
+        ];
+    }
+
+    /**
+     * Apply a paid renewal to an existing company. Never creates a new company/users/employees.
+     */
+    public function renewCompanyFromStripeSession(\Stripe\Checkout\Session $session): array
+    {
+        if (\App\Models\PaymentTransaction::where('stripe_checkout_session_id', $session->id)->exists()) {
+            return ['success' => true, 'message' => 'Already processed.'];
+        }
+
+        $metadata = $session->metadata;
+        $company = Company::find($metadata['company_id'] ?? null);
+        $plan = SubscriptionPlan::find($metadata['plan_id'] ?? null);
+
+        if (! $company || ! $plan) {
+            Log::error('Stripe webhook: renewal company or plan not found.', ['session_id' => $session->id]);
+
+            return ['success' => false, 'message' => 'Company or subscription plan not found for this renewal.'];
+        }
+
+        try {
+            return DB::transaction(function () use ($session, $company, $plan) {
+                $subscription = $this->applyPaidRenewal($company, $plan);
+
+                $paymentIntentId = $session->payment_intent;
+                $paymentIntentId = is_string($paymentIntentId) ? $paymentIntentId : ($paymentIntentId->id ?? null);
+
+                \App\Models\PaymentTransaction::create([
+                    'id' => Str::uuid()->toString(),
+                    'company_id' => $company->id,
+                    'subscription_id' => $subscription->id,
+                    'amount' => $session->amount_total !== null ? $session->amount_total / 100 : $plan->price,
+                    'gateway' => 'stripe',
+                    'transaction_reference' => $session->id,
+                    'status' => 'paid',
+                    'stripe_checkout_session_id' => $session->id,
+                    'stripe_payment_intent_id' => $paymentIntentId,
+                ]);
+
+                return ['success' => true, 'company' => $company->fresh(), 'subscription' => $subscription];
+            });
+        } catch (\Throwable $e) {
+            Log::error('Stripe webhook: failed to renew company subscription.', [
+                'session_id' => $session->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return ['success' => false, 'message' => 'Failed to renew subscription: '.$e->getMessage()];
+        }
+    }
+
+    public function applyPaidRenewal(Company $company, SubscriptionPlan $plan): Subscription
+    {
+        $extendable = $company->subscriptions()
+            ->whereIn('status', ['active', 'suspended'])
+            ->whereNotNull('end_date')
+            ->whereDate('end_date', '>=', now()->toDateString())
+            ->orderByDesc('end_date')
+            ->first();
+
+        if ($extendable) {
+            $extendable->update([
+                'plan_id' => $plan->id,
+                'plan_type' => $plan->plan_type,
+                'monthly_price' => $plan->price,
+                'end_date' => $this->calculateSubscriptionEndDateFrom($extendable->end_date, $plan->billing_period),
+                'status' => 'active',
+            ]);
+            $subscription = $extendable->fresh();
+        } else {
+            $start = now()->startOfDay();
+            $subscription = Subscription::create([
+                'company_id' => $company->id,
+                'plan_id' => $plan->id,
+                'plan_type' => $plan->plan_type,
+                'monthly_price' => $plan->price,
+                'start_date' => $start,
+                'end_date' => $this->calculateSubscriptionEndDateFrom($start, $plan->billing_period),
+                'status' => 'active',
+            ]);
+
+            $company->subscriptions()
+                ->where('id', '!=', $subscription->id)
+                ->where('status', 'active')
+                ->update(['status' => 'expired']);
+        }
+
+        $company->update(['status' => 'active']);
+
+        return $subscription;
+    }
 
     public function suspendCompany(\App\Models\Company $company): void
     {
-
         $company->update(['status' => 'suspended']);
 
         $company->subscriptions()->where('status', 'active')->update([
-            'status' => 'suspended'
+            'status' => 'suspended',
         ]);
     }
 
     public function activateCompany(\App\Models\Company $company): void
     {
+        $hasValidSubscription = $company->subscriptions()
+            ->whereIn('status', ['active', 'suspended'])
+            ->where(function ($query) {
+                $query->whereNull('end_date')
+                    ->orWhereDate('end_date', '>=', now()->toDateString());
+            })
+            ->exists();
+
+        if (! $hasValidSubscription) {
+            throw new \RuntimeException('Cannot activate a company without a valid subscription. The company must renew.');
+        }
+
         $company->update(['status' => 'active']);
 
+        $company->subscriptions()
+            ->where('status', 'suspended')
+            ->where(function ($query) {
+                $query->whereNull('end_date')
+                    ->orWhereDate('end_date', '>=', now()->toDateString());
+            })
+            ->update(['status' => 'active']);
+    }
 
-        $company->subscriptions()->where('status', 'suspended')->update([
-            'status' => 'active'
-        ]);
+    public function canPermanentlyDelete(Company $company): bool
+    {
+        if ($company->status !== 'active') {
+            return true;
+        }
+
+        $hasValidSubscription = $company->subscriptions()
+            ->where('status', 'active')
+            ->where(function ($query) {
+                $query->whereNull('end_date')
+                    ->orWhereDate('end_date', '>=', now()->toDateString());
+            })
+            ->exists();
+
+        if ($hasValidSubscription) {
+            return false;
+        }
+
+        if ($company->employees()->exists() || $company->users()->exists() || $company->departments()->exists()) {
+            return false;
+        }
+
+        return true;
     }
 }

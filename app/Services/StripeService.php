@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Company;
 use App\Models\SubscriptionPlan;
 use Stripe\Checkout\Session;
 use Stripe\Event;
@@ -67,6 +68,7 @@ class StripeService
             'success_url' => $successUrl,
             'cancel_url' => $cancelUrl,
             'metadata' => [
+                'purpose' => 'registration',
                 'plan_id' => $plan->id,
                 'name' => (string) $registrationData['name'],
                 'email' => (string) $registrationData['email'],
@@ -79,6 +81,55 @@ class StripeService
                 'marital_status' => (string) ($registrationData['marital_status'] ?? ''),
                 'nationality' => (string) ($registrationData['nationality'] ?? ''),
                 'residence' => (string) ($registrationData['residence'] ?? ''),
+            ],
+        ]);
+    }
+
+    /**
+     * Checkout Session for renewing an existing company's subscription.
+     * Company/users/employees are never created here; the webhook applies the paid period.
+     */
+    public function createRenewalCheckoutSession(Company $company, SubscriptionPlan $plan): Session
+    {
+        $successUrl = config('services.stripe.checkout_success_url');
+        $cancelUrl = config('services.stripe.checkout_cancel_url');
+
+        if (blank($successUrl) || blank($cancelUrl)) {
+            throw new \RuntimeException(
+                'STRIPE_CHECKOUT_SUCCESS_URL and STRIPE_CHECKOUT_CANCEL_URL must be set to the frontend application URLs before Stripe Checkout can be used.'
+            );
+        }
+
+        if (! str_contains($successUrl, '{CHECKOUT_SESSION_ID}')) {
+            $successUrl .= (str_contains($successUrl, '?') ? '&' : '?').'session_id={CHECKOUT_SESSION_ID}';
+        }
+
+        $productData = [
+            'name' => 'Khibrat HR - '.$plan->name.' Renewal',
+        ];
+
+        if (filled($plan->description)) {
+            $productData['description'] = (string) $plan->description;
+        }
+
+        return $this->client->checkout->sessions->create([
+            'mode' => 'payment',
+            'payment_method_types' => ['card'],
+            'customer_email' => $company->email,
+            'line_items' => [[
+                'quantity' => 1,
+                'price_data' => [
+                    'currency' => config('services.stripe.currency', 'usd'),
+                    'unit_amount' => (int) round(((float) $plan->price) * 100),
+                    'product_data' => $productData,
+                ],
+            ]],
+            'success_url' => $successUrl,
+            'cancel_url' => $cancelUrl,
+            'metadata' => [
+                'purpose' => 'renewal',
+                'company_id' => $company->id,
+                'plan_id' => $plan->id,
             ],
         ]);
     }

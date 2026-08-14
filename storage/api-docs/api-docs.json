@@ -2249,6 +2249,63 @@
                 ]
             }
         },
+        "/api/company/subscription": {
+            "get": {
+                "tags": [
+                    "Companies"
+                ],
+                "summary": "Get the current company's subscription status",
+                "operationId": "f709ed99404a696d90a98b7549db3ee7",
+                "responses": {
+                    "200": {
+                        "description": "Current subscription"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/company/subscription/renew": {
+            "post": {
+                "tags": [
+                    "Companies"
+                ],
+                "summary": "Start a Stripe Checkout session to renew the current company's subscription",
+                "operationId": "1a04f41d4f7a2b1006c440ba06e5dfc5",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "plan_id"
+                                ],
+                                "properties": {
+                                    "plan_id": {
+                                        "type": "string",
+                                        "format": "uuid"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "202": {
+                        "description": "Redirect the user to payment_url"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
         "/api/hr/departments": {
             "get": {
                 "tags": [
@@ -7766,6 +7823,73 @@
                 ]
             }
         },
+        "/api/management/attendance/roster": {
+            "get": {
+                "tags": [
+                    "Management Attendance"
+                ],
+                "summary": "Daily attendance roster for all active employees",
+                "description": "Returns every active employee for the requested date with a computed display_status. The legacy GET /api/management/attendance endpoint is unchanged.",
+                "operationId": "c4cfe600fc89b1db8647669fa1fb283d",
+                "parameters": [
+                    {
+                        "name": "date",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "department_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    },
+                    {
+                        "name": "employee_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 15
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Paginated daily roster"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
         "/api/management/attendance/stats": {
             "get": {
                 "tags": [
@@ -7837,10 +7961,20 @@
                                                 "absent": {
                                                     "type": "integer"
                                                 },
+                                                "not_arrived": {
+                                                    "type": "integer"
+                                                },
+                                                "on_leave": {
+                                                    "type": "integer"
+                                                },
                                                 "off_day": {
                                                     "type": "integer"
                                                 },
+                                                "total_employees": {
+                                                    "type": "integer"
+                                                },
                                                 "total_records": {
+                                                    "description": "Employees with a persisted attendance_records row for this date",
                                                     "type": "integer"
                                                 }
                                             },

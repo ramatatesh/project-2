@@ -7,6 +7,7 @@ use App\Http\Controllers\CompanyPolicyController;
 use App\Http\Controllers\CompanyProfileController;
 use App\Http\Controllers\CompanyRegistrationController;
 use App\Http\Controllers\CompanySettingsController;
+use App\Http\Controllers\CompanySubscriptionController;
 use App\Http\Controllers\DepartmentController;
 use App\Http\Controllers\DepartmentManagerController;
 use App\Http\Controllers\EmployeeAdvanceController;
@@ -22,6 +23,7 @@ use App\Http\Controllers\EvaluationReviewController;
 use App\Http\Controllers\EvaluationScoringController;
 use App\Http\Controllers\EvaluationTemplateController;
 use App\Http\Controllers\HolidayPolicyController;
+use App\Http\Controllers\HRAnalyticsController;
 use App\Http\Controllers\ManagementAdvanceController;
 use App\Http\Controllers\ManagementAttendanceController;
 use App\Http\Controllers\ManagementLeaveController;
@@ -31,6 +33,7 @@ use App\Http\Controllers\EmployeeSalaryController;
 use App\Http\Controllers\HrManagerController;
 use App\Http\Controllers\ManagementSalaryController;
 use App\Http\Controllers\PaymentWebhookController;
+use App\Http\Controllers\PayrollAnalyticsController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SalaryAdvancePolicyController;
 use App\Http\Controllers\SubscriptionPlanController;
@@ -45,7 +48,7 @@ Route::middleware('guest')->prefix('auth')->group(function () {
     Route::post('/reset-password', [AuthController::class, 'resetPassword'])->name('auth.reset-password')->middleware('throttle:5,1');
 });
 
-Route::middleware('auth:sanctum')->prefix('auth')->group(function () {
+Route::middleware(['auth:sanctum', 'company.active'])->prefix('auth')->group(function () {
     Route::post('/complete-first-login', [AuthController::class, 'completeFirstLogin'])->name('auth.complete-first-login');
     Route::post('/logout', [AuthController::class, 'logout'])->name('auth.logout');
     Route::post('/two-factor', [AuthController::class, 'toggleTwoFactor'])->name('auth.two-factor');
@@ -53,7 +56,7 @@ Route::middleware('auth:sanctum')->prefix('auth')->group(function () {
 
 // Profile: view / update / documents upload.
 // Available to any authenticated user. Employee-only fields/files require an employee record.
-Route::middleware('auth:sanctum')->prefix('profile')->group(function () {
+Route::middleware(['auth:sanctum', 'company.active'])->prefix('profile')->group(function () {
     Route::get('/', [ProfileController::class, 'show'])->name('profile.show');
     Route::put('/', [ProfileController::class, 'update'])->name('profile.update');
     Route::post('/documents', [ProfileController::class, 'uploadDocuments'])->name('profile.documents');
@@ -63,17 +66,24 @@ Route::middleware('auth:sanctum')->prefix('profile')->group(function () {
 // GET: any authenticated tenant user (General Manager, HR Manager, Department Manager, Employee) -
 // always scoped to auth()->user()->company_id, never a client-supplied company_id.
 // PUT: General Manager only.
-Route::middleware('auth:sanctum')->prefix('company/profile')->group(function () {
+Route::middleware(['auth:sanctum', 'company.active'])->prefix('company/profile')->group(function () {
     Route::get('/', [CompanyProfileController::class, 'show'])->name('company.profile.show');
     Route::put('/', [CompanyProfileController::class, 'update'])
         ->middleware(['role:general_manager', 'company.active'])
         ->name('company.profile.update');
 });
 
+// Current subscription + renewal checkout. POST /renew is allowed even when the company
+// is frozen (see EnsureCompanyIsNotFrozen exemptions) so a suspended tenant can pay.
+Route::middleware(['auth:sanctum', 'company.active', 'role:general_manager,hr_manager'])->prefix('company/subscription')->group(function () {
+    Route::get('/', [CompanySubscriptionController::class, 'show'])->name('company.subscription.show');
+    Route::post('/renew', [CompanySubscriptionController::class, 'renew'])->name('company.subscription.renew');
+});
+
 // Company policies & holidays page for the mobile employee app (read-only).
 // Available to Employee, HR Manager, Department Manager, and General Manager - always scoped to
 // auth()->user()->company_id, never a client-supplied company_id.
-Route::middleware(['auth:sanctum', 'role:employee,hr_manager,department_manager,general_manager'])->prefix('employee')->group(function () {
+Route::middleware(['auth:sanctum', 'company.active', 'role:employee,hr_manager,department_manager,general_manager'])->prefix('employee')->group(function () {
     Route::get('/company-policies', [EmployeeCompanyPolicyController::class, 'policies'])->name('employee.company-policies');
     Route::get('/company-holidays', [EmployeeCompanyPolicyController::class, 'holidays'])->name('employee.company-holidays');
 
@@ -190,23 +200,27 @@ Route::get('/stripe/checkout-sessions/{session_id}', [\App\Http\Controllers\Stri
 // Departments & Employees viewing (HR Manager & General Manager).
 // Company isolation is enforced per-request from the authenticated user's company_id
 // (no company_id is accepted from the client).
-Route::middleware(['auth:sanctum', 'role:hr_manager,general_manager'])->prefix('hr')->group(function () {
+Route::middleware(['auth:sanctum', 'company.active', 'role:hr_manager,general_manager'])->prefix('hr')->group(function () {
     Route::get('/departments', [DepartmentController::class, 'index']);
     Route::get('/departments/{department}', [DepartmentController::class, 'show']);
     Route::get('/departments/{department}/employees', [EmployeeController::class, 'byDepartment']);
     Route::get('/employees', [EmployeeController::class, 'index']);
+<<<<<<< HEAD
 
 
     Route::get('/employees/{employee}', [EmployeeController::class, 'show']);
     Route::delete('/employees/{employee}', [EmployeeController::class, 'destroy']);
 
 
+=======
+    Route::get('/employees/{employee}', [EmployeeController::class, 'show']);
+>>>>>>> 29aee38c12367c4186aef38f9232f518868af4a5
 });
 
 // HR Dashboard area: Departments & Employees management (HR Manager only).
 // Company isolation is enforced per-request from the authenticated user's company_id
 // (no company_id is accepted from the client).
-Route::middleware(['auth:sanctum', 'role:hr_manager'])->prefix('hr')->group(function () {
+Route::middleware(['auth:sanctum', 'company.active', 'role:hr_manager'])->prefix('hr')->group(function () {
     // Departments
     Route::post('/departments', [DepartmentController::class, 'store'])->middleware('company.active');
     Route::put('/departments/{department}', [DepartmentController::class, 'update'])->middleware('company.active');
@@ -215,7 +229,6 @@ Route::middleware(['auth:sanctum', 'role:hr_manager'])->prefix('hr')->group(func
     // Employees
     Route::get('/employees/import/template', [EmployeeController::class, 'downloadTemplate']);
     Route::post('/employees', [EmployeeController::class, 'store']);
-    Route::get('/employees/{employee}', [EmployeeController::class, 'show']);
     Route::put('/employees/{employee}', [EmployeeController::class, 'update']);
     Route::delete('/employees/{employee}', [EmployeeController::class, 'destroy']);
     Route::post('/employees/import', [EmployeeController::class, 'import']);
@@ -266,7 +279,7 @@ Route::middleware(['auth:sanctum', 'role:hr_manager'])->prefix('hr')->group(func
 });
 
 // Reviewer-facing endpoints (self/manager/peer reviews)
-Route::middleware(['auth:sanctum'])->prefix('evaluations')->group(function () {
+Route::middleware(['auth:sanctum', 'company.active'])->prefix('evaluations')->group(function () {
     Route::get('/my-reviews', [EvaluationReviewController::class, 'myReviews']);
     Route::get('/my-reviews/{review}', [EvaluationReviewController::class, 'show']);
     Route::post('/my-reviews/{review}/submit', [EvaluationReviewController::class, 'submit']);
@@ -274,7 +287,7 @@ Route::middleware(['auth:sanctum'])->prefix('evaluations')->group(function () {
 
 // Employee self-service: leave management (tenant-specific dynamic leave types).
 // Department Manager also has an employee record and uses this exact self-service flow for themselves.
-Route::middleware(['auth:sanctum', 'role:employee,department_manager'])->prefix('employee/leaves')->group(function () {
+Route::middleware(['auth:sanctum', 'company.active', 'role:employee,department_manager'])->prefix('employee/leaves')->group(function () {
     Route::get('/types', [EmployeeLeaveController::class, 'types']);
     Route::get('/dashboard', [EmployeeLeaveController::class, 'dashboard']);
     Route::post('/apply', [EmployeeLeaveController::class, 'apply']);
@@ -282,21 +295,21 @@ Route::middleware(['auth:sanctum', 'role:employee,department_manager'])->prefix(
 });
 
 // Management approval workflow for leave requests.
-Route::middleware(['auth:sanctum', 'role:department_manager,hr_manager'])->prefix('management/leaves')->group(function () {
+Route::middleware(['auth:sanctum', 'company.active', 'role:department_manager,hr_manager'])->prefix('management/leaves')->group(function () {
     Route::get('/inbox', [ManagementLeaveController::class, 'inbox']);
     Route::post('/{id}/action', [ManagementLeaveController::class, 'action']);
 });
 
 // Employee self-service: salary advances (السُلف المالية).
 // Department Manager also has an employee record and uses this exact self-service flow for themselves.
-Route::middleware(['auth:sanctum', 'role:employee,department_manager'])->prefix('employee/advances')->group(function () {
+Route::middleware(['auth:sanctum', 'company.active', 'role:employee,department_manager'])->prefix('employee/advances')->group(function () {
     Route::get('/', [EmployeeAdvanceController::class, 'index']);
     Route::get('/eligibility', [EmployeeAdvanceController::class, 'eligibility']);
     Route::post('/apply', [EmployeeAdvanceController::class, 'apply']);
 });
 
 // Management approval workflow for salary advances.
-Route::middleware(['auth:sanctum', 'role:department_manager,hr_manager'])->prefix('management/advances')->group(function () {
+Route::middleware(['auth:sanctum', 'company.active', 'role:department_manager,hr_manager'])->prefix('management/advances')->group(function () {
     Route::get('/', [ManagementAdvanceController::class, 'index']);
     Route::get('/{id}', [ManagementAdvanceController::class, 'show']);
     Route::post('/{id}/action', [ManagementAdvanceController::class, 'action']);
@@ -305,7 +318,7 @@ Route::middleware(['auth:sanctum', 'role:department_manager,hr_manager'])->prefi
 
 // Employee self-service: overtime requests.
 // Department Manager also has an employee record and uses this exact self-service flow for themselves.
-Route::middleware(['auth:sanctum', 'role:employee,department_manager'])->prefix('employee/overtime')->group(function () {
+Route::middleware(['auth:sanctum', 'company.active', 'role:employee,department_manager'])->prefix('employee/overtime')->group(function () {
     Route::get('/', [EmployeeOvertimeController::class, 'index']);
     Route::get('/rates', [EmployeeOvertimeController::class, 'rates']);
     Route::get('/preview', [EmployeeOvertimeController::class, 'preview']);
@@ -313,7 +326,7 @@ Route::middleware(['auth:sanctum', 'role:employee,department_manager'])->prefix(
 });
 
 // Management approval workflow for overtime.
-Route::middleware(['auth:sanctum', 'role:department_manager,hr_manager'])->prefix('management/overtime')->group(function () {
+Route::middleware(['auth:sanctum', 'company.active', 'role:department_manager,hr_manager'])->prefix('management/overtime')->group(function () {
     $uuid = '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}';
     Route::get('/', [ManagementOvertimeController::class, 'index']);
     Route::get('/{id}', [ManagementOvertimeController::class, 'show'])->where('id', $uuid);
@@ -322,13 +335,13 @@ Route::middleware(['auth:sanctum', 'role:department_manager,hr_manager'])->prefi
 
 // Employee self-service: salary history / payslips.
 // Department Manager also has an employee record and uses this exact self-service flow for themselves.
-Route::middleware(['auth:sanctum', 'role:employee,department_manager'])->prefix('employee/salaries')->group(function () {
+Route::middleware(['auth:sanctum', 'company.active', 'role:employee,department_manager'])->prefix('employee/salaries')->group(function () {
     Route::get('/', [EmployeeSalaryController::class, 'index']);
     Route::get('/{id}', [EmployeeSalaryController::class, 'show']);
 });
 
 // Salary viewing (HR Manager & General Manager).
-Route::middleware(['auth:sanctum', 'role:hr_manager,general_manager'])->prefix('management/salaries')->group(function () {
+Route::middleware(['auth:sanctum', 'company.active', 'role:hr_manager,general_manager'])->prefix('management/salaries')->group(function () {
     Route::get('/', [ManagementSalaryController::class, 'index']);
     Route::get('/by-month', [ManagementSalaryController::class, 'byMonth']);
     Route::get('/employees/{employee}/history', [ManagementSalaryController::class, 'employeeHistory']);
@@ -336,7 +349,7 @@ Route::middleware(['auth:sanctum', 'role:hr_manager,general_manager'])->prefix('
 });
 
 // Salary generation and payment closing (HR Manager only).
-Route::middleware(['auth:sanctum', 'role:hr_manager'])->prefix('management/salaries')->group(function () {
+Route::middleware(['auth:sanctum', 'company.active', 'role:hr_manager'])->prefix('management/salaries')->group(function () {
     Route::post('/generate', [ManagementSalaryController::class, 'generate']);
     Route::post('/{id}/pay', [ManagementSalaryController::class, 'pay']);
 });
@@ -345,7 +358,7 @@ Route::middleware(['auth:sanctum', 'role:hr_manager'])->prefix('management/salar
 // Company isolation is enforced per-request from the authenticated user's company_id
 // (no company_id is accepted from the client).
 // Department Manager also has an employee record and uses this exact self-service flow for themselves.
-Route::middleware(['auth:sanctum', 'role:employee,department_manager'])->prefix('employee/attendance')->group(function () {
+Route::middleware(['auth:sanctum', 'company.active', 'role:employee,department_manager'])->prefix('employee/attendance')->group(function () {
     Route::post('/check-in', [AttendanceController::class, 'checkIn']);
     Route::post('/check-out', [AttendanceController::class, 'checkOut']);
     Route::get('/dashboard', [AttendanceController::class, 'dashboard']);
@@ -353,13 +366,27 @@ Route::middleware(['auth:sanctum', 'role:employee,department_manager'])->prefix(
 
 // Attendance dashboard/listing: HR Manager & General Manager see the whole company,
 // Department Manager is scoped to employees in departments they manage (enforced in the controller).
-Route::middleware(['auth:sanctum', 'role:hr_manager,general_manager,department_manager'])->prefix('management/attendance')->group(function () {
+Route::middleware(['auth:sanctum', 'company.active', 'role:hr_manager,general_manager,department_manager'])->prefix('management/attendance')->group(function () {
     Route::get('/', [ManagementAttendanceController::class, 'index']);
+    Route::get('/roster', [ManagementAttendanceController::class, 'roster']);
     Route::get('/stats', [ManagementAttendanceController::class, 'stats']);
 });
 
 // QR code display and manual adjustments: HR Manager & General Manager only.
-Route::middleware(['auth:sanctum', 'role:hr_manager,general_manager'])->prefix('management/attendance')->group(function () {
+Route::middleware(['auth:sanctum', 'company.active', 'role:hr_manager,general_manager'])->prefix('management/attendance')->group(function () {
     Route::get('/qr-code', [ManagementAttendanceController::class, 'qrCode']);
     Route::put('/{attendanceRecord}/adjust', [ManagementAttendanceController::class, 'adjust']);
+});
+
+Route::middleware(['auth:sanctum', 'company.active', 'role:hr_manager,general_manager'])->group(function () {
+    Route::get('/payrolls/analytics', [PayrollAnalyticsController::class, 'index']);
+});
+
+Route::middleware(['auth:sanctum', 'company.active'])->prefix('analytics/hr')->group(function () {
+    Route::get('/turnover-rate', [HRAnalyticsController::class, 'getTurnoverRate']);
+    Route::get('/demographics', [HRAnalyticsController::class, 'getDemographics']);
+    Route::get('/department-budgets', [HRAnalyticsController::class, 'getDepartmentBudgets']);
+    Route::get('/daily-verification-rate', [HRAnalyticsController::class, 'getDailyVerificationRate']);
+    Route::get('/realtime-headcount', [HRAnalyticsController::class, 'getRealtimeHeadcount']);
+    Route::get('/performance-distribution', [HRAnalyticsController::class, 'getPerformanceDistribution']);
 });
