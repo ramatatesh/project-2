@@ -296,13 +296,7 @@ class EvaluationSystemTest extends TestCase
 
         $questionIds = $template->questions->pluck('id')->toArray();
 
-        $this->actingAs($this->employeeUser)
-            ->postJson("/api/evaluations/my-reviews/{$selfReview->id}/submit", [
-                'answers' => [
-                    ['question_id' => $questionIds[0], 'rating' => 4],
-                ],
-            ])
-            ->assertOk();
+        $this->submitCompletedReview($selfReview, $this->employeeUser, $questionIds, 4, 'Self');
 
         $this->actingAs($this->hrManager)
             ->postJson("/api/hr/evaluation-cycles/{$cycle->id}/reviews/{$selfReview->id}/score", [
@@ -668,7 +662,7 @@ class EvaluationSystemTest extends TestCase
             ->assertJsonPath('message', 'Cannot score a review that has not been completed.');
     }
 
-    public function test_cannot_score_text_question(): void
+    public function test_can_score_text_question(): void
     {
         [$cycle, $template] = $this->createLaunchedCycle();
 
@@ -690,8 +684,10 @@ class EvaluationSystemTest extends TestCase
                     ['answer_id' => $this->getAnswerId($selfReview->id, $textQuestionId), 'hr_score' => 8],
                 ],
             ])
-            ->assertStatus(422)
-            ->assertJsonPath('message', 'HR scores can only be applied to rating questions.');
+            ->assertOk();
+
+        $this->assertEquals(8, EvaluationAnswer::find($this->getAnswerId($selfReview->id, $textQuestionId))->hr_score);
+        $this->assertEquals(8.0, $selfReview->fresh()->total_score);
     }
 
     public function test_empty_scores_array_is_rejected(): void

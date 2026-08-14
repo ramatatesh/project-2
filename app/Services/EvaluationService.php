@@ -233,6 +233,19 @@ class EvaluationService
             throw new InvalidArgumentException('All rating questions must be answered before submitting the review.');
         }
 
+        $textQuestionIds = $questions
+            ->where('response_type', EvaluationTemplateQuestion::RESPONSE_TYPE_TEXT)
+            ->pluck('id');
+
+        $answeredTextIds = collect($answersData)
+            ->filter(fn (array $answerData) => array_key_exists('comment', $answerData) && trim((string) ($answerData['comment'] ?? '')) !== '')
+            ->pluck('question_id')
+            ->unique();
+
+        if ($textQuestionIds->isNotEmpty() && $textQuestionIds->diff($answeredTextIds)->isNotEmpty()) {
+            throw new InvalidArgumentException('All text questions must be answered before submitting the review.');
+        }
+
         $now = now();
 
         foreach ($answersData as $answerData) {
@@ -342,10 +355,6 @@ class EvaluationService
                 throw new InvalidArgumentException('Answer does not belong to this review.');
             }
 
-            if ($answer->question?->response_type !== EvaluationTemplateQuestion::RESPONSE_TYPE_RATING) {
-                throw new InvalidArgumentException('HR scores can only be applied to rating questions.');
-            }
-
             $answer->update([
                 'hr_score' => $scoreData['hr_score'],
                 'updated_at' => $now,
@@ -361,7 +370,7 @@ class EvaluationService
         $review->load('answers.question');
 
         $scores = $review->answers
-            ->filter(fn (EvaluationAnswer $answer) => $answer->question->response_type === EvaluationTemplateQuestion::RESPONSE_TYPE_RATING && $answer->hr_score !== null)
+            ->filter(fn (EvaluationAnswer $answer) => $answer->hr_score !== null)
             ->pluck('hr_score');
 
         $total = $scores->sum();
