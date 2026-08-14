@@ -59,6 +59,42 @@ class ManagementAttendanceController extends Controller
 
     /**
      * @OA\Get(
+     *   path="/api/management/attendance/roster",
+     *   summary="Daily attendance roster for all active employees",
+     *   description="Returns every active employee for the requested date with a computed display_status. The legacy GET /api/management/attendance endpoint is unchanged.",
+     *   tags={"Management Attendance"},
+     *   security={{"sanctum":{}}},
+     *   @OA\Parameter(name="date", in="query", required=false, @OA\Schema(type="string", format="date")),
+     *   @OA\Parameter(name="department_id", in="query", required=false, @OA\Schema(type="string", format="uuid")),
+     *   @OA\Parameter(name="employee_id", in="query", required=false, @OA\Schema(type="string", format="uuid")),
+     *   @OA\Parameter(name="per_page", in="query", required=false, @OA\Schema(type="integer", default=15)),
+     *   @OA\Parameter(name="page", in="query", required=false, @OA\Schema(type="integer", default=1)),
+     *   @OA\Response(response=200, description="Paginated daily roster")
+     * )
+     */
+    public function roster(Request $request): JsonResponse
+    {
+        $date = $request->filled('date')
+            ? \Carbon\Carbon::parse($request->input('date'))->startOfDay()
+            : now()->startOfDay();
+
+        $perPage = (int) $request->input('per_page', 15);
+        $perPage = max(1, min($perPage, 100));
+        $page = max(1, (int) $request->input('page', 1));
+
+        return response()->json([
+            'success' => true,
+            'data' => $this->attendanceService->buildDailyRosterPaginated(
+                $date,
+                $this->rosterFilters($request),
+                $perPage,
+                $page,
+            ),
+        ]);
+    }
+
+    /**
+     * @OA\Get(
      *   path="/api/management/attendance/stats",
      *   summary="Attendance statistics for a date or date range",
      *   description="Defaults to today if no date filter is given. Department Manager statistics are scoped to their own department(s).",
@@ -78,8 +114,11 @@ class ManagementAttendanceController extends Controller
      *         @OA\Property(property="late", type="integer"),
      *         @OA\Property(property="early_leave", type="integer"),
      *         @OA\Property(property="absent", type="integer"),
+     *         @OA\Property(property="not_arrived", type="integer"),
+     *         @OA\Property(property="on_leave", type="integer"),
      *         @OA\Property(property="off_day", type="integer"),
-     *         @OA\Property(property="total_records", type="integer")
+     *         @OA\Property(property="total_employees", type="integer"),
+     *         @OA\Property(property="total_records", type="integer", description="Employees with a persisted attendance_records row for this date")
      *       )
      *     )
      *   )
@@ -87,24 +126,34 @@ class ManagementAttendanceController extends Controller
      */
     public function stats(Request $request): JsonResponse
     {
-        $query = $this->scopedQuery($request);
-        $this->applyFilters($query, $request, defaultToday: true);
+        $date = $request->filled('date')
+            ? \Carbon\Carbon::parse($request->input('date'))->startOfDay()
+            : ($request->filled('date_from') || $request->filled('date_to')
+                ? null
+                : now()->startOfDay());
 
-        $records = $query->get(['id', 'attendance_type', 'status']);
+        if ($date === null) {
+            $query = $this->scopedQuery($request);
+            $this->applyFilters($query, $request, defaultToday: true);
+            $records = $query->get(['id', 'attendance_type', 'status']);
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'present' => $records->where('attendance_type', AttendanceRecord::TYPE_PRESENT)->count(),
+                    'late' => $records->where('attendance_type', AttendanceRecord::TYPE_LATE)->count(),
+                    'early_leave' => $records->where('attendance_type', AttendanceRecord::TYPE_EARLY_LEAVE)->count(),
+                    'absent' => $records->where('attendance_type', AttendanceRecord::TYPE_ABSENT)->count(),
+                    'total_records' => $records->count(),
+                ],
+            ]);
+        }
+
+        $filters = $this->rosterFilters($request);
 
         return response()->json([
             'success' => true,
-            'data' => [
-                'present' => $records->where('attendance_type', AttendanceRecord::TYPE_PRESENT)->count(),
-
-                'late' => $records->where('attendance_type', AttendanceRecord::TYPE_LATE)->count(),
-
-                'early_leave' => $records->where('attendance_type', AttendanceRecord::TYPE_EARLY_LEAVE)->count(),
-
-                'absent' => $records->where('attendance_type', AttendanceRecord::TYPE_ABSENT)->count(),
-
-                'total_records' => $records->count(),
-            ],
+            'data' => $this->attendanceService->computeDailyRosterStats($date, $filters),
         ]);
     }
 
@@ -175,6 +224,28 @@ class ManagementAttendanceController extends Controller
             'message' => 'Attendance record adjusted successfully.',
             'data' => $this->mapRecord($record),
         ]);
+    }
+
+    private function rosterFilters(Request $request): array
+    {
+        $user = auth()->user();
+        $employee = $user?->employee;
+
+        $filters = [
+            'company_id' => $user?->company_id,
+            'department_id' => $request->input('department_id'),
+            'employee_id' => $request->input('employee_id'),
+            'managed_department_ids' => null,
+        ];
+
+        if ($user?->role === Role::DepartmentManager->value) {
+            $filters['managed_department_ids'] = DB::table('departments')
+                ->where('manager_id', $employee?->id)
+                ->pluck('id')
+                ->all();
+        }
+
+        return $filters;
     }
 
     private function scopedQuery(Request $request)

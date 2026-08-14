@@ -358,6 +358,7 @@ Route::middleware(['auth:sanctum', 'company.active', 'role:employee,department_m
 // Department Manager is scoped to employees in departments they manage (enforced in the controller).
 Route::middleware(['auth:sanctum', 'company.active', 'role:hr_manager,general_manager,department_manager'])->prefix('management/attendance')->group(function () {
     Route::get('/', [ManagementAttendanceController::class, 'index']);
+    Route::get('/roster', [ManagementAttendanceController::class, 'roster']);
     Route::get('/stats', [ManagementAttendanceController::class, 'stats']);
 });
 

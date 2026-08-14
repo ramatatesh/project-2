@@ -7813,6 +7813,73 @@
                 ]
             }
         },
+        "/api/management/attendance/roster": {
+            "get": {
+                "tags": [
+                    "Management Attendance"
+                ],
+                "summary": "Daily attendance roster for all active employees",
+                "description": "Returns every active employee for the requested date with a computed display_status. The legacy GET /api/management/attendance endpoint is unchanged.",
+                "operationId": "c4cfe600fc89b1db8647669fa1fb283d",
+                "parameters": [
+                    {
+                        "name": "date",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "department_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    },
+                    {
+                        "name": "employee_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 15
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Paginated daily roster"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
         "/api/management/attendance/stats": {
             "get": {
                 "tags": [
@@ -7884,10 +7951,20 @@
                                                 "absent": {
                                                     "type": "integer"
                                                 },
+                                                "not_arrived": {
+                                                    "type": "integer"
+                                                },
+                                                "on_leave": {
+                                                    "type": "integer"
+                                                },
                                                 "off_day": {
                                                     "type": "integer"
                                                 },
+                                                "total_employees": {
+                                                    "type": "integer"
+                                                },
                                                 "total_records": {
+                                                    "description": "Employees with a persisted attendance_records row for this date",
                                                     "type": "integer"
                                                 }
                                             },

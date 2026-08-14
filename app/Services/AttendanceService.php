@@ -321,6 +321,270 @@ class AttendanceService
 
     /*
     |--------------------------------------------------------------------------
+    | Daily roster (all active employees + live status for a date)
+    |--------------------------------------------------------------------------
+    */
+
+    public const DISPLAY_NOT_ARRIVED = 'not_arrived';
+
+    public const DISPLAY_PRESENT = 'present';
+
+    public const DISPLAY_LATE = 'late';
+
+    public const DISPLAY_EARLY_LEAVE = 'early_leave';
+
+    public const DISPLAY_ABSENT = 'absent';
+
+    public const DISPLAY_ON_LEAVE = 'on_leave';
+
+    public const DISPLAY_OFF_DAY = 'off_day';
+
+    /**
+     * @param  array{company_id: string, department_id?: string|null, employee_id?: string|null, managed_department_ids?: array<int, string>|null}  $filters
+     */
+    public function buildDailyRosterPaginated(Carbon $date, array $filters, int $perPage, int $page): array
+    {
+        $query = $this->rosterEmployeeQuery($filters)->with(['user', 'department']);
+        $paginator = $query->orderBy('id')->paginate(perPage: $perPage, page: $page);
+
+        $items = $this->buildRosterItems(
+            $paginator->getCollection(),
+            $date,
+            $filters['company_id'],
+        );
+
+        return [
+            'date' => $date->toDateString(),
+            'items' => $items,
+            'meta' => [
+                'current_page' => $paginator->currentPage(),
+                'per_page' => $paginator->perPage(),
+                'total' => $paginator->total(),
+                'last_page' => $paginator->lastPage(),
+            ],
+        ];
+    }
+
+    /**
+     * @param  array{company_id: string, department_id?: string|null, employee_id?: string|null, managed_department_ids?: array<int, string>|null}  $filters
+     */
+    public function computeDailyRosterStats(Carbon $date, array $filters): array
+    {
+        $employees = $this->rosterEmployeeQuery($filters)->get();
+        $items = $this->buildRosterItems($employees, $date, $filters['company_id']);
+
+        $stats = [
+            'total_employees' => count($items),
+            'present' => 0,
+            'late' => 0,
+            'early_leave' => 0,
+            'absent' => 0,
+            'not_arrived' => 0,
+            'on_leave' => 0,
+            'off_day' => 0,
+            'total_records' => 0,
+        ];
+
+        foreach ($items as $item) {
+            $stats[$item['display_status']] = ($stats[$item['display_status']] ?? 0) + 1;
+
+            if ($item['attendance_record_id'] !== null) {
+                $stats['total_records']++;
+            }
+        }
+
+        return $stats;
+    }
+
+    /**
+     * @param  array{company_id: string, department_id?: string|null, employee_id?: string|null, managed_department_ids?: array<int, string>|null}  $filters
+     */
+    private function rosterEmployeeQuery(array $filters)
+    {
+        $query = Employee::query()
+            ->where('company_id', $filters['company_id'])
+            ->where('is_active', true);
+
+        if (! empty($filters['managed_department_ids'])) {
+            $query->whereIn('department_id', $filters['managed_department_ids']);
+        }
+
+        if (! empty($filters['department_id'])) {
+            $query->where('department_id', $filters['department_id']);
+        }
+
+        if (! empty($filters['employee_id'])) {
+            $query->where('id', $filters['employee_id']);
+        }
+
+        return $query;
+    }
+
+    /**
+     * @param  \Illuminate\Support\Collection<int, Employee>|\Illuminate\Database\Eloquent\Collection<int, Employee>  $employees
+     * @return array<int, array<string, mixed>>
+     */
+    private function buildRosterItems($employees, Carbon $date, string $companyId): array
+    {
+        if ($employees->isEmpty()) {
+            return [];
+        }
+
+        $employeeIds = $employees->pluck('id')->all();
+        $policy = AttendancePolicy::where('company_id', $companyId)->first();
+        $holidayPolicy = HolidayPolicy::where('company_id', $companyId)->first();
+        $companyHolidays = Holiday::where('company_id', $companyId)->get();
+
+        $records = AttendanceRecord::where('company_id', $companyId)
+            ->where('work_date', $date->toDateString())
+            ->whereIn('employee_id', $employeeIds)
+            ->get()
+            ->keyBy('employee_id');
+
+        $approvedLeaves = LeaveRequest::query()
+            ->where('company_id', $companyId)
+            ->where('status', 'approved')
+            ->whereDate('start_date', '<=', $date->toDateString())
+            ->whereDate('end_date', '>=', $date->toDateString())
+            ->whereIn('employee_id', $employeeIds)
+            ->with('leaveType:id,name')
+            ->get()
+            ->groupBy('employee_id');
+
+        $referenceTime = $date->isToday() ? now() : $date->copy()->endOfDay();
+
+        return $employees->map(function (Employee $employee) use (
+            $date,
+            $policy,
+            $holidayPolicy,
+            $companyHolidays,
+            $records,
+            $approvedLeaves,
+            $referenceTime,
+        ) {
+            $record = $records->get($employee->id);
+            $leave = $approvedLeaves->get($employee->id)?->first();
+            $displayStatus = $this->resolveRosterDisplayStatus(
+                $date,
+                $policy,
+                $holidayPolicy,
+                $companyHolidays,
+                $record,
+                $leave,
+                $referenceTime,
+            );
+
+            return $this->mapRosterItem($employee, $date, $record, $leave, $displayStatus);
+        })->values()->all();
+    }
+
+    private function resolveRosterDisplayStatus(
+        Carbon $date,
+        ?AttendancePolicy $policy,
+        ?HolidayPolicy $holidayPolicy,
+        $companyHolidays,
+        ?AttendanceRecord $record,
+        ?LeaveRequest $leave,
+        Carbon $referenceTime,
+    ): string {
+        if ($leave) {
+            return self::DISPLAY_ON_LEAVE;
+        }
+
+        if ($this->isWeeklyHoliday($date, $holidayPolicy)) {
+            return self::DISPLAY_OFF_DAY;
+        }
+
+        if ($companyHolidays->contains(fn (Holiday $holiday) => $holiday->occursOn($date))) {
+            return self::DISPLAY_OFF_DAY;
+        }
+
+        if (! $this->isWorkDay($date, $policy)) {
+            return self::DISPLAY_OFF_DAY;
+        }
+
+        if ($record) {
+            return $this->displayStatusFromRecord($record);
+        }
+
+        if ($this->shouldMarkNotArrived($date, $policy, $referenceTime)) {
+            return self::DISPLAY_NOT_ARRIVED;
+        }
+
+        return self::DISPLAY_ABSENT;
+    }
+
+    private function displayStatusFromRecord(AttendanceRecord $record): string
+    {
+        if ($record->status === AttendanceRecord::STATUS_ABSENT) {
+            return self::DISPLAY_ABSENT;
+        }
+
+        return match ($record->attendance_type) {
+            AttendanceRecord::TYPE_LATE => self::DISPLAY_LATE,
+            AttendanceRecord::TYPE_EARLY_LEAVE => self::DISPLAY_EARLY_LEAVE,
+            AttendanceRecord::TYPE_ABSENT => self::DISPLAY_ABSENT,
+            AttendanceRecord::TYPE_OFF_DAY => self::DISPLAY_OFF_DAY,
+            default => self::DISPLAY_PRESENT,
+        };
+    }
+
+    private function shouldMarkNotArrived(Carbon $date, ?AttendancePolicy $policy, Carbon $referenceTime): bool
+    {
+        if ($date->isFuture()) {
+            return true;
+        }
+
+        if (! $date->isToday()) {
+            return false;
+        }
+
+        if (! $policy || blank($policy->work_end_time)) {
+            return true;
+        }
+
+        $workEnd = Carbon::parse($date->toDateString().' '.$policy->work_end_time);
+
+        return $referenceTime->lessThan($workEnd);
+    }
+
+    private function isWeeklyHoliday(Carbon $date, ?HolidayPolicy $holidayPolicy): bool
+    {
+        if (! $holidayPolicy) {
+            return false;
+        }
+
+        return in_array(strtolower($date->format('l')), $holidayPolicy->weekly_holidays ?? [], true);
+    }
+
+    private function mapRosterItem(
+        Employee $employee,
+        Carbon $date,
+        ?AttendanceRecord $record,
+        ?LeaveRequest $leave,
+        string $displayStatus,
+    ): array {
+        return [
+            'employee_id' => $employee->id,
+            'employee_name' => $employee->user?->full_name,
+            'department_id' => $employee->department_id,
+            'department_name' => $employee->department?->name,
+            'work_date' => $date->toDateString(),
+            'display_status' => $displayStatus,
+            'attendance_record_id' => $record?->id,
+            'check_in_time' => $record?->check_in_time?->toDateTimeString(),
+            'check_out_time' => $record?->check_out_time?->toDateTimeString(),
+            'late_minutes' => $record?->late_minutes ?? 0,
+            'early_leave_minutes' => $record?->early_leave_minutes ?? 0,
+            'total_work_minutes' => $record?->total_work_minutes,
+            'status' => $record?->status,
+            'attendance_type' => $record?->attendance_type,
+            'leave_type_name' => $leave?->leaveType?->name,
+        ];
+    }
+
+    /*
+    |--------------------------------------------------------------------------
     | Absence marking (used by the console command / scheduler)
     |--------------------------------------------------------------------------
     */

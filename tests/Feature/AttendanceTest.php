@@ -484,4 +484,173 @@ class AttendanceTest extends TestCase
         $response->assertStatus(200);
         $this->assertSame(0, $response->json('data.total'));
     }
+
+    public function test_roster_includes_all_active_employees_even_without_check_in(): void
+    {
+        AttendancePolicy::create([
+            'id' => Str::uuid()->toString(),
+            'company_id' => $this->company->id,
+            'work_start_time' => '08:00:00',
+            'work_end_time' => '17:00:00',
+            'allowed_late_minutes' => 15,
+        ]);
+
+        $secondUser = User::create([
+            'id' => Str::uuid()->toString(),
+            'company_id' => $this->company->id,
+            'full_name' => 'Second Employee',
+            'email' => 'second@attendance.test',
+            'password_hash' => bcrypt('password'),
+            'role' => Role::Employee->value,
+            'status' => 'active',
+            'is_first_login' => false,
+        ]);
+
+        $secondEmployeeId = Str::uuid()->toString();
+        Employee::create([
+            'id' => $secondEmployeeId,
+            'user_id' => $secondUser->id,
+            'company_id' => $this->company->id,
+            'department_id' => $this->department->id,
+            'job_title' => 'QA',
+            'base_salary' => 1000,
+            'hire_date' => '2022-01-01',
+            'employment_type' => 'full-time',
+            'is_active' => true,
+        ]);
+
+        AttendanceRecord::create([
+            'id' => Str::uuid()->toString(),
+            'company_id' => $this->company->id,
+            'employee_id' => $this->employee->id,
+            'work_date' => Carbon::today()->toDateString(),
+            'check_in_time' => Carbon::today()->setTime(8, 0),
+            'status' => AttendanceRecord::STATUS_CHECKED_IN,
+            'attendance_type' => AttendanceRecord::TYPE_PRESENT,
+        ]);
+
+        Carbon::setTestNow(Carbon::today()->setTime(9, 0));
+
+        $this->actingAs($this->hrManager);
+
+        $response = $this->getJson('/api/management/attendance/roster?date='.Carbon::today()->toDateString());
+
+        $response->assertOk()
+            ->assertJsonPath('data.meta.total', 2);
+
+        $statuses = collect($response->json('data.items'))->pluck('display_status', 'employee_id');
+        $this->assertSame('present', $statuses[$this->employee->id]);
+        $this->assertSame('not_arrived', $statuses[$secondEmployeeId]);
+
+        Carbon::setTestNow();
+    }
+
+    public function test_roster_marks_employee_on_leave(): void
+    {
+        $leaveType = LeaveType::create([
+            'id' => Str::uuid()->toString(),
+            'company_id' => $this->company->id,
+            'name' => 'Annual',
+            'allocation_value' => 20,
+            'allocation_unit' => 'days',
+            'requires_proof' => false,
+            'is_active' => true,
+        ]);
+
+        LeaveRequest::create([
+            'id' => Str::uuid()->toString(),
+            'company_id' => $this->company->id,
+            'employee_id' => $this->employee->id,
+            'leave_type_id' => $leaveType->id,
+            'start_date' => Carbon::today()->toDateString(),
+            'end_date' => Carbon::today()->toDateString(),
+            'requested_value' => 1,
+            'status' => 'approved',
+        ]);
+
+        $this->actingAs($this->hrManager);
+
+        $response = $this->getJson('/api/management/attendance/roster?date='.Carbon::today()->toDateString());
+
+        $response->assertOk()
+            ->assertJsonPath('data.items.0.display_status', 'on_leave')
+            ->assertJsonPath('data.items.0.leave_type_name', 'Annual')
+            ->assertJsonPath('data.items.0.attendance_record_id', null);
+    }
+
+    public function test_roster_marks_absent_after_work_end_without_check_in(): void
+    {
+        AttendancePolicy::create([
+            'id' => Str::uuid()->toString(),
+            'company_id' => $this->company->id,
+            'work_start_time' => '08:00:00',
+            'work_end_time' => '09:00:00',
+            'allowed_late_minutes' => 0,
+        ]);
+
+        Carbon::setTestNow(Carbon::today()->setTime(10, 0));
+
+        $this->actingAs($this->hrManager);
+
+        $response = $this->getJson('/api/management/attendance/roster?date='.Carbon::today()->toDateString());
+
+        $response->assertOk()
+            ->assertJsonPath('data.items.0.display_status', 'absent');
+
+        Carbon::setTestNow();
+    }
+
+    public function test_roster_stats_count_all_active_employees_for_single_date(): void
+    {
+        AttendancePolicy::create([
+            'id' => Str::uuid()->toString(),
+            'company_id' => $this->company->id,
+            'work_start_time' => '08:00:00',
+            'work_end_time' => '17:00:00',
+        ]);
+
+        AttendanceRecord::create([
+            'id' => Str::uuid()->toString(),
+            'company_id' => $this->company->id,
+            'employee_id' => $this->employee->id,
+            'work_date' => Carbon::today()->toDateString(),
+            'check_in_time' => Carbon::today()->setTime(8, 30),
+            'late_minutes' => 30,
+            'status' => AttendanceRecord::STATUS_CHECKED_IN,
+            'attendance_type' => AttendanceRecord::TYPE_LATE,
+        ]);
+
+        $this->actingAs($this->hrManager);
+
+        $response = $this->getJson('/api/management/attendance/stats?date='.Carbon::today()->toDateString());
+
+        $response->assertOk()
+            ->assertJsonPath('data.total_employees', 1)
+            ->assertJsonPath('data.late', 1)
+            ->assertJsonPath('data.not_arrived', 0)
+            ->assertJsonPath('data.total_records', 1);
+    }
+
+    public function test_legacy_attendance_index_still_lists_records_only(): void
+    {
+        AttendanceRecord::create([
+            'id' => Str::uuid()->toString(),
+            'company_id' => $this->company->id,
+            'employee_id' => $this->employee->id,
+            'work_date' => Carbon::today()->toDateString(),
+            'check_in_time' => now(),
+            'status' => AttendanceRecord::STATUS_CHECKED_IN,
+            'attendance_type' => AttendanceRecord::TYPE_PRESENT,
+        ]);
+
+        $this->actingAs($this->hrManager);
+
+        $this->getJson('/api/management/attendance?date='.Carbon::today()->toDateString())
+            ->assertOk()
+            ->assertJsonPath('data.total', 1);
+
+        $this->getJson('/api/management/attendance/roster?date='.Carbon::today()->toDateString())
+            ->assertOk()
+            ->assertJsonPath('data.meta.total', 1);
+    }
 }
