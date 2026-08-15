@@ -210,7 +210,6 @@ Route::middleware(['auth:sanctum', 'company.active', 'role:hr_manager,general_ma
     Route::get('/employees/{employee}', [EmployeeController::class, 'show']);
     Route::delete('/employees/{employee}', [EmployeeController::class, 'destroy']);
 
-
     Route::get('/employees/{employee}', [EmployeeController::class, 'show']);
 });
 
