@@ -4640,43 +4640,11 @@
                 "tags": [
                     "Employee Overtime"
                 ],
-                "summary": "Show current overtime rates per hour and per day based on company salary rules",
+                "summary": "Show overtime increase for 1 hour and 1 day based on company policy",
                 "operationId": "6ff6777537ce7ac93c9eb3137db2e1b6",
                 "responses": {
                     "200": {
-                        "description": "Current overtime rates",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "success": {
-                                            "type": "boolean",
-                                            "example": true
-                                        },
-                                        "data": {
-                                            "properties": {
-                                                "rate_per_hour": {
-                                                    "type": "number",
-                                                    "format": "float",
-                                                    "nullable": true
-                                                },
-                                                "rate_per_day": {
-                                                    "type": "number",
-                                                    "format": "float",
-                                                    "nullable": true
-                                                },
-                                                "currency": {
-                                                    "type": "string",
-                                                    "example": "SYP"
-                                                }
-                                            },
-                                            "type": "object"
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
+                        "description": "Current overtime rates"
                     }
                 },
                 "security": [
@@ -4691,7 +4659,7 @@
                 "tags": [
                     "Employee Overtime"
                 ],
-                "summary": "Preview estimated overtime pay from company salary rules",
+                "summary": "Preview full overtime increase for selected hours/days",
                 "operationId": "6501223638cf267dca4e2f235b0f28e3",
                 "parameters": [
                     {
@@ -4718,7 +4686,7 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Estimated overtime amount"
+                        "description": "Estimated overtime amount for selected units"
                     }
                 },
                 "security": [
@@ -8527,6 +8495,18 @@
                 ],
                 "summary": "Get salary record details (HR)",
                 "operationId": "c77c4f5a8fdeb0dc3980c8cddcc59fac",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "Salary record UUID",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "Salary details"
@@ -8615,12 +8595,49 @@
                 ]
             }
         },
+        "/api/management/salaries/period-status": {
+            "get": {
+                "tags": [
+                    "Management Salaries"
+                ],
+                "summary": "Payroll period status for Generate button (draft/paid/empty)",
+                "operationId": "1d600cf1fcf4e7e4d3279d48ea8cb9ca",
+                "parameters": [
+                    {
+                        "name": "month",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "year",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Period status including can_generate"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
         "/api/management/salaries/generate": {
             "post": {
                 "tags": [
                     "Management Salaries"
                 ],
-                "summary": "Generate draft salary records for a month",
+                "summary": "Run payroll calculation engine (create/recalculate draft salaries)",
                 "operationId": "07fbf783a7c773bce569a5c289262b56",
                 "requestBody": {
                     "required": true,
@@ -8653,7 +8670,10 @@
                 },
                 "responses": {
                     "201": {
-                        "description": "Draft salaries generated"
+                        "description": "Draft salaries generated/recalculated"
+                    },
+                    "422": {
+                        "description": "Cannot recalculate a closed or paid payroll period"
                     }
                 },
                 "security": [
@@ -8670,9 +8690,74 @@
                 ],
                 "summary": "Mark a salary record as paid/received",
                 "operationId": "cbe2fbce9e349feb3795a847fae595f4",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "Salary record UUID (from GET /api/management/salaries)",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid",
+                            "example": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "Salary marked as paid"
+                    },
+                    "404": {
+                        "description": "Salary record not found"
+                    },
+                    "422": {
+                        "description": "Already paid or before cutoff day"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/management/salaries/pay-period": {
+            "post": {
+                "tags": [
+                    "Management Salaries"
+                ],
+                "summary": "Mark all draft salaries for a month/year as paid",
+                "operationId": "f1518647571a355e1d0f61d829545423",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "month",
+                                    "year"
+                                ],
+                                "properties": {
+                                    "month": {
+                                        "type": "integer",
+                                        "example": 8
+                                    },
+                                    "year": {
+                                        "type": "integer",
+                                        "example": 2026
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Period salaries marked as paid"
+                    },
+                    "422": {
+                        "description": "No records or invalid period"
                     }
                 },
                 "security": [

@@ -10,6 +10,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 
 /**
  * @OA\Tag(
@@ -85,6 +86,13 @@ class ManagementSalaryController extends Controller
      *   summary="Get salary record details (HR)",
      *   tags={"Management Salaries"},
      *   security={{"sanctum":{}}},
+     *   @OA\Parameter(
+     *     name="id",
+     *     in="path",
+     *     required=true,
+     *     description="Salary record UUID",
+     *     @OA\Schema(type="string", format="uuid")
+     *   ),
      *   @OA\Response(response=200, description="Salary details")
      * )
      */
@@ -224,9 +232,49 @@ class ManagementSalaryController extends Controller
     }
 
     /**
+     * @OA\Get(
+     *   path="/api/management/salaries/period-status",
+     *   summary="Payroll period status for Generate button (draft/paid/empty)",
+     *   tags={"Management Salaries"},
+     *   security={{"sanctum":{}}},
+     *   @OA\Parameter(name="month", in="query", required=true, @OA\Schema(type="integer")),
+     *   @OA\Parameter(name="year", in="query", required=true, @OA\Schema(type="integer")),
+     *   @OA\Response(response=200, description="Period status including can_generate")
+     * )
+     */
+    public function periodStatus(Request $request): JsonResponse
+    {
+        $user = auth()->user();
+        if (! $this->canViewSalaries($user)) {
+            return response()->json(['success' => false, 'message' => 'Access denied.'], 403);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'month' => ['required', 'integer', 'min:1', 'max:12'],
+            'year' => ['required', 'integer', 'min:2000', 'max:2100'],
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed.',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        $month = (int) $validator->validated()['month'];
+        $year = (int) $validator->validated()['year'];
+
+        return response()->json([
+            'success' => true,
+            'data' => $this->salaryService->periodStatus($user->company_id, $month, $year),
+        ]);
+    }
+
+    /**
      * @OA\Post(
      *   path="/api/management/salaries/generate",
-     *   summary="Generate draft salary records for a month",
+     *   summary="Run payroll calculation engine (create/recalculate draft salaries)",
      *   tags={"Management Salaries"},
      *   security={{"sanctum":{}}},
      *   @OA\RequestBody(
@@ -238,7 +286,8 @@ class ManagementSalaryController extends Controller
      *       @OA\Property(property="employee_id", type="string", format="uuid", nullable=true)
      *     )
      *   ),
-     *   @OA\Response(response=201, description="Draft salaries generated")
+     *   @OA\Response(response=201, description="Draft salaries generated/recalculated"),
+     *   @OA\Response(response=422, description="Cannot recalculate a closed or paid payroll period")
      * )
      */
     public function generate(Request $request): JsonResponse
@@ -266,46 +315,35 @@ class ManagementSalaryController extends Controller
         $year = (int) $validator->validated()['year'];
         $employeeId = $validator->validated()['employee_id'] ?? null;
 
-        $employeesQuery = Employee::where('company_id', $user->company_id)
-            ->where('is_active', true);
-
-        if ($employeeId) {
-            $employeesQuery->where('id', $employeeId);
+        try {
+            $result = DB::transaction(function () use ($user, $month, $year, $employeeId) {
+                return $this->salaryService->generatePayroll(
+                    $user->company_id,
+                    $month,
+                    $year,
+                    $employeeId
+                );
+            });
+        } catch (\RuntimeException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 422);
         }
 
-        $created = 0;
-        $updated = 0;
-        $skippedPaid = 0;
-
-        DB::transaction(function () use ($employeesQuery, $month, $year, &$created, &$updated, &$skippedPaid) {
-            $employeesQuery->orderBy('id')->chunkById(100, function ($employees) use ($month, $year, &$created, &$updated, &$skippedPaid) {
-                foreach ($employees as $employee) {
-                    $existing = SalaryRecord::where('employee_id', $employee->id)
-                        ->where('month', $month)
-                        ->where('year', $year)
-                        ->first();
-
-                    if ($existing && $this->salaryService->isPaid($existing)) {
-                        $skippedPaid++;
-                        continue;
-                    }
-
-                    $wasNew = $existing === null;
-                    $this->salaryService->ensureDraftRecord($employee, $month, $year);
-                    $wasNew ? $created++ : $updated++;
-                }
-            });
-        });
+        $period = $this->salaryService->periodStatus($user->company_id, $month, $year);
 
         return response()->json([
             'success' => true,
-            'message' => 'Salary drafts generated.',
+            'message' => 'Payroll drafts generated/recalculated successfully.',
             'data' => [
                 'month' => $month,
                 'year' => $year,
-                'created' => $created,
-                'updated' => $updated,
-                'skipped_paid' => $skippedPaid,
+                'created' => $result['created'],
+                'updated' => $result['updated'],
+                'as_of_date' => $result['as_of_date'],
+                'cutoff_day' => SalaryService::PAYROLL_CUTOFF_DAY,
+                'period' => $period,
             ],
         ], 201);
     }
@@ -316,7 +354,16 @@ class ManagementSalaryController extends Controller
      *   summary="Mark a salary record as paid/received",
      *   tags={"Management Salaries"},
      *   security={{"sanctum":{}}},
-     *   @OA\Response(response=200, description="Salary marked as paid")
+     *   @OA\Parameter(
+     *     name="id",
+     *     in="path",
+     *     required=true,
+     *     description="Salary record UUID (from GET /api/management/salaries)",
+     *     @OA\Schema(type="string", format="uuid", example="a1b2c3d4-e5f6-7890-abcd-ef1234567890")
+     *   ),
+     *   @OA\Response(response=200, description="Salary marked as paid"),
+     *   @OA\Response(response=404, description="Salary record not found"),
+     *   @OA\Response(response=422, description="Already paid or before cutoff day")
      * )
      */
     public function pay(string $id): JsonResponse
@@ -324,6 +371,13 @@ class ManagementSalaryController extends Controller
         $user = auth()->user();
         if (! $this->canManageSalaries($user)) {
             return response()->json(['success' => false, 'message' => 'HR access only.'], 403);
+        }
+
+        if (! Str::isUuid($id)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid salary record id. Pass a real UUID, not {id}.',
+            ], 422);
         }
 
         $record = SalaryRecord::where('id', $id)
@@ -337,12 +391,91 @@ class ManagementSalaryController extends Controller
             ], 422);
         }
 
-        $record = $this->salaryService->markPaid($record, $user->id);
+        try {
+            $record = $this->salaryService->markPaid($record, $user->id);
+        } catch (\RuntimeException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 422);
+        }
 
         return response()->json([
             'success' => true,
             'message' => 'Salary marked as paid.',
             'data' => $this->salaryService->serializeDetails($record),
+        ]);
+    }
+
+    /**
+     * @OA\Post(
+     *   path="/api/management/salaries/pay-period",
+     *   summary="Mark all draft salaries for a month/year as paid",
+     *   tags={"Management Salaries"},
+     *   security={{"sanctum":{}}},
+     *   @OA\RequestBody(
+     *     required=true,
+     *     @OA\JsonContent(
+     *       required={"month","year"},
+     *       @OA\Property(property="month", type="integer", example=8),
+     *       @OA\Property(property="year", type="integer", example=2026)
+     *     )
+     *   ),
+     *   @OA\Response(response=200, description="Period salaries marked as paid"),
+     *   @OA\Response(response=422, description="No records or invalid period")
+     * )
+     */
+    public function payPeriod(Request $request): JsonResponse
+    {
+        $user = auth()->user();
+        if (! $this->canManageSalaries($user)) {
+            return response()->json(['success' => false, 'message' => 'HR access only.'], 403);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'month' => ['required', 'integer', 'min:1', 'max:12'],
+            'year' => ['required', 'integer', 'min:2000', 'max:2100'],
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed.',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        $month = (int) $validator->validated()['month'];
+        $year = (int) $validator->validated()['year'];
+
+        try {
+            $result = DB::transaction(function () use ($user, $month, $year) {
+                return $this->salaryService->payPeriod(
+                    $user->company_id,
+                    $month,
+                    $year,
+                    $user->id
+                );
+            });
+        } catch (\RuntimeException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 422);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Payroll period marked as paid.',
+            'data' => [
+                'month' => $month,
+                'year' => $year,
+                'period' => sprintf('%04d-%02d', $year, $month),
+                'paid_count' => $result['paid'],
+                'already_paid_count' => $result['already_paid'],
+                'total_records' => $result['total'],
+                'period_status' => $this->salaryService->periodStatus($user->company_id, $month, $year),
+            ],
         ]);
     }
 

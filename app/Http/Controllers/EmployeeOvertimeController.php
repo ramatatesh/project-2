@@ -61,21 +61,10 @@ class EmployeeOvertimeController extends Controller
     /**
      * @OA\Get(
      *   path="/api/employee/overtime/rates",
-     *   summary="Show current overtime rates per hour and per day based on company salary rules",
+     *   summary="Show overtime increase for 1 hour and 1 day based on company policy",
      *   tags={"Employee Overtime"},
      *   security={{"sanctum":{}}},
-     *   @OA\Response(
-     *     response=200,
-     *     description="Current overtime rates",
-     *     @OA\JsonContent(
-     *       @OA\Property(property="success", type="boolean", example=true),
-     *       @OA\Property(property="data", type="object",
-     *         @OA\Property(property="rate_per_hour", type="number", format="float", nullable=true),
-     *         @OA\Property(property="rate_per_day", type="number", format="float", nullable=true),
-     *         @OA\Property(property="currency", type="string", example="SYP")
-     *       )
-     *     )
-     *   )
+     *   @OA\Response(response=200, description="Current overtime rates")
      * )
      */
     public function rates(): JsonResponse
@@ -97,21 +86,31 @@ class EmployeeOvertimeController extends Controller
             ], 422);
         }
 
+        $rates = $this->overtimeService->rates($employee);
+
         return response()->json([
             'success' => true,
-            'data' => $this->overtimeService->rates($employee),
+            'data' => [
+                // قيمة الزيادة لساعة إضافية واحدة
+                'rate_per_hour' => $rates['rate_per_hour'],
+                // قيمة الزيادة ليوم إضافي واحد
+                'rate_per_day' => $rates['rate_per_day'],
+                'hour_rule_percent' => $rates['hour_rule_percent'],
+                'day_rule_percent' => $rates['day_rule_percent'],
+                'currency' => $rates['currency'],
+            ],
         ]);
     }
 
     /**
      * @OA\Get(
      *   path="/api/employee/overtime/preview",
-     *   summary="Preview estimated overtime pay from company salary rules",
+     *   summary="Preview full overtime increase for selected hours/days",
      *   tags={"Employee Overtime"},
      *   security={{"sanctum":{}}},
      *   @OA\Parameter(name="duration_type", in="query", required=true, @OA\Schema(type="string", enum={"hour","day"})),
      *   @OA\Parameter(name="units", in="query", required=true, @OA\Schema(type="integer", minimum=1)),
-     *   @OA\Response(response=200, description="Estimated overtime amount")
+     *   @OA\Response(response=200, description="Estimated overtime amount for selected units")
      * )
      */
     public function preview(Request $request): JsonResponse
@@ -154,7 +153,18 @@ class EmployeeOvertimeController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => $preview,
+            'data' => [
+                'duration_type' => $preview['duration_type'],
+                'units' => $preview['units'],
+                // قيمة الوحدة الواحدة حسب السياسة
+                'unit_amount' => $preview['unit_amount'],
+                // الزيادة الكاملة لكل الساعات/الأيام المختارة
+                'estimated_amount' => $preview['estimated_amount'],
+                'rate_per_hour' => $preview['rate_per_hour'],
+                'rate_per_day' => $preview['rate_per_day'],
+                'rule_percent' => $preview['rule_percent'],
+                'currency' => $preview['currency'],
+            ],
         ]);
     }
 

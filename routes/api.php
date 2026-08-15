@@ -346,17 +346,21 @@ Route::middleware(['auth:sanctum', 'company.active', 'role:employee,department_m
 
 // Salary viewing (HR Manager & General Manager).
 Route::middleware(['auth:sanctum', 'company.active', 'role:hr_manager,general_manager'])->prefix('management/salaries')->group(function () {
+    $uuid = '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}';
     Route::get('/', [ManagementSalaryController::class, 'index']);
     Route::get('/by-month', [ManagementSalaryController::class, 'byMonth']);
-    Route::get('/employees/{employee}/history', [ManagementSalaryController::class, 'employeeHistory']);
-    Route::get('/{id}', [ManagementSalaryController::class, 'show']);
+    Route::get('/period-status', [ManagementSalaryController::class, 'periodStatus']);
+    Route::get('/employees/{employee}/history', [ManagementSalaryController::class, 'employeeHistory'])->where('employee', $uuid);
+    Route::get('/{id}', [ManagementSalaryController::class, 'show'])->where('id', $uuid);
 });
 
 // Salary generation and payment closing (HR Manager only).
 Route::middleware(['auth:sanctum', 'company.active', 'role:hr_manager'])->prefix('management/salaries')->group(function () {
+    $uuid = '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}';
     Route::post('/generate', [ManagementSalaryController::class, 'generate']);
-    Route::post('/{id}/pay', [ManagementSalaryController::class, 'pay']);
-    Route::post('/{id}/adjustments', [ManagementSalaryController::class, 'addAdjustment']);
+    Route::post('/pay-period', [ManagementSalaryController::class, 'payPeriod']);
+    Route::post('/{id}/pay', [ManagementSalaryController::class, 'pay'])->where('id', $uuid);
+    Route::post('/{id}/adjustments', [ManagementSalaryController::class, 'addAdjustment'])->where('id', $uuid);
 });
 
 // Employee self-service: attendance check-in/check-out via rotating QR code + personal dashboard.

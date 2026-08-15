@@ -74,6 +74,7 @@ class OvertimeService
 
     public function preview(Employee $employee, string $durationType, float $units): array
     {
+        $employee->loadMissing('company');
         $rule = $this->activeRuleFor($employee->company_id, $durationType);
 
         if (! $rule) {
@@ -85,28 +86,41 @@ class OvertimeService
 
         $unitAmount = $this->calculateAmount($employee, $rule, 1);
         $totalAmount = $this->calculateAmount($employee, $rule, $units);
+        $rates = $this->rates($employee);
 
         return [
             'ok' => true,
             'duration_type' => $durationType,
-            'units' => $units,
+            'units' => (int) $units,
             'rule_type' => $rule->rule_type,
-            'rule_value' => $rule->value,
+            'rule_percent' => (float) $rule->value,
             'value_type' => $rule->value_type,
+            // قيمة الزيادة للوحدة الواحدة (ساعة أو يوم) حسب سياسة الشركة
             'unit_amount' => $unitAmount,
+            // الزيادة الكاملة = unit_amount × عدد الوحدات المختارة
             'estimated_amount' => $totalAmount,
+            'rate_per_hour' => $rates['rate_per_hour'],
+            'rate_per_day' => $rates['rate_per_day'],
+            'currency' => $rates['currency'],
         ];
     }
 
+    /**
+     * Current company overtime rates for one hour and one day.
+     */
     public function rates(Employee $employee): array
     {
+        $employee->loadMissing('company');
         $hourRule = $this->activeRuleFor($employee->company_id, OvertimeRequest::DURATION_HOUR);
         $dayRule = $this->activeRuleFor($employee->company_id, OvertimeRequest::DURATION_DAY);
 
         return [
             'rate_per_hour' => $hourRule ? $this->calculateAmount($employee, $hourRule, 1) : null,
             'rate_per_day' => $dayRule ? $this->calculateAmount($employee, $dayRule, 1) : null,
+            'hour_rule_percent' => $hourRule ? (float) $hourRule->value : null,
+            'day_rule_percent' => $dayRule ? (float) $dayRule->value : null,
             'currency' => $employee->company?->payroll_currency ?? 'SYP',
+            'overtime_allowed' => $this->allowsOvertime($employee->company_id),
         ];
     }
 
