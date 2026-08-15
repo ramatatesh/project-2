@@ -4226,6 +4226,145 @@
                 ]
             }
         },
+        "/api/management/employees": {
+            "get": {
+                "tags": [
+                    "Employees"
+                ],
+                "summary": "عرض موظفي القسم الذي يديره مدير القسم الحالي فقط (مع Pagination/Search/Sort/Filter)",
+                "description": "متاح فقط لمدير القسم (Department Manager). يعرض حصراً الموظفين التابعين للقسم/الأقسام التي يديرها (department.manager_id = الموظف الحالي)، بدون أي إمكانية لتمرير department_id من الطلب.",
+                "operationId": "38609e86e470e7f4fab4f4f330decc65",
+                "parameters": [
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 15
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "description": "بحث في الاسم والإيميل والمسمى الوظيفي",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "is_active",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    },
+                    {
+                        "name": "sort_by",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": "hire_date"
+                        }
+                    },
+                    {
+                        "name": "sort_dir",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": "desc"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "قائمة موظفي القسم الذي يديره مدير القسم",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "403": {
+                        "description": "Forbidden (Department Manager only)"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/management/employees/{employee}": {
+            "get": {
+                "tags": [
+                    "Employees"
+                ],
+                "summary": "عرض تفاصيل موظف تابع للقسم الذي يديره مدير القسم الحالي فقط",
+                "description": "متاح فقط لمدير القسم (Department Manager). يرفض الطلب (404) إذا لم يكن الموظف تابعاً لقسم يديره مدير القسم الحالي.",
+                "operationId": "7572ae109ece75381f754868b30363e8",
+                "parameters": [
+                    {
+                        "name": "employee",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "تفاصيل الموظف"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "403": {
+                        "description": "Forbidden (Department Manager only, or no employee record)"
+                    },
+                    "404": {
+                        "description": "Not found / not in a department you manage"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
         "/api/employee/leaves/dashboard": {
             "get": {
                 "tags": [

@@ -452,6 +452,131 @@ class EmployeeController extends Controller
         return Excel::download(new EmployeeTemplateExport, 'employees_template.xlsx');
     }
 
+    /**
+     * @OA\Get(
+     *   path="/api/management/employees",
+     *   summary="عرض موظفي القسم الذي يديره مدير القسم الحالي فقط (مع Pagination/Search/Sort/Filter)",
+     *   description="متاح فقط لمدير القسم (Department Manager). يعرض حصراً الموظفين التابعين للقسم/الأقسام التي يديرها (department.manager_id = الموظف الحالي)، بدون أي إمكانية لتمرير department_id من الطلب.",
+     *   tags={"Employees"},
+     *   security={{"sanctum":{}}},
+     *
+     *   @OA\Parameter(name="page", in="query", required=false, @OA\Schema(type="integer")),
+     *   @OA\Parameter(name="per_page", in="query", required=false, @OA\Schema(type="integer", default=15)),
+     *   @OA\Parameter(name="search", in="query", required=false, @OA\Schema(type="string"), description="بحث في الاسم والإيميل والمسمى الوظيفي"),
+     *   @OA\Parameter(name="is_active", in="query", required=false, @OA\Schema(type="boolean")),
+     *   @OA\Parameter(name="sort_by", in="query", required=false, @OA\Schema(type="string", default="hire_date")),
+     *   @OA\Parameter(name="sort_dir", in="query", required=false, @OA\Schema(type="string", default="desc")),
+     *
+     *   @OA\Response(
+     *     response=200,
+     *     description="قائمة موظفي القسم الذي يديره مدير القسم",
+     *
+     *     @OA\JsonContent(
+     *
+     *       @OA\Property(property="success", type="boolean", example=true),
+     *       @OA\Property(property="data", type="array", @OA\Items(type="object"))
+     *     )
+     *   ),
+     *
+     *   @OA\Response(response=401, description="Unauthenticated"),
+     *   @OA\Response(response=403, description="Forbidden (Department Manager only)")
+     * )
+     */
+    public function myDepartmentEmployees(Request $request): JsonResponse
+    {
+        $user = auth()->user();
+        $companyId = (string) $user->company_id;
+        $managerEmployee = $user->employee;
+
+        if (! $managerEmployee) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Employee record not found.',
+            ], 403);
+        }
+
+        $managedDepartmentIds = Department::where('company_id', $companyId)
+            ->where('manager_id', $managerEmployee->id)
+            ->pluck('id');
+
+        $sortBy = in_array($request->input('sort_by'), ['hire_date', 'created_at', 'job_title', 'base_salary'], true)
+            ? $request->input('sort_by') : 'hire_date';
+        $sortDir = in_array(strtolower($request->input('sort_dir')), ['asc', 'desc'], true)
+            ? strtolower($request->input('sort_dir')) : 'desc';
+
+        $query = Employee::where('company_id', $companyId)
+            ->whereIn('department_id', $managedDepartmentIds)
+            ->with(['user', 'department', 'document']);
+
+        if ($search = $request->input('search')) {
+            $query->where(function ($q) use ($search) {
+                $q->where('job_title', 'ilike', "%{$search}%")
+                    ->orWhereHas('user', function ($u) use ($search) {
+                        $u->where('full_name', 'ilike', "%{$search}%")
+                            ->orWhere('email', 'ilike', "%{$search}%");
+                    });
+            });
+        }
+
+        if ($request->has('is_active')) {
+            $query->where('is_active', filter_var($request->input('is_active'), FILTER_VALIDATE_BOOLEAN));
+        }
+
+        $perPage = (int) ($request->input('per_page', 15));
+        $employees = $query->orderBy($sortBy, $sortDir)->paginate($perPage);
+
+        return response()->json([
+            'success' => true,
+            'data' => EmployeeResource::collection($employees),
+        ]);
+    }
+
+    /**
+     * @OA\Get(
+     *   path="/api/management/employees/{employee}",
+     *   summary="عرض تفاصيل موظف تابع للقسم الذي يديره مدير القسم الحالي فقط",
+     *   description="متاح فقط لمدير القسم (Department Manager). يرفض الطلب (404) إذا لم يكن الموظف تابعاً لقسم يديره مدير القسم الحالي.",
+     *   tags={"Employees"},
+     *   security={{"sanctum":{}}},
+     *
+     *   @OA\Parameter(name="employee", in="path", required=true, @OA\Schema(type="string", format="uuid")),
+     *
+     *   @OA\Response(response=200, description="تفاصيل الموظف"),
+     *   @OA\Response(response=401, description="Unauthenticated"),
+     *   @OA\Response(response=403, description="Forbidden (Department Manager only, or no employee record)"),
+     *   @OA\Response(response=404, description="Not found / not in a department you manage")
+     * )
+     */
+    public function showMyDepartmentEmployee(Employee $employee): JsonResponse
+    {
+        $user = auth()->user();
+        $companyId = (string) $user->company_id;
+        $managerEmployee = $user->employee;
+
+        if (! $managerEmployee) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Employee record not found.',
+            ], 403);
+        }
+
+        $isManaged = Department::where('company_id', $companyId)
+            ->where('manager_id', $managerEmployee->id)
+            ->where('id', $employee->department_id)
+            ->exists();
+
+        if ($employee->company_id !== $companyId || ! $isManaged) {
+            abort(404, 'Employee not found.');
+        }
+
+        $employee->load('user', 'department', 'document');
+
+        return response()->json([
+            'success' => true,
+            'data' => new EmployeeResource($employee),
+        ]);
+    }
+
     protected function currentUserCompanyId(): string
     {
         return (string) auth()->user()->company_id;
