@@ -40,47 +40,47 @@ class PerformanceEvaluationTestSeeder extends Seeder
     private const SCENARIOS = [
         'new' => [
             'email' => 'evaluation-new@khibrat.perf.test',
-            'name' => 'Evaluation Test - New',
+            'name' => 'Ahmad Youssef',
             'scenario' => 'Pending self review, not started (no answers)',
         ],
         'incomplete' => [
             'email' => 'evaluation-incomplete@khibrat.perf.test',
-            'name' => 'Evaluation Test - Incomplete',
+            'name' => 'Rana Idris',
             'scenario' => 'Pending self review with partial draft answers (not submitted)',
         ],
         'completed' => [
             'email' => 'evaluation-completed@khibrat.perf.test',
-            'name' => 'Evaluation Test - Completed',
+            'name' => 'Khaled Barakat',
             'scenario' => 'Self review completed; manager review still pending',
         ],
         'review' => [
             'email' => 'evaluation-review@khibrat.perf.test',
-            'name' => 'Evaluation Test - HR Review',
+            'name' => 'Mona Saleh',
             'scenario' => 'Self+manager completed; ready for HR scoring (pending score)',
         ],
         'finalized' => [
             'email' => 'evaluation-finalized@khibrat.perf.test',
-            'name' => 'Evaluation Test - Finalized',
+            'name' => 'Tariq Hamdan',
             'scenario' => 'All reviews scored and final score finalized',
         ],
         'none' => [
             'email' => 'evaluation-none@khibrat.perf.test',
-            'name' => 'Evaluation Test - No Evaluation',
+            'name' => 'Dana Fares',
             'scenario' => 'Active employee with no reviews in any cycle',
         ],
         'multiple' => [
             'email' => 'evaluation-multiple@khibrat.perf.test',
-            'name' => 'Evaluation Test - Multiple Evaluations',
+            'name' => 'Nour Aziz',
             'scenario' => 'Past finalized cycle + current incomplete self review',
         ],
         'expired' => [
             'email' => 'evaluation-expired@khibrat.perf.test',
-            'name' => 'Evaluation Test - Expired',
+            'name' => 'Samer Qassem',
             'scenario' => 'Pending self review past due_date (status=expired)',
         ],
         'mixed' => [
             'email' => 'evaluation-mixed@khibrat.perf.test',
-            'name' => 'Evaluation Test - Mixed Forms',
+            'name' => 'Lina Zaidan',
             'scenario' => 'Self completed, peer completed, manager still pending',
         ],
     ];
@@ -150,13 +150,13 @@ class PerformanceEvaluationTestSeeder extends Seeder
 
         $gm = $this->upsertUser(
             'evaluation-gm@'.self::DOMAIN,
-            'Evaluation Lab GM',
+            'Layla Haddad',
             Role::GeneralManager->value,
         );
 
         $this->hrUser = $this->upsertUser(
             'evaluation-hr@'.self::DOMAIN,
-            'Evaluation Lab HR',
+            'Youssef Nassar',
             Role::HrManager->value,
         );
 
@@ -173,7 +173,7 @@ class PerformanceEvaluationTestSeeder extends Seeder
 
         $this->managerUser = $this->upsertUser(
             'evaluation-manager@'.self::DOMAIN,
-            'Evaluation Lab Manager',
+            'Omar Al-Khatib',
             Role::DepartmentManager->value,
         );
 
@@ -187,7 +187,7 @@ class PerformanceEvaluationTestSeeder extends Seeder
         // Peer reviewer used only as reviewer_id for TYPE_PEER reviews.
         $this->peerUser = $this->upsertUser(
             'evaluation-peer@'.self::DOMAIN,
-            'Evaluation Lab Peer',
+            'Sara Mansour',
             Role::Employee->value,
         );
         $this->peerEmployee = $this->upsertEmployee(
@@ -545,7 +545,9 @@ class PerformanceEvaluationTestSeeder extends Seeder
         // For closed cycles, scoreReview is blocked — write hr_score + totals manually.
         if ($review->cycle->isClosed()) {
             foreach ($review->answers as $answer) {
-                $answer->update(['hr_score' => $hrScore, 'updated_at' => now()]);
+                if ($answer->question?->response_type === EvaluationTemplateQuestion::RESPONSE_TYPE_RATING) {
+                    $answer->update(['hr_score' => $hrScore, 'updated_at' => now()]);
+                }
             }
             $this->evaluationService->computeReviewScore($review->fresh());
             $this->evaluationService->updateEmployeeScores($review->cycle, $review->employee_id);
@@ -554,7 +556,7 @@ class PerformanceEvaluationTestSeeder extends Seeder
         }
 
         $scores = $review->answers
-            ->filter(fn (EvaluationAnswer $a) => $a->question !== null)
+            ->filter(fn (EvaluationAnswer $a) => $a->question?->response_type === EvaluationTemplateQuestion::RESPONSE_TYPE_RATING)
             ->map(fn (EvaluationAnswer $a) => [
                 'answer_id' => $a->id,
                 'hr_score' => $hrScore,
