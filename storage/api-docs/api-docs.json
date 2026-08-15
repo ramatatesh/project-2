@@ -8296,6 +8296,139 @@
                 ]
             }
         },
+        "/api/management/leaves/{id}/action": {
+            "post": {
+                "tags": [
+                    "Management Leaves"
+                ],
+                "summary": "Approve or reject a leave request (department manager step, then HR step)",
+                "description": "role_context=manager: only the department manager of the employee's department, only while status=pending_department_manager. Approving forwards to pending_hr (after re-checking the leave balance); rejecting sets rejected_by_manager. role_context=hr: only an HR Manager, only while status=pending_hr. Approving sets status=approved (after checking for overlapping requests and the leave balance) and syncs the used balance; rejecting sets rejected_by_hr.",
+                "operationId": "3f51fcf7b35f902d3dba4a4bd080845f",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "action",
+                                    "role_context"
+                                ],
+                                "properties": {
+                                    "action": {
+                                        "type": "string",
+                                        "enum": [
+                                            "approve",
+                                            "reject"
+                                        ]
+                                    },
+                                    "role_context": {
+                                        "type": "string",
+                                        "enum": [
+                                            "manager",
+                                            "hr"
+                                        ]
+                                    },
+                                    "rejection_reason": {
+                                        "description": "Used when action=reject",
+                                        "type": "string",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Action executed successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Leave request forwarded to HR."
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "id": {
+                                                    "type": "string",
+                                                    "format": "uuid"
+                                                },
+                                                "status": {
+                                                    "type": "string",
+                                                    "example": "pending_hr"
+                                                },
+                                                "reviewed_by": {
+                                                    "type": "string",
+                                                    "format": "uuid"
+                                                },
+                                                "reviewed_at": {
+                                                    "type": "string",
+                                                    "format": "date-time"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Wrong role for this role_context, or a department manager who does not manage this employee's department"
+                    },
+                    "404": {
+                        "description": "Leave request not found / not in your company"
+                    },
+                    "422": {
+                        "description": "Wrong workflow state for this role_context, requested duration exceeds remaining leave balance, or (HR step) overlapping dates with another active leave request",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": false
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "remaining_balance": {
+                                            "type": "number",
+                                            "nullable": true
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
         "/api/management/overtime": {
             "get": {
                 "tags": [
