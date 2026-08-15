@@ -77,6 +77,7 @@ Route::middleware(['auth:sanctum', 'company.active'])->prefix('company/profile')
 // is frozen (see EnsureCompanyIsNotFrozen exemptions) so a suspended tenant can pay.
 Route::middleware(['auth:sanctum', 'company.active', 'role:general_manager,hr_manager'])->prefix('company/subscription')->group(function () {
     Route::get('/', [CompanySubscriptionController::class, 'show'])->name('company.subscription.show');
+    Route::get('/usage', [CompanySubscriptionController::class, 'usage'])->name('company.subscription.usage');
     Route::post('/renew', [CompanySubscriptionController::class, 'renew'])->name('company.subscription.renew');
 });
 
@@ -384,6 +385,7 @@ Route::middleware(['auth:sanctum', 'company.active', 'role:hr_manager,general_ma
 // QR code display and manual adjustments: HR Manager & General Manager only.
 Route::middleware(['auth:sanctum', 'company.active', 'role:hr_manager,general_manager'])->prefix('management/attendance')->group(function () {
     Route::get('/qr-code', [ManagementAttendanceController::class, 'qrCode']);
+    Route::post('/register', [ManagementAttendanceController::class, 'register']);
     Route::put('/{attendanceRecord}/adjust', [ManagementAttendanceController::class, 'adjust']);
 });
 

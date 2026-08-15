@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Enums\Role;
 use App\Http\Requests\AttendanceAdjustmentRequest;
+use App\Http\Requests\AttendanceManualRegisterRequest;
 use App\Models\AttendanceRecord;
 use App\Services\AttendanceService;
 use Illuminate\Http\JsonResponse;
@@ -224,6 +225,40 @@ class ManagementAttendanceController extends Controller
             'message' => 'Attendance record adjusted successfully.',
             'data' => $this->mapRecord($record),
         ]);
+    }
+
+    /**
+     * @OA\Post(
+     *   path="/api/management/attendance/register",
+     *   summary="Manually register attendance when employee did not scan QR",
+     *   description="HR / General Manager only. Skips QR and GPS. Creates a new record, or converts an absent record. If a non-absent record already exists, use adjust instead.",
+     *   tags={"Management Attendance"},
+     *   security={{"sanctum":{}}},
+     *   @OA\RequestBody(
+     *     required=true,
+     *     @OA\JsonContent(
+     *       required={"employee_id","check_in_time","reason"},
+     *       @OA\Property(property="employee_id", type="string", format="uuid"),
+     *       @OA\Property(property="work_date", type="string", format="date", nullable=true, example="2026-08-15", description="Defaults to today"),
+     *       @OA\Property(property="check_in_time", type="string", format="date-time", example="2026-08-15 08:05:00"),
+     *       @OA\Property(property="check_out_time", type="string", format="date-time", nullable=true, example="2026-08-15 17:00:00"),
+     *       @OA\Property(property="reason", type="string", example="Employee forgot phone; confirmed presence with department manager")
+     *     )
+     *   ),
+     *   @OA\Response(response=201, description="Attendance registered"),
+     *   @OA\Response(response=404, description="Employee not found"),
+     *   @OA\Response(response=422, description="Validation failed or record already exists")
+     * )
+     */
+    public function register(AttendanceManualRegisterRequest $request): JsonResponse
+    {
+        $record = $this->attendanceService->manualRegister(auth()->user(), $request->validated());
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Attendance registered successfully.',
+            'data' => $this->mapRecord($record->loadMissing(['employee.user', 'employee.department'])),
+        ], 201);
     }
 
     private function rosterFilters(Request $request): array

@@ -2268,6 +2268,28 @@
                 ]
             }
         },
+        "/api/company/subscription/usage": {
+            "get": {
+                "tags": [
+                    "Companies"
+                ],
+                "summary": "Package consumption: employees used and days/months remaining",
+                "operationId": "5f9264e7bd67425f34250b839aea03bd",
+                "responses": {
+                    "200": {
+                        "description": "Subscription package usage"
+                    },
+                    "404": {
+                        "description": "Company not found"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
         "/api/company/subscription/renew": {
             "post": {
                 "tags": [
@@ -8208,6 +8230,75 @@
                     },
                     "422": {
                         "description": "Validation failed"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/management/attendance/register": {
+            "post": {
+                "tags": [
+                    "Management Attendance"
+                ],
+                "summary": "Manually register attendance when employee did not scan QR",
+                "description": "HR / General Manager only. Skips QR and GPS. Creates a new record, or converts an absent record. If a non-absent record already exists, use adjust instead.",
+                "operationId": "6ca0b8ac21913047dc2c9b72c0713852",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "employee_id",
+                                    "check_in_time",
+                                    "reason"
+                                ],
+                                "properties": {
+                                    "employee_id": {
+                                        "type": "string",
+                                        "format": "uuid"
+                                    },
+                                    "work_date": {
+                                        "description": "Defaults to today",
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "2026-08-15",
+                                        "nullable": true
+                                    },
+                                    "check_in_time": {
+                                        "type": "string",
+                                        "format": "date-time",
+                                        "example": "2026-08-15 08:05:00"
+                                    },
+                                    "check_out_time": {
+                                        "type": "string",
+                                        "format": "date-time",
+                                        "example": "2026-08-15 17:00:00",
+                                        "nullable": true
+                                    },
+                                    "reason": {
+                                        "type": "string",
+                                        "example": "Employee forgot phone; confirmed presence with department manager"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Attendance registered"
+                    },
+                    "404": {
+                        "description": "Employee not found"
+                    },
+                    "422": {
+                        "description": "Validation failed or record already exists"
                     }
                 },
                 "security": [
