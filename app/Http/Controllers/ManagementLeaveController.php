@@ -104,6 +104,55 @@ class ManagementLeaveController extends Controller
         ]);
     }
 
+    /**
+     * @OA\Post(
+     *    path="/api/management/leaves/{id}/action",
+     *    summary="Approve or reject a leave request (department manager step, then HR step)",
+     *    description="role_context=manager: only the department manager of the employee's department, only while status=pending_department_manager. Approving forwards to pending_hr (after re-checking the leave balance); rejecting sets rejected_by_manager. role_context=hr: only an HR Manager, only while status=pending_hr. Approving sets status=approved (after checking for overlapping requests and the leave balance) and syncs the used balance; rejecting sets rejected_by_hr.",
+     *    tags={"Management Leaves"},
+     *    security={{"sanctum":{}}},
+     *    @OA\Parameter(
+     *      name="id",
+     *      in="path",
+     *      required=true,
+     *      @OA\Schema(type="string", format="uuid")
+     *    ),
+     *    @OA\RequestBody(
+     *      required=true,
+     *      @OA\JsonContent(
+     *        required={"action","role_context"},
+     *        @OA\Property(property="action", type="string", enum={"approve","reject"}),
+     *        @OA\Property(property="role_context", type="string", enum={"manager","hr"}),
+     *        @OA\Property(property="rejection_reason", type="string", nullable=true, description="Used when action=reject")
+     *      )
+     *    ),
+     *    @OA\Response(
+     *      response=200,
+     *      description="Action executed successfully",
+     *      @OA\JsonContent(
+     *        @OA\Property(property="success", type="boolean", example=true),
+     *        @OA\Property(property="message", type="string", example="Leave request forwarded to HR."),
+     *        @OA\Property(property="data", type="object",
+     *          @OA\Property(property="id", type="string", format="uuid"),
+     *          @OA\Property(property="status", type="string", example="pending_hr"),
+     *          @OA\Property(property="reviewed_by", type="string", format="uuid"),
+     *          @OA\Property(property="reviewed_at", type="string", format="date-time")
+     *        )
+     *      )
+     *    ),
+     *    @OA\Response(response=403, description="Wrong role for this role_context, or a department manager who does not manage this employee's department"),
+     *    @OA\Response(response=404, description="Leave request not found / not in your company"),
+     *    @OA\Response(
+     *      response=422,
+     *      description="Wrong workflow state for this role_context, requested duration exceeds remaining leave balance, or (HR step) overlapping dates with another active leave request",
+     *      @OA\JsonContent(
+     *        @OA\Property(property="success", type="boolean", example=false),
+     *        @OA\Property(property="message", type="string"),
+     *        @OA\Property(property="remaining_balance", type="number", nullable=true)
+     *      )
+     *    )
+     * )
+     */
     public function action(ManagementLeaveActionRequest $request, string $id): JsonResponse
     {
         $user = auth()->user();
