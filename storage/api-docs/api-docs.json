@@ -4527,12 +4527,56 @@
                 ]
             }
         },
+        "/api/employee/leaves/upload-attachment": {
+            "post": {
+                "tags": [
+                    "Employee Leaves"
+                ],
+                "summary": "Upload leave proof file (multipart), same pattern as Excel employee import",
+                "description": "Send multipart/form-data with field name `file` (pdf/jpg/jpeg/png, max 5MB). Returns path to use in apply as attachment_path, or you can send `file` directly on /apply.",
+                "operationId": "fcfae319af49b7c9cc715d9abbfe8114",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "required": [
+                                    "file"
+                                ],
+                                "properties": {
+                                    "file": {
+                                        "description": "Proof document (pdf/jpg/jpeg/png)",
+                                        "type": "string",
+                                        "format": "binary"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "File uploaded"
+                    },
+                    "422": {
+                        "description": "Validation failed"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
         "/api/employee/leaves/apply": {
             "post": {
                 "tags": [
                     "Employee Leaves"
                 ],
                 "summary": "Submit a leave request",
+                "description": "Use multipart/form-data. Proof file: send field `file` (same as Excel import) or `attachment`, or first call upload-attachment and pass `attachment_path`.",
                 "operationId": "cddb5d059f3cdd977d2cf7b7571f9832",
                 "requestBody": {
                     "required": true,
@@ -4579,9 +4623,21 @@
                                         "type": "string",
                                         "nullable": true
                                     },
-                                    "attachment": {
+                                    "file": {
+                                        "description": "Proof file — same field name as Excel import",
                                         "type": "string",
                                         "format": "binary",
+                                        "nullable": true
+                                    },
+                                    "attachment": {
+                                        "description": "Alias of file",
+                                        "type": "string",
+                                        "format": "binary",
+                                        "nullable": true
+                                    },
+                                    "attachment_path": {
+                                        "description": "Path returned by upload-attachment",
+                                        "type": "string",
                                         "nullable": true
                                     }
                                 },
@@ -4596,6 +4652,39 @@
                     },
                     "422": {
                         "description": "Validation failed or insufficient balance"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/employee/leaves/{id}/attachment": {
+            "get": {
+                "tags": [
+                    "Employee Leaves"
+                ],
+                "summary": "Download leave proof file (authenticated, like Excel template download)",
+                "operationId": "cabc1ecf8406ed28c4002563fe53bfea",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "File download"
+                    },
+                    "404": {
+                        "description": "Not found"
                     }
                 },
                 "security": [
@@ -8378,6 +8467,39 @@
                                 }
                             }
                         }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/management/leaves/{id}/attachment": {
+            "get": {
+                "tags": [
+                    "Management Leaves"
+                ],
+                "summary": "Download leave proof file for a request in your company",
+                "operationId": "317c54ae1cda8ad1a3d1a750362a1f23",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "File download"
+                    },
+                    "404": {
+                        "description": "Not found"
                     }
                 },
                 "security": [

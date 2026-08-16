@@ -287,13 +287,16 @@ Route::middleware(['auth:sanctum', 'company.active'])->prefix('evaluations')->gr
 Route::middleware(['auth:sanctum', 'company.active', 'role:employee,department_manager'])->prefix('employee/leaves')->group(function () {
     Route::get('/types', [EmployeeLeaveController::class, 'types']);
     Route::get('/dashboard', [EmployeeLeaveController::class, 'dashboard']);
+    Route::post('/upload-attachment', [EmployeeLeaveController::class, 'uploadAttachment']);
     Route::post('/apply', [EmployeeLeaveController::class, 'apply']);
+    Route::get('/{id}/attachment', [EmployeeLeaveController::class, 'downloadAttachment']);
     Route::post('/{id}/cancel', [EmployeeLeaveController::class, 'cancel']);
 });
 
 // Management approval workflow for leave requests.
 Route::middleware(['auth:sanctum', 'company.active', 'role:department_manager,hr_manager'])->prefix('management/leaves')->group(function () {
     Route::get('/inbox', [ManagementLeaveController::class, 'inbox']);
+    Route::get('/{id}/attachment', [ManagementLeaveController::class, 'downloadAttachment']);
     Route::post('/{id}/action', [ManagementLeaveController::class, 'action']);
 });
 
