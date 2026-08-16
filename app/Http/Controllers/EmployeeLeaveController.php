@@ -8,13 +8,14 @@ use App\Models\LeaveType;
 use App\Services\LeaveBalanceService;
 use App\Services\LeaveDurationService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 /**
  * @OA\Tag(
- *   name="Employee Leaves",
- *   description="Employee leave management endpoints"
+ *    name="Employee Leaves",
+ *    description="Employee leave management endpoints"
  * )
  */
 class EmployeeLeaveController extends Controller
@@ -25,50 +26,37 @@ class EmployeeLeaveController extends Controller
     ) {
     }
 
-    /**
-     * Primary leave type used for the dashboard summary totals
-     * (allowed / used / remaining days shown in the web UI).
-     */
     private const PRIMARY_LEAVE_TYPE_NAME = 'Paid Free Days Leave Allocation';
 
     /**
      * @OA\Get(
-     *   path="/api/employee/leaves/dashboard",
-     *   summary="Leave balance and history for the current employee",
-     *   tags={"Employee Leaves"},
-     *   security={{"sanctum":{}}},
-     *   @OA\Response(
-     *     response=200,
-     *     description="Current year leave dashboard",
-     *     @OA\JsonContent(
-     *       @OA\Property(property="success", type="boolean", example=true),
-     *       @OA\Property(property="data", type="object",
-     *         @OA\Property(property="total_allowed_days", type="integer", description="Paid Free Days Leave Allocation only"),
-     *         @OA\Property(property="total_used_days", type="integer", description="Paid Free Days Leave Allocation only"),
-     *         @OA\Property(property="remaining_days", type="integer", description="Paid Free Days Leave Allocation only"),
-     *         @OA\Property(property="balances", type="array",
-     *           @OA\Items(
-     *             @OA\Property(property="id", type="string", format="uuid"),
-     *             @OA\Property(property="name", type="string"),
-     *             @OA\Property(property="allocation_value", type="integer"),
-     *             @OA\Property(property="used_value", type="integer"),
-     *             @OA\Property(property="remaining_value", type="integer")
-     *           )
-     *         ),
-     *         @OA\Property(property="leave_history", type="array",
-     *           @OA\Items(
-     *             @OA\Property(property="id", type="string", format="uuid"),
-     *             @OA\Property(property="leave_type_name", type="string"),
-     *             @OA\Property(property="start_date", type="string", format="date"),
-     *             @OA\Property(property="duration_days", type="integer"),
-     *             @OA\Property(property="status", type="string")
-     *           )
-     *         )
-     *       )
-     *     )
-     *   ),
-     *   @OA\Response(response=401, description="Unauthenticated"),
-     *   @OA\Response(response=403, description="No employee record found")
+     *    path="/api/employee/leaves/dashboard",
+     *    summary="Leave balance and history for the current employee",
+     *    tags={"Employee Leaves"},
+     *    security={{"sanctum":{}}},
+     *    @OA\Response(
+     *      response=200,
+     *      description="Current year leave dashboard",
+     *      @OA\JsonContent(
+     *        @OA\Property(property="success", type="boolean", example=true),
+     *        @OA\Property(property="data", type="object",
+     *          @OA\Property(property="total_allowed_days", type="integer"),
+     *          @OA\Property(property="total_used_days", type="integer"),
+     *          @OA\Property(property="remaining_days", type="integer"),
+     *          @OA\Property(property="balances", type="array", @OA\Items(type="object")),
+     *          @OA\Property(property="leave_history", type="array",
+     *            @OA\Items(
+     *              @OA\Property(property="id", type="string", format="uuid"),
+     *              @OA\Property(property="leave_type_name", type="string"),
+     *              @OA\Property(property="start_date", type="string", format="date"),
+     *              @OA\Property(property="duration_days", type="integer"),
+     *              @OA\Property(property="status", type="string"),
+     *              @OA\Property(property="attachment_url", type="string", nullable=true)
+     *            )
+     *          )
+     *        )
+     *      )
+     *    )
      * )
      */
     public function dashboard(): JsonResponse
@@ -100,8 +88,6 @@ class EmployeeLeaveController extends Controller
             $used = (float) $balance->used_days;
             $remaining = (float) $balance->remaining_days;
 
-            // Summary totals must reflect Paid Free Days Leave Allocation only —
-            // not the sum of sick/study/travel/maternity/etc. leave types.
             if ($this->isPrimaryLeaveType($leaveType->name)) {
                 $totalAllowed = (float) $balance->total_days;
                 $totalUsed = $used;
@@ -130,6 +116,7 @@ class EmployeeLeaveController extends Controller
                     'start_date' => $leaveRequest->start_date?->toDateString(),
                     'duration_days' => (int) $leaveRequest->requested_value,
                     'status' => $this->resolveHistoryStatus($leaveRequest),
+                    'attachment_url' => $leaveRequest->attachment_url, // تم إضافته هنا
                 ];
             });
 
@@ -144,30 +131,29 @@ class EmployeeLeaveController extends Controller
             ],
         ]);
     }
-
-    /**
+/**
      * @OA\Get(
-     *   path="/api/employee/leaves/types",
-     *   summary="Fetch dynamic leave types for the current employee's company",
-     *   tags={"Employee Leaves"},
-     *   security={{"sanctum":{}}},
-     *   @OA\Response(
-     *     response=200,
-     *     description="Active leave types for the company",
-     *     @OA\JsonContent(
-     *       @OA\Property(property="success", type="boolean", example=true),
-     *       @OA\Property(property="data", type="array",
-     *         @OA\Items(
-     *           @OA\Property(property="id", type="string", format="uuid"),
-     *           @OA\Property(property="name", type="string"),
-     *           @OA\Property(property="allocation_value", type="integer"),
-     *           @OA\Property(property="allocation_unit", type="string"),
-     *           @OA\Property(property="requires_proof", type="boolean")
-     *         )
-     *       )
-     *     )
-     *   ),
-     *   @OA\Response(response=401, description="Unauthenticated")
+     *    path="/api/employee/leaves/types",
+     *    summary="Fetch dynamic leave types for the current employee's company",
+     *    tags={"Employee Leaves"},
+     *    security={{"sanctum":{}}},
+     *    @OA\Response(
+     *      response=200,
+     *      description="Active leave types for the company",
+     *      @OA\JsonContent(
+     *        @OA\Property(property="success", type="boolean", example=true),
+     *        @OA\Property(property="data", type="array",
+     *          @OA\Items(
+     *            @OA\Property(property="id", type="string", format="uuid"),
+     *            @OA\Property(property="name", type="string"),
+     *            @OA\Property(property="allocation_value", type="integer"),
+     *            @OA\Property(property="allocation_unit", type="string"),
+     *            @OA\Property(property="requires_proof", type="boolean")
+     *          )
+     *        )
+     *      )
+     *    ),
+     *    @OA\Response(response=401, description="Unauthenticated")
      * )
      */
     public function types(): JsonResponse
@@ -183,35 +169,31 @@ class EmployeeLeaveController extends Controller
             'data' => $leaveTypes,
         ]);
     }
-
-    /**
+/**
      * @OA\Post(
-     *   path="/api/employee/leaves/apply",
-     *   summary="Submit a leave request",
-     *   tags={"Employee Leaves"},
-     *   security={{"sanctum":{}}},
-     *   @OA\RequestBody(
-     *     required=true,
-     *     @OA\MediaType(
-     *       mediaType="multipart/form-data",
-     *       @OA\Schema(
-     *         required={"leave_type_id","duration_type","start_date"},
-     *         @OA\Property(property="leave_type_id", type="string", format="uuid"),
-     *         @OA\Property(property="duration_type", type="string", enum={"single_day","multiple_days"}),
-     *         @OA\Property(property="start_date", type="string", format="date"),
-     *         @OA\Property(property="end_date", type="string", format="date", nullable=true),
-     *         @OA\Property(property="start_time", type="string", format="time", nullable=true),
-     *         @OA\Property(property="end_time", type="string", format="time", nullable=true),
-     *         @OA\Property(property="reason", type="string", nullable=true),
-     *         @OA\Property(property="attachment", type="string", format="binary", nullable=true)
-     *       )
-     *     )
-     *   ),
-     *   @OA\Response(
-     *     response=201,
-     *     description="Leave request submitted successfully"
-     *   ),
-     *   @OA\Response(response=422, description="Validation failed or insufficient balance")
+     *    path="/api/employee/leaves/apply",
+     *    summary="Submit a leave request",
+     *    tags={"Employee Leaves"},
+     *    security={{"sanctum":{}}},
+     *    @OA\RequestBody(
+     *      required=true,
+     *      @OA\MediaType(
+     *        mediaType="multipart/form-data",
+     *        @OA\Schema(
+     *          required={"leave_type_id","duration_type","start_date"},
+     *          @OA\Property(property="leave_type_id", type="string", format="uuid"),
+     *          @OA\Property(property="duration_type", type="string", enum={"single_day","multiple_days"}),
+     *          @OA\Property(property="start_date", type="string", format="date"),
+     *          @OA\Property(property="end_date", type="string", format="date", nullable=true),
+     *          @OA\Property(property="start_time", type="string", format="time", nullable=true),
+     *          @OA\Property(property="end_time", type="string", format="time", nullable=true),
+     *          @OA\Property(property="reason", type="string", nullable=true),
+     *          @OA\Property(property="attachment", type="string", format="binary", nullable=true)
+     *        )
+     *      )
+     *    ),
+     *    @OA\Response(response=201, description="Leave request submitted successfully"),
+     *    @OA\Response(response=422, description="Validation failed or insufficient balance")
      * )
      */
     public function apply(EmployeeLeaveRequest $request): JsonResponse
@@ -250,7 +232,7 @@ class EmployeeLeaveController extends Controller
         if ($durationDays <= 0) {
             return response()->json([
                 'success' => false,
-                'message' => 'Requested period contains no working days (weekly holidays / public holidays only).',
+                'message' => 'Requested period contains no working days.',
             ], 422);
         }
 
@@ -272,8 +254,6 @@ class EmployeeLeaveController extends Controller
             $attachmentUrl = Storage::disk('public')->url($path);
         }
 
-        // A department manager applying for their own leave can't review their own request -
-        // skip the manager step and send it straight to HR.
         $employee->loadMissing('department');
         $isOwnDepartmentManager = (bool) ($employee->department && $employee->department->manager_id === $employee->id);
 
@@ -299,10 +279,86 @@ class EmployeeLeaveController extends Controller
         ], 201);
     }
 
+    /**
+     * @OA\Post(
+     *    path="/api/employee/leaves/{id}/cancel",
+     *    summary="Cancel a leave request",
+     *    tags={"Employee Leaves"},
+     *    security={{"sanctum":{}}},
+     *    @OA\Parameter(
+     *      name="id",
+     *      in="path",
+     *      required=true,
+     *      @OA\Schema(type="string", format="uuid")
+     *    ),
+     *    @OA\Response(response=200, description="Leave request cancelled successfully"),
+     *    @OA\Response(response=422, description="Cannot cancel completed or past leaves")
+     * )
+     */
+    public function cancel(string $id): JsonResponse
+    {
+        $user = auth()->user();
+        $employee = $user?->employee;
+
+        if (! $employee) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Employee record not found.',
+            ], 403);
+        }
+
+        return DB::transaction(function () use ($id, $employee) {
+            $leaveRequest = LeaveRequest::where('id', $id)
+                ->where('employee_id', $employee->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            // لا يمكن إلغاء الطلبات الملغاة أو المرفوضة سابقاً
+            if (in_array($leaveRequest->status, ['cancelled', 'rejected_by_manager', 'rejected_by_hr'])) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Leave request is already in a non-cancellable state.',
+                ], 422);
+            }
+
+            // إذا كانت الإجازة مقبولة وانتهت بالفعل، لا يمكن إلغاؤها
+            if ($leaveRequest->status === 'approved' && $leaveRequest->end_date && $leaveRequest->end_date->isPast()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Cannot cancel a completed past leave.',
+                ], 422);
+            }
+
+            $wasApproved = ($leaveRequest->status === 'approved');
+
+            $leaveRequest->status = 'cancelled';
+            $leaveRequest->save();
+
+            // إذا كانت الإجازة مقبولة مسبقاً، يجب إعادتها لرصيد الموظف ومزامنة الأيام المستهلكة
+            if ($wasApproved && $leaveRequest->leaveType) {
+                $year = (int) $leaveRequest->start_date->year;
+                $this->leaveBalanceService->syncUsedDays($employee, $leaveRequest->leaveType, $year);
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Leave request cancelled successfully.',
+                'data' => [
+                    'id' => $leaveRequest->id,
+                    'status' => $leaveRequest->status,
+                ],
+            ]);
+        });
+    }
+
     private function resolveHistoryStatus(LeaveRequest $leaveRequest): string
     {
         if (str_starts_with($leaveRequest->status, 'rejected')) {
             return 'rejected';
+        }
+
+        if ($leaveRequest->status === 'cancelled') {
+            return 'cancelled';
         }
 
         if ($leaveRequest->status === 'approved' && $leaveRequest->end_date && $leaveRequest->end_date->isPast()) {

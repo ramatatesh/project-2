@@ -83,6 +83,7 @@ Route::middleware(['auth:sanctum', 'company.active'])->prefix('company/profile')
 // is frozen (see EnsureCompanyIsNotFrozen exemptions) so a suspended tenant can pay.
 Route::middleware(['auth:sanctum', 'company.active', 'role:general_manager,hr_manager'])->prefix('company/subscription')->group(function () {
     Route::get('/', [CompanySubscriptionController::class, 'show'])->name('company.subscription.show');
+    Route::get('/usage', [CompanySubscriptionController::class, 'usage'])->name('company.subscription.usage');
     Route::post('/renew', [CompanySubscriptionController::class, 'renew'])->name('company.subscription.renew');
 });
 
@@ -211,6 +212,12 @@ Route::middleware(['auth:sanctum', 'company.active', 'role:hr_manager,general_ma
     Route::get('/departments/{department}', [DepartmentController::class, 'show']);
     Route::get('/departments/{department}/employees', [EmployeeController::class, 'byDepartment']);
     Route::get('/employees', [EmployeeController::class, 'index']);
+
+
+    Route::get('/employees/{employee}', [EmployeeController::class, 'show']);
+    Route::delete('/employees/{employee}', [EmployeeController::class, 'destroy']);
+
+    Route::get('/employees/{employee}', [EmployeeController::class, 'show']);
 });
 
 // HR Dashboard area: Departments & Employees management (HR Manager only).
@@ -225,7 +232,6 @@ Route::middleware(['auth:sanctum', 'company.active', 'role:hr_manager'])->prefix
     // Employees
     Route::get('/employees/import/template', [EmployeeController::class, 'downloadTemplate']);
     Route::post('/employees', [EmployeeController::class, 'store']);
-    Route::get('/employees/{employee}', [EmployeeController::class, 'show']);
     Route::put('/employees/{employee}', [EmployeeController::class, 'update']);
     Route::delete('/employees/{employee}', [EmployeeController::class, 'destroy']);
     Route::post('/employees/import', [EmployeeController::class, 'import']);
@@ -288,12 +294,21 @@ Route::middleware(['auth:sanctum', 'company.active', 'role:employee,department_m
     Route::get('/types', [EmployeeLeaveController::class, 'types']);
     Route::get('/dashboard', [EmployeeLeaveController::class, 'dashboard']);
     Route::post('/apply', [EmployeeLeaveController::class, 'apply']);
+    Route::post('/{id}/cancel', [EmployeeLeaveController::class, 'cancel']);
 });
 
 // Management approval workflow for leave requests.
 Route::middleware(['auth:sanctum', 'company.active', 'role:department_manager,hr_manager'])->prefix('management/leaves')->group(function () {
     Route::get('/inbox', [ManagementLeaveController::class, 'inbox']);
     Route::post('/{id}/action', [ManagementLeaveController::class, 'action']);
+});
+
+// Department Manager: view employees within the department(s) they manage only.
+// Company/department isolation is enforced per-request from the authenticated user's
+// own employee record (department.manager_id) - no department_id is accepted from the client.
+Route::middleware(['auth:sanctum', 'company.active', 'role:department_manager'])->prefix('management/employees')->group(function () {
+    Route::get('/', [EmployeeController::class, 'myDepartmentEmployees']);
+    Route::get('/{employee}', [EmployeeController::class, 'showMyDepartmentEmployee']);
 });
 
 // Employee self-service: salary advances (السُلف المالية).
@@ -338,16 +353,21 @@ Route::middleware(['auth:sanctum', 'company.active', 'role:employee,department_m
 
 // Salary viewing (HR Manager & General Manager).
 Route::middleware(['auth:sanctum', 'company.active', 'role:hr_manager,general_manager'])->prefix('management/salaries')->group(function () {
+    $uuid = '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}';
     Route::get('/', [ManagementSalaryController::class, 'index']);
     Route::get('/by-month', [ManagementSalaryController::class, 'byMonth']);
-    Route::get('/employees/{employee}/history', [ManagementSalaryController::class, 'employeeHistory']);
-    Route::get('/{id}', [ManagementSalaryController::class, 'show']);
+    Route::get('/period-status', [ManagementSalaryController::class, 'periodStatus']);
+    Route::get('/employees/{employee}/history', [ManagementSalaryController::class, 'employeeHistory'])->where('employee', $uuid);
+    Route::get('/{id}', [ManagementSalaryController::class, 'show'])->where('id', $uuid);
 });
 
 // Salary generation and payment closing (HR Manager only).
 Route::middleware(['auth:sanctum', 'company.active', 'role:hr_manager'])->prefix('management/salaries')->group(function () {
+    $uuid = '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}';
     Route::post('/generate', [ManagementSalaryController::class, 'generate']);
-    Route::post('/{id}/pay', [ManagementSalaryController::class, 'pay']);
+    Route::post('/pay-period', [ManagementSalaryController::class, 'payPeriod']);
+    Route::post('/{id}/pay', [ManagementSalaryController::class, 'pay'])->where('id', $uuid);
+    Route::post('/{id}/adjustments', [ManagementSalaryController::class, 'addAdjustment'])->where('id', $uuid);
 });
 
 // Employee self-service: attendance check-in/check-out via rotating QR code + personal dashboard.
@@ -371,6 +391,7 @@ Route::middleware(['auth:sanctum', 'company.active', 'role:hr_manager,general_ma
 // QR code display and manual adjustments: HR Manager & General Manager only.
 Route::middleware(['auth:sanctum', 'company.active', 'role:hr_manager,general_manager'])->prefix('management/attendance')->group(function () {
     Route::get('/qr-code', [ManagementAttendanceController::class, 'qrCode']);
+    Route::post('/register', [ManagementAttendanceController::class, 'register']);
     Route::put('/{attendanceRecord}/adjust', [ManagementAttendanceController::class, 'adjust']);
 });
 

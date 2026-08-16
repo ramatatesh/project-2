@@ -319,6 +319,133 @@ class AttendanceService
         });
     }
 
+    /**
+     * HR / General Manager manual attendance when the employee did not scan the QR code.
+     * Skips QR + GPS. Creates a new record, or converts an absent row via adjust().
+     */
+    public function manualRegister(User $actor, array $data): AttendanceRecord
+    {
+        $companyId = $actor->company_id;
+        $employee = Employee::where('id', $data['employee_id'])
+            ->where('company_id', $companyId)
+            ->first();
+
+        if (! $employee) {
+            throw new HttpResponseException(response()->json([
+                'success' => false,
+                'message' => 'Employee not found in your company.',
+            ], 404));
+        }
+
+        if (! $employee->is_active) {
+            throw new HttpResponseException(response()->json([
+                'success' => false,
+                'message' => 'Cannot register attendance for an inactive employee.',
+            ], 422));
+        }
+
+        $workDate = Carbon::parse($data['work_date'] ?? now()->toDateString())->startOfDay();
+        $checkIn = Carbon::parse($data['check_in_time']);
+        $checkOut = filled($data['check_out_time'] ?? null)
+            ? Carbon::parse($data['check_out_time'])
+            : null;
+
+        $policy = AttendancePolicy::where('company_id', $companyId)->first();
+
+        $isHoliday = Holiday::where('company_id', $companyId)
+            ->get()
+            ->contains(fn (Holiday $holiday) => $holiday->occursOn($workDate));
+
+        if ($isHoliday) {
+            throw new HttpResponseException(response()->json([
+                'success' => false,
+                'message' => 'Cannot register attendance on an official company holiday.',
+            ], 422));
+        }
+
+        if (! $this->isWorkDay($workDate, $policy)) {
+            throw new HttpResponseException(response()->json([
+                'success' => false,
+                'message' => 'Cannot register attendance on a weekly day off.',
+            ], 422));
+        }
+
+        $existing = AttendanceRecord::where('company_id', $companyId)
+            ->where('employee_id', $employee->id)
+            ->whereDate('work_date', $workDate->toDateString())
+            ->first();
+
+        if ($existing) {
+            if ($existing->status === AttendanceRecord::STATUS_ABSENT
+                || ($existing->check_in_time === null && $existing->check_out_time === null)
+            ) {
+                $record = $this->adjust($existing, $actor, [
+                    'new_check_in' => $checkIn->toDateTimeString(),
+                    'new_check_out' => $checkOut?->toDateTimeString(),
+                    'reason' => $data['reason'],
+                ]);
+
+                $record->notes = $data['reason'];
+                $record->save();
+
+                return $record->fresh(['employee.user', 'employee.department']);
+            }
+
+            throw new HttpResponseException(response()->json([
+                'success' => false,
+                'message' => 'Attendance already exists for this employee on this date. Use adjust instead.',
+                'attendance_record_id' => $existing->id,
+            ], 422));
+        }
+
+        return DB::transaction(function () use ($actor, $companyId, $employee, $workDate, $checkIn, $checkOut, $policy, $data) {
+            $isWorkDay = true;
+            $lateMinutes = $this->computeLateMinutes($workDate, $policy, $checkIn);
+            $earlyLeaveMinutes = $checkOut
+                ? $this->computeEarlyLeaveMinutes($workDate, $policy, $checkOut)
+                : 0;
+
+            $record = AttendanceRecord::create([
+                'id' => Str::uuid()->toString(),
+                'company_id' => $companyId,
+                'employee_id' => $employee->id,
+                'work_date' => $workDate->toDateString(),
+                'check_in_time' => $checkIn,
+                'check_out_time' => $checkOut,
+                'check_in_lat' => null,
+                'check_in_lng' => null,
+                'check_out_lat' => null,
+                'check_out_lng' => null,
+                'check_in_device_id' => null,
+                'qr_token_used' => null,
+                'late_minutes' => $lateMinutes,
+                'early_leave_minutes' => $earlyLeaveMinutes,
+                'total_work_minutes' => $checkOut
+                    ? (int) round($checkIn->diffInMinutes($checkOut))
+                    : null,
+                'status' => $checkOut
+                    ? AttendanceRecord::STATUS_COMPLETED
+                    : AttendanceRecord::STATUS_CHECKED_IN,
+                'attendance_type' => $this->classifyAttendanceType($isWorkDay, $lateMinutes, $earlyLeaveMinutes),
+                'notes' => $data['reason'],
+            ]);
+
+            AttendanceAdjustment::create([
+                'id' => Str::uuid()->toString(),
+                'company_id' => $companyId,
+                'attendance_record_id' => $record->id,
+                'adjusted_by' => $actor->id,
+                'old_check_in' => null,
+                'new_check_in' => $checkIn,
+                'old_check_out' => null,
+                'new_check_out' => $checkOut,
+                'reason' => $data['reason'],
+            ]);
+
+            return $record->fresh(['employee.user', 'employee.department']);
+        });
+    }
+
     /*
     |--------------------------------------------------------------------------
     | Daily roster (all active employees + live status for a date)

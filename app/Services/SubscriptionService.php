@@ -15,8 +15,9 @@ use Illuminate\Support\Str;
 
 class SubscriptionService
 {
-    public function __construct(private readonly StripeService $stripeService)
+    protected function stripe(): StripeService
     {
+        return app(StripeService::class);
     }
 
     public function registerCompany(array $data): array
@@ -98,7 +99,7 @@ class SubscriptionService
 
         // في حال كانت الباقة مدفوعة (Paid Plan): لا يتم إنشاء أي بيانات في النظام هنا إطلاقاً.
         // يتم فقط إنشاء Stripe Checkout Session، وإنشاء الشركة/الاشتراك يحدث لاحقاً داخل الـ Webhook بعد نجاح الدفع فعلياً.
-        $session = $this->stripeService->createRegistrationCheckoutSession($plan, $data);
+        $session = $this->stripe()->createRegistrationCheckoutSession($plan, $data);
 
         return [
             'success' => true,
@@ -337,7 +338,7 @@ class SubscriptionService
             return ['success' => false, 'message' => 'Renewal requires a paid subscription plan.'];
         }
 
-        $session = $this->stripeService->createRenewalCheckoutSession($company, $plan);
+        $session = $this->stripe()->createRenewalCheckoutSession($company, $plan);
 
         return [
             'success' => true,
@@ -495,5 +496,98 @@ class SubscriptionService
         }
 
         return true;
+    }
+
+    /**
+     * Package consumption + remaining time for the company's current subscription.
+     *
+     * @return array{
+     *   company_id: string,
+     *   company_status: string,
+     *   subscription: array<string, mixed>|null,
+     *   employees: array{used: int, max: int|null, remaining: int|null, usage_percent: float|null},
+     *   period: array{
+     *     total_days: int|null,
+     *     days_elapsed: int|null,
+     *     days_remaining: int|null,
+     *     months_remaining: int|null,
+     *     is_expired: bool
+     *   }
+     * }
+     */
+    public function getPackageUsage(Company $company): array
+    {
+        $company->loadMissing(['subscriptions.plan']);
+
+        $current = $company->subscriptions
+            ->sortByDesc(fn (Subscription $subscription) => optional($subscription->end_date)?->timestamp ?? 0)
+            ->first();
+
+        $employeesUsed = $company->employees()->count();
+        $employeesActive = $company->employees()->where('is_active', true)->count();
+        $maxEmployees = $current?->plan?->max_employees;
+
+        $employeesRemaining = $maxEmployees !== null
+            ? max(0, (int) $maxEmployees - $employeesUsed)
+            : null;
+
+        $usagePercent = $maxEmployees !== null && (int) $maxEmployees > 0
+            ? round(min(100, ($employeesUsed / (int) $maxEmployees) * 100), 2)
+            : null;
+
+        $today = now()->startOfDay();
+        $start = $current?->start_date?->copy()->startOfDay();
+        $end = $current?->end_date?->copy()->startOfDay();
+
+        $isExpired = $end ? $today->gt($end) : false;
+        $totalDays = ($start && $end) ? max(0, $start->diffInDays($end)) : null;
+        $daysElapsed = null;
+        $daysRemaining = null;
+        $monthsRemaining = null;
+
+        if ($start && $end) {
+            if ($today->lt($start)) {
+                $daysElapsed = 0;
+                $daysRemaining = $start->diffInDays($end);
+            } elseif ($isExpired) {
+                $daysElapsed = $totalDays;
+                $daysRemaining = 0;
+            } else {
+                $daysElapsed = $start->diffInDays($today);
+                $daysRemaining = $today->diffInDays($end);
+            }
+
+            $monthsRemaining = $isExpired ? 0 : (int) $today->diffInMonths($end);
+        }
+
+        return [
+            'company_id' => $company->id,
+            'company_status' => $company->status,
+            'subscription' => $current ? [
+                'id' => $current->id,
+                'status' => $current->status,
+                'plan_id' => $current->plan_id,
+                'plan_name' => $current->plan?->name,
+                'plan_type' => $current->plan_type,
+                'billing_period' => $current->plan?->billing_period,
+                'price' => $current->plan?->price !== null ? (float) $current->plan->price : null,
+                'start_date' => optional($current->start_date)?->toDateString(),
+                'end_date' => optional($current->end_date)?->toDateString(),
+            ] : null,
+            'employees' => [
+                'used' => $employeesUsed,
+                'active' => $employeesActive,
+                'max' => $maxEmployees !== null ? (int) $maxEmployees : null,
+                'remaining' => $employeesRemaining,
+                'usage_percent' => $usagePercent,
+            ],
+            'period' => [
+                'total_days' => $totalDays,
+                'days_elapsed' => $daysElapsed,
+                'days_remaining' => $daysRemaining,
+                'months_remaining' => $monthsRemaining,
+                'is_expired' => $isExpired || ($current && $current->status === 'expired'),
+            ],
+        ];
     }
 }

@@ -54,6 +54,30 @@ class CompanySubscriptionController extends Controller
     }
 
     /**
+     * @OA\Get(
+     *   path="/api/company/subscription/usage",
+     *   summary="Package consumption: employees used and days/months remaining",
+     *   tags={"Companies"},
+     *   security={{"sanctum":{}}},
+     *   @OA\Response(response=200, description="Subscription package usage"),
+     *   @OA\Response(response=404, description="Company not found")
+     * )
+     */
+    public function usage(): JsonResponse
+    {
+        $company = auth()->user()->company;
+
+        if (! $company) {
+            return response()->json(['success' => false, 'message' => 'Company not found.'], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => $this->subscriptionService->getPackageUsage($company),
+        ]);
+    }
+
+    /**
      * @OA\Post(
      *   path="/api/company/subscription/renew",
      *   summary="Start a Stripe Checkout session to renew the current company's subscription",

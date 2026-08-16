@@ -350,6 +350,87 @@ class AttendanceTest extends TestCase
         ]);
     }
 
+    public function test_hr_can_manually_register_attendance_without_qr(): void
+    {
+        AttendancePolicy::create([
+            'id' => Str::uuid()->toString(),
+            'company_id' => $this->company->id,
+            'work_start_time' => '08:00:00',
+            'work_end_time' => '17:00:00',
+            'allowed_late_minutes' => 15,
+            'allowed_early_leave_minutes' => 15,
+        ]);
+
+        $today = Carbon::today();
+
+        $this->actingAs($this->hrManager);
+
+        $response = $this->postJson('/api/management/attendance/register', [
+            'employee_id' => $this->employee->id,
+            'work_date' => $today->toDateString(),
+            'check_in_time' => $today->copy()->setTime(9, 0)->toDateTimeString(),
+            'check_out_time' => $today->copy()->setTime(17, 0)->toDateTimeString(),
+            'reason' => 'Employee forgot phone; confirmed by department manager.',
+        ]);
+
+        $response->assertStatus(201);
+        $response->assertJsonPath('data.late_minutes', 45);
+        $response->assertJsonPath('data.attendance_type', AttendanceRecord::TYPE_LATE);
+        $response->assertJsonPath('data.status', AttendanceRecord::STATUS_COMPLETED);
+
+        $this->assertDatabaseHas('attendance_records', [
+            'employee_id' => $this->employee->id,
+            'work_date' => $today->toDateString(),
+            'status' => AttendanceRecord::STATUS_COMPLETED,
+        ]);
+
+        $this->assertDatabaseHas('attendance_adjustments', [
+            'adjusted_by' => $this->hrManager->id,
+            'reason' => 'Employee forgot phone; confirmed by department manager.',
+        ]);
+    }
+
+    public function test_manual_register_converts_absent_record(): void
+    {
+        AttendancePolicy::create([
+            'id' => Str::uuid()->toString(),
+            'company_id' => $this->company->id,
+            'work_start_time' => '08:00:00',
+            'work_end_time' => '17:00:00',
+            'allowed_late_minutes' => 0,
+            'allowed_early_leave_minutes' => 0,
+        ]);
+
+        $today = Carbon::today();
+
+        $absent = AttendanceRecord::create([
+            'id' => Str::uuid()->toString(),
+            'company_id' => $this->company->id,
+            'employee_id' => $this->employee->id,
+            'work_date' => $today->toDateString(),
+            'check_in_time' => null,
+            'check_out_time' => null,
+            'late_minutes' => 0,
+            'early_leave_minutes' => 0,
+            'status' => AttendanceRecord::STATUS_ABSENT,
+            'attendance_type' => AttendanceRecord::TYPE_ABSENT,
+        ]);
+
+        $this->actingAs($this->hrManager);
+
+        $response = $this->postJson('/api/management/attendance/register', [
+            'employee_id' => $this->employee->id,
+            'work_date' => $today->toDateString(),
+            'check_in_time' => $today->copy()->setTime(8, 0)->toDateTimeString(),
+            'reason' => 'Was present; missed QR scan.',
+        ]);
+
+        $response->assertStatus(201);
+        $response->assertJsonPath('data.id', $absent->id);
+        $response->assertJsonPath('data.status', AttendanceRecord::STATUS_CHECKED_IN);
+        $response->assertJsonPath('data.attendance_type', AttendanceRecord::TYPE_PRESENT);
+    }
+
     public function test_absence_job_marks_absent_but_skips_approved_leave(): void
     {
         $leaveType = LeaveType::create([
