@@ -6,10 +6,12 @@ use App\Enums\Role;
 use App\Http\Requests\ManagementAdvanceActionRequest;
 use App\Models\SalaryAdvance;
 use App\Models\SalaryAdvanceInstallment;
+use App\Services\NotificationService;
 use App\Services\SalaryAdvanceService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 /**
  * @OA\Tag(
@@ -335,13 +337,31 @@ class ManagementAdvanceController extends Controller
             return response()->json($payload, $result['status'] ?? 422);
         }
 
+        $advance = $result['advance'];
+        // Final outcomes only: manager reject, HR approve, HR reject.
+        // Manager approve (pending_hr) does not notify the employee.
+        if (in_array($advance->status, [
+            SalaryAdvance::STATUS_APPROVED,
+            SalaryAdvance::STATUS_REJECTED_BY_HR,
+            SalaryAdvance::STATUS_REJECTED_BY_MANAGER,
+        ], true)) {
+            try {
+                app(NotificationService::class)->notifyAdvanceDecision($advance);
+            } catch (\Throwable $e) {
+                Log::error('Failed to create advance decision notification.', [
+                    'salary_advance_id' => $advance->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
         return response()->json([
             'success' => true,
             'message' => $result['message'],
             'data' => [
-                'id' => $result['advance']->id,
-                'status' => $result['advance']->status,
-                'rejection_reason' => $result['advance']->rejection_reason,
+                'id' => $advance->id,
+                'status' => $advance->status,
+                'rejection_reason' => $advance->rejection_reason,
             ],
         ]);
     }

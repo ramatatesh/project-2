@@ -12,6 +12,18 @@ class Notification extends Model
 
     public const TYPE_EVALUATION_ASSIGNED = 'evaluation_assigned';
 
+    public const TYPE_LEAVE_APPROVED = 'leave_approved';
+
+    public const TYPE_LEAVE_REJECTED = 'leave_rejected';
+
+    public const TYPE_OVERTIME_APPROVED = 'overtime_approved';
+
+    public const TYPE_OVERTIME_REJECTED = 'overtime_rejected';
+
+    public const TYPE_ADVANCE_APPROVED = 'advance_approved';
+
+    public const TYPE_ADVANCE_REJECTED = 'advance_rejected';
+
     public const CHANNEL_PUSH = 'push';
 
     protected $fillable = [

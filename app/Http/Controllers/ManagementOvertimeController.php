@@ -5,10 +5,12 @@ namespace App\Http\Controllers;
 use App\Enums\Role;
 use App\Http\Requests\ManagementOvertimeActionRequest;
 use App\Models\OvertimeRequest;
+use App\Services\NotificationService;
 use App\Services\OvertimeService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 /**
  * @OA\Tag(
@@ -346,15 +348,33 @@ class ManagementOvertimeController extends Controller
             ], $result['status'] ?? 422);
         }
 
+        $overtime = $result['overtime'];
+        // Final outcomes only: manager reject, HR approve, HR reject.
+        // Manager approve (pending_hr) does not notify the employee.
+        if (in_array($overtime->status, [
+            OvertimeRequest::STATUS_APPROVED,
+            OvertimeRequest::STATUS_REJECTED_BY_HR,
+            OvertimeRequest::STATUS_REJECTED_BY_MANAGER,
+        ], true)) {
+            try {
+                app(NotificationService::class)->notifyOvertimeDecision($overtime);
+            } catch (\Throwable $e) {
+                Log::error('Failed to create overtime decision notification.', [
+                    'overtime_request_id' => $overtime->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
         return response()->json([
             'success' => true,
             'message' => $result['message'],
             'data' => [
-                'id' => $result['overtime']->id,
-                'status' => $result['overtime']->status,
-                'units_approved' => $result['overtime']->hours_approved,
-                'calculated_amount' => $result['overtime']->calculated_amount,
-                'rejection_reason' => $result['overtime']->rejection_reason,
+                'id' => $overtime->id,
+                'status' => $overtime->status,
+                'units_approved' => $overtime->hours_approved,
+                'calculated_amount' => $overtime->calculated_amount,
+                'rejection_reason' => $overtime->rejection_reason,
             ],
         ]);
     }
