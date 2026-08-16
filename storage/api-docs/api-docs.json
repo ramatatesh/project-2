@@ -25,7 +25,8 @@
                         "application/json": {
                             "schema": {
                                 "required": [
-                                    "qr_token"
+                                    "qr_token",
+                                    "device_id"
                                 ],
                                 "properties": {
                                     "qr_token": {
@@ -45,9 +46,9 @@
                                         "nullable": true
                                     },
                                     "device_id": {
+                                        "description": "Stable mobile device id; first check-in binds it to the employee",
                                         "type": "string",
-                                        "example": "device-abc-123",
-                                        "nullable": true
+                                        "example": "device-abc-123"
                                     }
                                 },
                                 "type": "object"
@@ -60,7 +61,7 @@
                         "description": "Checked in successfully"
                     },
                     "422": {
-                        "description": "Invalid/expired QR code, GPS out of range, or already checked in"
+                        "description": "Invalid/expired QR, GPS out of range, device mismatch, or already checked in"
                     },
                     "403": {
                         "description": "No employee record found"
@@ -86,7 +87,8 @@
                         "application/json": {
                             "schema": {
                                 "required": [
-                                    "qr_token"
+                                    "qr_token",
+                                    "device_id"
                                 ],
                                 "properties": {
                                     "qr_token": {
@@ -104,6 +106,10 @@
                                         "format": "float",
                                         "example": 36.2765,
                                         "nullable": true
+                                    },
+                                    "device_id": {
+                                        "type": "string",
+                                        "example": "device-abc-123"
                                     }
                                 },
                                 "type": "object"
@@ -116,7 +122,7 @@
                         "description": "Checked out successfully"
                     },
                     "422": {
-                        "description": "Invalid/expired QR code, GPS out of range, not checked in, or already checked out"
+                        "description": "Invalid/expired QR, GPS out of range, device mismatch, not checked in, or already checked out"
                     },
                     "403": {
                         "description": "No employee record found"
@@ -4378,6 +4384,127 @@
                     },
                     "404": {
                         "description": "Not found / not in a department you manage"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/hr/employee-devices": {
+            "get": {
+                "tags": [
+                    "Employee Devices"
+                ],
+                "summary": "List active (and optionally inactive) bound attendance devices",
+                "operationId": "b81429154e03606c75415e44e60fcb08",
+                "parameters": [
+                    {
+                        "name": "employee_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    },
+                    {
+                        "name": "active_only",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "boolean",
+                            "default": true
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Device bindings list"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/hr/employees/{employee}/device": {
+            "get": {
+                "tags": [
+                    "Employee Devices"
+                ],
+                "summary": "Get the active bound device for an employee (plus recent history)",
+                "operationId": "9bb94e09efa3f07a9f453eadd9bcc623",
+                "parameters": [
+                    {
+                        "name": "employee",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Employee device binding"
+                    },
+                    "404": {
+                        "description": "Employee not found"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/hr/employees/{employee}/device/unbind": {
+            "post": {
+                "tags": [
+                    "Employee Devices"
+                ],
+                "summary": "Unbind the employee's attendance device so they can bind a new phone",
+                "operationId": "429d16cf05db22b4134eb2c3226cbb47",
+                "parameters": [
+                    {
+                        "name": "employee",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": false,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "reason": {
+                                        "type": "string",
+                                        "example": "Employee replaced lost phone"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Device unbound"
+                    },
+                    "404": {
+                        "description": "No active device / employee not found"
                     }
                 },
                 "security": [
@@ -9862,14 +9989,14 @@
                 "tags": [
                     "بوابات الدفع والاشتراكات (Payments & Subscriptions)"
                 ],
-                "summary": "Check the status of a Stripe Checkout Session (pure JSON, for the separate frontend)",
-                "description": "The frontend calls this after redirecting the user back from Stripe Checkout (success_url/cancel_url are frontend routes, not backend pages) to find out whether the payment succeeded and whether the company/subscription has been provisioned yet by the webhook. Provisioning always happens asynchronously via POST /api/stripe/webhook, so right after redirect the status may briefly be 'processing' before becoming 'completed'.",
+                "summary": "Verify Stripe Checkout Session after frontend redirect",
+                "description": "Call this from /payment/success?session_id=... and poll until status=completed before showing success / login. Do not treat a Stripe redirect alone as success. Values: completed (account ready, email sent), processing (paid, still provisioning), not_completed (payment not finished).",
                 "operationId": "a6e2f2470adb1b249c6edbfa98e469ea",
                 "parameters": [
                     {
                         "name": "session_id",
                         "in": "path",
-                        "description": "The Stripe Checkout Session id (also returned as 'transaction_reference' by POST /api/companies/register)",
+                        "description": "Stripe Checkout Session id from the success URL query (?session_id=) — same as transaction_reference from register/renew",
                         "required": true,
                         "schema": {
                             "type": "string",
@@ -9897,7 +10024,19 @@
                                             ],
                                             "example": "completed"
                                         },
+                                        "can_login": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        },
                                         "company_id": {
+                                            "type": "string",
+                                            "format": "uuid",
+                                            "nullable": true
+                                        },
+                                        "subscription_id": {
                                             "type": "string",
                                             "format": "uuid",
                                             "nullable": true
@@ -10316,6 +10455,10 @@
         {
             "name": "Employees",
             "description": "إدارة موظفي الشركة الحالية (متاح فقط لمدير الموارد البشرية HR Manager)"
+        },
+        {
+            "name": "Employee Devices",
+            "description": "HR management of attendance device bindings (anti buddy-punching)"
         },
         {
             "name": "Employee Leaves",

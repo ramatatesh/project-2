@@ -14,6 +14,7 @@ use App\Http\Controllers\EmployeeAdvanceController;
 use App\Http\Controllers\EmployeeAssistantController;
 use App\Http\Controllers\EmployeeCompanyPolicyController;
 use App\Http\Controllers\EmployeeController;
+use App\Http\Controllers\EmployeeDeviceController;
 use App\Http\Controllers\EmployeeLeaveController;
 use App\Http\Controllers\EvaluationCycleController;
 use App\Http\Controllers\EvaluationProgressController;
@@ -229,6 +230,11 @@ Route::middleware(['auth:sanctum', 'company.active', 'role:hr_manager'])->prefix
     Route::put('/employees/{employee}', [EmployeeController::class, 'update']);
     Route::delete('/employees/{employee}', [EmployeeController::class, 'destroy']);
     Route::post('/employees/import', [EmployeeController::class, 'import']);
+
+    // Attendance device bindings (anti buddy-punching)
+    Route::get('/employee-devices', [EmployeeDeviceController::class, 'index']);
+    Route::get('/employees/{employee}/device', [EmployeeDeviceController::class, 'show']);
+    Route::post('/employees/{employee}/device/unbind', [EmployeeDeviceController::class, 'unbind']);
 
     // Department Managers
     Route::get('/department-managers', [DepartmentManagerController::class, 'index']);

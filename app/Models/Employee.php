@@ -36,6 +36,16 @@ class Employee extends Model
         return $this->hasMany(AttendanceRecord::class);
     }
 
+    public function devices(): HasMany
+    {
+        return $this->hasMany(EmployeeDevice::class);
+    }
+
+    public function activeDevice()
+    {
+        return $this->hasOne(EmployeeDevice::class)->where('is_active', true);
+    }
+
     public function document()
     {
         return $this->hasOne(EmployeeDocument::class);

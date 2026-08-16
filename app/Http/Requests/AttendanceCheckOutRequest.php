@@ -24,6 +24,7 @@ class AttendanceCheckOutRequest extends FormRequest
             'qr_token' => ['required', 'string'],
             'latitude' => [$gpsRequired ? 'required' : 'nullable', 'numeric', 'between:-90,90'],
             'longitude' => [$gpsRequired ? 'required' : 'nullable', 'numeric', 'between:-180,180'],
+            'device_id' => ['required', 'string', 'max:255'],
         ];
     }
 
