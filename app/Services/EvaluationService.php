@@ -13,6 +13,7 @@ use App\Models\EvaluationTemplate;
 use App\Models\EvaluationTemplateQuestion;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\Log;
 use InvalidArgumentException;
 use RuntimeException;
 
@@ -607,7 +608,7 @@ class EvaluationService
             return 0;
         }
 
-        EvaluationReview::firstOrCreate(
+        $review = EvaluationReview::firstOrCreate(
             [
                 'evaluation_cycle_id' => $cycle->id,
                 'employee_id' => $employee->id,
@@ -621,6 +622,10 @@ class EvaluationService
             ]
         );
 
+        if ($review->wasRecentlyCreated) {
+            $this->notifyReviewerOfAssignment($review);
+        }
+
         return 1;
     }
 
@@ -630,7 +635,7 @@ class EvaluationService
             return 0;
         }
 
-        EvaluationReview::firstOrCreate(
+        $review = EvaluationReview::firstOrCreate(
             [
                 'evaluation_cycle_id' => $cycle->id,
                 'employee_id' => $employee->id,
@@ -644,12 +649,16 @@ class EvaluationService
             ]
         );
 
+        if ($review->wasRecentlyCreated) {
+            $this->notifyReviewerOfAssignment($review);
+        }
+
         return 1;
     }
 
     private function createPeerReview(EvaluationCycle $cycle, Employee $employee, string $peerUserId, string $due): int
     {
-        EvaluationReview::firstOrCreate(
+        $review = EvaluationReview::firstOrCreate(
             [
                 'evaluation_cycle_id' => $cycle->id,
                 'employee_id' => $employee->id,
@@ -663,7 +672,24 @@ class EvaluationService
             ]
         );
 
+        if ($review->wasRecentlyCreated) {
+            $this->notifyReviewerOfAssignment($review);
+        }
+
         return 1;
+    }
+
+    private function notifyReviewerOfAssignment(EvaluationReview $review): void
+    {
+        try {
+            app(NotificationService::class)->notifyEvaluationAssigned($review);
+        } catch (\Throwable $e) {
+            Log::error('Failed to create evaluation assignment notification.', [
+                'review_id' => $review->id,
+                'reviewer_id' => $review->reviewer_id,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     private function resolveManagerReviewerId(Employee $employee, ?User $companyGeneralManager): ?string

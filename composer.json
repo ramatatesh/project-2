@@ -8,6 +8,7 @@
         "php": "^8.2",
         "chillerlan/php-qrcode": "^6.0",
         "darkaonline/l5-swagger": "^9.0",
+        "kreait/firebase-php": "^7.16.1",
         "laravel/framework": "^11.9",
         "laravel/sanctum": "^4.3",
         "laravel/tinker": "^2.9",
@@ -68,6 +69,8 @@
         "allow-plugins": {
             "pestphp/pest-plugin": true,
             "php-http/discovery": true
+        },
+        "platform": {
         }
     },
     "minimum-stability": "stable",

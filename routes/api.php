@@ -8,6 +8,7 @@ use App\Http\Controllers\CompanyProfileController;
 use App\Http\Controllers\CompanyRegistrationController;
 use App\Http\Controllers\CompanySettingsController;
 use App\Http\Controllers\CompanySubscriptionController;
+use App\Http\Controllers\DeviceController;
 use App\Http\Controllers\DepartmentController;
 use App\Http\Controllers\DepartmentManagerController;
 use App\Http\Controllers\EmployeeAdvanceController;
@@ -61,6 +62,11 @@ Route::middleware(['auth:sanctum', 'company.active'])->prefix('profile')->group(
     Route::get('/', [ProfileController::class, 'show'])->name('profile.show');
     Route::put('/', [ProfileController::class, 'update'])->name('profile.update');
     Route::post('/documents', [ProfileController::class, 'uploadDocuments'])->name('profile.documents');
+});
+
+Route::middleware(['auth:sanctum', 'company.active'])->prefix('devices')->group(function () {
+    Route::post('/', [DeviceController::class, 'store'])->name('devices.store');
+    Route::post('/unregister', [DeviceController::class, 'unregister'])->name('devices.unregister');
 });
 
 // Company profile page (logo, tagline, about, contact info).

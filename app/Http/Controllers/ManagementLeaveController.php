@@ -7,9 +7,14 @@ use App\Http\Requests\ManagementLeaveActionRequest;
 use App\Models\LeaveRequest;
 use App\Services\LeaveAttachmentService;
 use App\Services\LeaveBalanceService;
+use App\Services\NotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
+<<<<<<< HEAD
 use Symfony\Component\HttpFoundation\StreamedResponse;
+=======
+use Illuminate\Support\Facades\Log;
+>>>>>>> 213e2a0a9c94fd50b3117913cddd19dd060b86f8
 
 /**
  * @OA\Tag(
@@ -331,6 +336,21 @@ class ManagementLeaveController extends Controller
                     $leaveRequest->leaveType,
                     (int) $leaveRequest->start_date->year,
                 );
+            }
+
+            // Push employee only on final outcomes:
+            // - manager reject → notify now
+            // - HR approve / HR reject → notify
+            // Manager approve (pending_hr) → no notification.
+            if (in_array($leaveRequest->status, ['approved', 'rejected_by_hr', 'rejected_by_manager'], true)) {
+                try {
+                    app(NotificationService::class)->notifyLeaveDecision($leaveRequest);
+                } catch (\Throwable $e) {
+                    Log::error('Failed to create leave decision notification.', [
+                        'leave_request_id' => $leaveRequest->id,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
             }
 
             return response()->json([

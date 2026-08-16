@@ -50,6 +50,14 @@ return [
         'checkout_cancel_url' => env('STRIPE_CHECKOUT_CANCEL_URL'),
     ],
 
+    'firebase' => [
+        // Absolute path or path relative to the Laravel base path.
+        // Never commit the service-account JSON. Example:
+        // storage/app/firebase/credentials.json
+        'credentials' => env('FIREBASE_CREDENTIALS'),
+        'project_id' => env('FIREBASE_PROJECT_ID'),
+    ],
+
     'gemini' => [
         'api_key' => env('GEMINI_API_KEY'),
         'base_url' => env('GEMINI_BASE_URL', 'https://generativelanguage.googleapis.com/v1beta'),
