@@ -72,6 +72,16 @@ class User extends Authenticatable
         return $this->hasMany(EvaluationReview::class, 'reviewer_id');
     }
 
+    public function devices()
+    {
+        return $this->hasMany(UserDevice::class, 'user_id');
+    }
+
+    public function notifications()
+    {
+        return $this->hasMany(Notification::class, 'user_id');
+    }
+
     public function getAuthPassword(): string
     {
         return $this->password_hash;
