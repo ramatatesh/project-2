@@ -8,12 +8,19 @@ use App\Http\Requests\ImportEmployeesRequest;
 use App\Http\Requests\StoreEmployeeRequest;
 use App\Http\Requests\UpdateEmployeeRequest;
 use App\Http\Resources\EmployeeResource;
+use App\Models\AttendanceRecord;
 use App\Models\Department;
 use App\Models\Employee;
+use App\Models\EvaluationScore;
+use App\Models\Holiday;
+use App\Models\HolidayPolicy;
+use App\Models\LeaveRequest;
 use App\Services\EmployeeService;
+use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Maatwebsite\Excel\Facades\Excel;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
@@ -256,6 +263,227 @@ class EmployeeController extends Controller
             'success' => true,
             'data' => new EmployeeResource($employee),
         ]);
+    }
+
+    /**
+     * @OA\Get(
+     *   path="/api/hr/employees/{employee}/profile-overview",
+     *   summary="عرض شامل لملف الموظف: البيانات الشخصية والوثائق، تصنيف كل تقييم نهائي (بدون علامة رقمية)، وسجل الحضور/الغياب/الإجازات/العطل منذ تاريخ التعيين حتى اليوم",
+     *   description="متاح فقط لمدير الموارد البشرية والمدير العام لنفس الشركة. لا يُرجع أي علامات رقمية للتقييمات، فقط تصنيف نصي (excellent/good/average/weak).",
+     *   tags={"Employees"},
+     *   security={{"sanctum":{}}},
+     *
+     *   @OA\Parameter(name="employee", in="path", required=true, @OA\Schema(type="string", format="uuid")),
+     *
+     *   @OA\Response(response=200, description="ملف الموظف الشامل"),
+     *   @OA\Response(response=401, description="Unauthenticated"),
+     *   @OA\Response(response=403, description="Forbidden (HR Manager or General Manager only)"),
+     *   @OA\Response(response=404, description="Not found / not in your company")
+     * )
+     */
+    public function profileOverview(Employee $employee): JsonResponse
+    {
+        $this->ensureBelongsToCurrentCompany($employee);
+        $employee->load('user', 'department', 'document');
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'personal_info' => $this->buildPersonalInfo($employee),
+                'evaluation_ratings' => $this->buildEvaluationRatings($employee),
+                'attendance_history' => $this->buildAttendanceHistory($employee),
+            ],
+        ]);
+    }
+
+    private function buildPersonalInfo(Employee $employee): array
+    {
+        $user = $employee->user;
+        $document = $employee->document;
+
+        return [
+            'id' => $employee->id,
+            'full_name' => $user?->full_name,
+            'email' => $user?->email,
+            'phone' => $user?->phone,
+            'gender' => $user?->gender,
+            'marital_status' => $user?->marital_status,
+            'nationality' => $user?->nationality,
+            'residence' => $user?->residence,
+            'birth_date' => $user?->birth_date,
+            'job_title' => $employee->job_title,
+            'education' => $employee->education,
+            'employment_type' => $employee->employment_type,
+            'base_salary' => $employee->base_salary,
+            'hire_date' => $employee->hire_date,
+            'is_active' => $employee->is_active,
+            'department' => $employee->department ? [
+                'id' => $employee->department->id,
+                'name' => $employee->department->name,
+            ] : null,
+            'documents' => [
+                'profile_image_url' => $document?->profile_image_path
+                    ? Storage::disk('public')->url($document->profile_image_path)
+                    : null,
+                'identity_image_url' => $document?->identity_image_path
+                    ? Storage::disk('public')->url($document->identity_image_path)
+                    : null,
+                'university_certificate_url' => $document?->university_certificate_path
+                    ? Storage::disk('public')->url($document->university_certificate_path)
+                    : null,
+            ],
+        ];
+    }
+
+    /**
+     * Only the rating label is exposed (never the numeric score), per HR's request -
+     * one entry per cycle that already has a computed final_score, regardless of whether
+     * the score has been finalized yet.
+     */
+    private function buildEvaluationRatings(Employee $employee): array
+    {
+        return EvaluationScore::where('employee_id', $employee->id)
+            ->where('company_id', $employee->company_id)
+            ->whereNotNull('final_score')
+            ->with('cycle')
+            ->orderByDesc('finalized_at')
+            ->get()
+            ->map(fn (EvaluationScore $score) => [
+                'evaluation_cycle_id' => $score->evaluation_cycle_id,
+                'cycle_name' => $score->cycle?->name,
+                'period' => [
+                    'start_date' => $score->cycle?->start_date?->toDateString(),
+                    'end_date' => $score->cycle?->end_date?->toDateString(),
+                ],
+                'status' => $score->status,
+                'rating' => $this->classifyEvaluationScore((float) $score->final_score),
+            ])
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Same excellent/good/average/weak bands already used to drive the evaluation-linked
+     * salary bonus/deduction in SalaryService::resolveEvaluationAdjustment(), so an employee's
+     * displayed rating always matches the classification that actually affected their pay.
+     */
+    private function classifyEvaluationScore(float $score): string
+    {
+        if ($score >= 8) {
+            return 'excellent';
+        }
+        if ($score >= 6) {
+            return 'good';
+        }
+        if ($score >= 4) {
+            return 'average';
+        }
+
+        return 'weak';
+    }
+
+    private function buildAttendanceHistory(Employee $employee): array
+    {
+        $from = Carbon::parse($employee->hire_date)->startOfDay();
+        $to = Carbon::today();
+
+        $attendanceRecords = AttendanceRecord::where('employee_id', $employee->id)
+            ->where('company_id', $employee->company_id)
+            ->whereBetween('work_date', [$from->toDateString(), $to->toDateString()])
+            ->orderBy('work_date')
+            ->get();
+
+        $leaveRequests = LeaveRequest::where('employee_id', $employee->id)
+            ->where('company_id', $employee->company_id)
+            ->where('status', 'approved')
+            ->whereDate('start_date', '<=', $to->toDateString())
+            ->whereDate('end_date', '>=', $from->toDateString())
+            ->with('leaveType')
+            ->orderBy('start_date')
+            ->get();
+
+        $holidays = Holiday::where('company_id', $employee->company_id)->get();
+        $holidayOccurrences = $this->expandHolidayOccurrences($holidays, $from, $to);
+
+        $weeklyHolidayDays = HolidayPolicy::where('company_id', $employee->company_id)
+            ->value('weekly_holidays') ?? [];
+
+        return [
+            'from' => $from->toDateString(),
+            'to' => $to->toDateString(),
+            'summary' => [
+                'present_days' => $attendanceRecords->where('attendance_type', AttendanceRecord::TYPE_PRESENT)->count(),
+                'late_days' => $attendanceRecords->where('attendance_type', AttendanceRecord::TYPE_LATE)->count(),
+                'early_leave_days' => $attendanceRecords->where('attendance_type', AttendanceRecord::TYPE_EARLY_LEAVE)->count(),
+                'absent_days' => $attendanceRecords->where('attendance_type', AttendanceRecord::TYPE_ABSENT)->count(),
+                'leave_days' => (float) $leaveRequests->sum('requested_value'),
+                'holiday_occurrences' => count($holidayOccurrences),
+            ],
+            'attendance_records' => $attendanceRecords->map(fn (AttendanceRecord $record) => [
+                'work_date' => $record->work_date?->toDateString(),
+                'attendance_type' => $record->attendance_type,
+                'status' => $record->status,
+                'check_in_time' => $record->check_in_time?->toDateTimeString(),
+                'check_out_time' => $record->check_out_time?->toDateTimeString(),
+                'late_minutes' => $record->late_minutes,
+                'early_leave_minutes' => $record->early_leave_minutes,
+            ])->values()->all(),
+            'leave_requests' => $leaveRequests->map(fn (LeaveRequest $leaveRequest) => [
+                'id' => $leaveRequest->id,
+                'leave_type_name' => $leaveRequest->leaveType?->name,
+                'start_date' => $leaveRequest->start_date?->toDateString(),
+                'end_date' => $leaveRequest->end_date?->toDateString(),
+                'duration_days' => (float) $leaveRequest->requested_value,
+                'status' => $leaveRequest->status,
+            ])->values()->all(),
+            'holidays' => $holidayOccurrences,
+            'weekly_holiday_days' => $weeklyHolidayDays,
+        ];
+    }
+
+    /**
+     * Expands each Holiday row into the concrete date range(s) it actually falls on within
+     * [$from, $to] - annually-repeating holidays are re-anchored to every year in the range,
+     * one-off holidays are checked once. Occurrences entirely outside the range are dropped.
+     */
+    private function expandHolidayOccurrences($holidays, Carbon $from, Carbon $to): array
+    {
+        $occurrences = [];
+
+        foreach ($holidays as $holiday) {
+            if ($holiday->repeats_annually) {
+                for ($year = $from->year; $year <= $to->year; $year++) {
+                    $start = Carbon::create($year, $holiday->start_date->month, $holiday->start_date->day);
+                    $end = $holiday->end_date
+                        ? Carbon::create($year, $holiday->end_date->month, $holiday->end_date->day)
+                        : $start->copy();
+
+                    $this->pushHolidayOccurrenceIfInRange($occurrences, $holiday->name, $start, $end, $from, $to);
+                }
+            } else {
+                $start = $holiday->start_date->copy();
+                $end = $holiday->end_date ? $holiday->end_date->copy() : $start->copy();
+
+                $this->pushHolidayOccurrenceIfInRange($occurrences, $holiday->name, $start, $end, $from, $to);
+            }
+        }
+
+        usort($occurrences, fn ($a, $b) => strcmp($a['start_date'], $b['start_date']));
+
+        return $occurrences;
+    }
+
+    private function pushHolidayOccurrenceIfInRange(array &$occurrences, string $name, Carbon $start, Carbon $end, Carbon $from, Carbon $to): void
+    {
+        if ($end->lt($from) || $start->gt($to)) {
+            return;
+        }
+
+        $occurrences[] = [
+            'name' => $name,
+            'start_date' => $start->max($from)->toDateString(),
+            'end_date' => $end->min($to)->toDateString(),
+        ];
     }
 
     /**

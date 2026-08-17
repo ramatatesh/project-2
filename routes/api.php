@@ -15,6 +15,7 @@ use App\Http\Controllers\EmployeeAdvanceController;
 use App\Http\Controllers\EmployeeAssistantController;
 use App\Http\Controllers\EmployeeCompanyPolicyController;
 use App\Http\Controllers\EmployeeController;
+use App\Http\Controllers\EmployeeDeviceController;
 use App\Http\Controllers\EmployeeLeaveController;
 use App\Http\Controllers\EvaluationCycleController;
 use App\Http\Controllers\EvaluationProgressController;
@@ -79,11 +80,14 @@ Route::middleware(['auth:sanctum', 'company.active'])->prefix('company/profile')
         ->name('company.profile.update');
 });
 
-// Current subscription + renewal checkout. POST /renew is allowed even when the company
-// is frozen (see EnsureCompanyIsNotFrozen exemptions) so a suspended tenant can pay.
+// Current subscription status (reads allowed while frozen via company.active GET pass-through).
 Route::middleware(['auth:sanctum', 'company.active', 'role:general_manager,hr_manager'])->prefix('company/subscription')->group(function () {
     Route::get('/', [CompanySubscriptionController::class, 'show'])->name('company.subscription.show');
     Route::get('/usage', [CompanySubscriptionController::class, 'usage'])->name('company.subscription.usage');
+});
+
+// Paid renewal checkout — must stay reachable for frozen/suspended tenants without company.active blocking POST.
+Route::middleware(['auth:sanctum', 'role:general_manager,hr_manager'])->prefix('company/subscription')->group(function () {
     Route::post('/renew', [CompanySubscriptionController::class, 'renew'])->name('company.subscription.renew');
 });
 
@@ -216,6 +220,7 @@ Route::middleware(['auth:sanctum', 'company.active', 'role:hr_manager,general_ma
 
     Route::get('/employees/{employee}', [EmployeeController::class, 'show']);
     Route::delete('/employees/{employee}', [EmployeeController::class, 'destroy']);
+    Route::get('/employees/{employee}/profile-overview', [EmployeeController::class, 'profileOverview']);
 
     Route::get('/employees/{employee}', [EmployeeController::class, 'show']);
 });
@@ -235,6 +240,11 @@ Route::middleware(['auth:sanctum', 'company.active', 'role:hr_manager'])->prefix
     Route::put('/employees/{employee}', [EmployeeController::class, 'update']);
     Route::delete('/employees/{employee}', [EmployeeController::class, 'destroy']);
     Route::post('/employees/import', [EmployeeController::class, 'import']);
+
+    // Attendance device bindings (anti buddy-punching)
+    Route::get('/employee-devices', [EmployeeDeviceController::class, 'index']);
+    Route::get('/employees/{employee}/device', [EmployeeDeviceController::class, 'show']);
+    Route::post('/employees/{employee}/device/unbind', [EmployeeDeviceController::class, 'unbind']);
 
     // Department Managers
     Route::get('/department-managers', [DepartmentManagerController::class, 'index']);
@@ -293,13 +303,16 @@ Route::middleware(['auth:sanctum', 'company.active'])->prefix('evaluations')->gr
 Route::middleware(['auth:sanctum', 'company.active', 'role:employee,department_manager'])->prefix('employee/leaves')->group(function () {
     Route::get('/types', [EmployeeLeaveController::class, 'types']);
     Route::get('/dashboard', [EmployeeLeaveController::class, 'dashboard']);
+    Route::post('/upload-attachment', [EmployeeLeaveController::class, 'uploadAttachment']);
     Route::post('/apply', [EmployeeLeaveController::class, 'apply']);
+    Route::get('/{id}/attachment', [EmployeeLeaveController::class, 'downloadAttachment']);
     Route::post('/{id}/cancel', [EmployeeLeaveController::class, 'cancel']);
 });
 
 // Management approval workflow for leave requests.
 Route::middleware(['auth:sanctum', 'company.active', 'role:department_manager,hr_manager'])->prefix('management/leaves')->group(function () {
     Route::get('/inbox', [ManagementLeaveController::class, 'inbox']);
+    Route::get('/{id}/attachment', [ManagementLeaveController::class, 'downloadAttachment']);
     Route::post('/{id}/action', [ManagementLeaveController::class, 'action']);
 });
 

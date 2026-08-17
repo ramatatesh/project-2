@@ -2,12 +2,11 @@
 
 namespace App\Http\Requests;
 
-use App\Models\AttendancePolicy;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
 
-class AttendanceCheckOutRequest extends FormRequest
+class LeaveAttachmentUploadRequest extends FormRequest
 {
     public function authorize(): bool
     {
@@ -16,15 +15,17 @@ class AttendanceCheckOutRequest extends FormRequest
 
     public function rules(): array
     {
-        $companyId = $this->user()?->company_id;
-        $policy = AttendancePolicy::where('company_id', $companyId)->first();
-        $gpsRequired = (bool) $policy?->enable_gps_verification;
-
         return [
-            'qr_token' => ['required', 'string'],
-            'latitude' => [$gpsRequired ? 'required' : 'nullable', 'numeric', 'between:-90,90'],
-            'longitude' => [$gpsRequired ? 'required' : 'nullable', 'numeric', 'between:-180,180'],
-            'device_id' => ['required', 'string', 'max:255'],
+            'file' => ['required', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'file.required' => 'A proof file is required.',
+            'file.mimes' => 'The file must be of type: pdf, jpg, jpeg, or png.',
+            'file.max' => 'The file may not be greater than 5 MB.',
         ];
     }
 
