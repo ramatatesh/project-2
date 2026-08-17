@@ -34,6 +34,11 @@ class AttendanceService
 
     private const DEFAULT_ALLOWED_PERIMETER_METERS = 150;
 
+    public function __construct(
+        private readonly EmployeeDeviceService $employeeDeviceService,
+    ) {
+    }
+
     /*
     |--------------------------------------------------------------------------
     | QR token (stateless, time-windowed HMAC - no DB table, no extra package)
@@ -173,6 +178,17 @@ class AttendanceService
         }
 
         return DB::transaction(function () use ($employee, $companyId, $policy, $today, $data, $gpsCheck) {
+            $deviceCheck = $this->employeeDeviceService->assertAndBind(
+                $employee,
+                (string) ($data['device_id'] ?? '')
+            );
+
+            if (! $deviceCheck['success']) {
+                return $this->failure($deviceCheck['message'], [
+                    'code' => $deviceCheck['code'] ?? 'device_rejected',
+                ]);
+            }
+
             $isWorkDay = $this->isWorkDay($today, $policy);
             if (! $isWorkDay) {
              return $this->failure('Today is a weekly day off. Attendance is not allowed.');
@@ -187,7 +203,7 @@ class AttendanceService
                 'check_in_time' => now(),
                 'check_in_lat' => $gpsCheck['latitude'],
                 'check_in_lng' => $gpsCheck['longitude'],
-                'check_in_device_id' => $data['device_id'] ?? null,
+                'check_in_device_id' => $data['device_id'],
                 'qr_token_used' => explode('.', $data['qr_token'])[0],
                 'late_minutes' => $lateMinutes,
                 'early_leave_minutes' => 0,
@@ -202,7 +218,11 @@ class AttendanceService
                 $this->logLocationAttempt($record->id, $gpsCheck);
             }
 
-            return ['success' => true, 'record' => $record];
+            return [
+                'success' => true,
+                'record' => $record,
+                'device_bound_now' => (bool) ($deviceCheck['bound_now'] ?? false),
+            ];
         });
     }
 
@@ -226,6 +246,17 @@ class AttendanceService
 
         if (! $this->validateQrToken($companyId, $data['qr_token'] ?? null)) {
             return $this->failure('Invalid or expired QR code. Please scan the current code.');
+        }
+
+        $deviceCheck = $this->employeeDeviceService->assertMatchesBound(
+            $employee,
+            $data['device_id'] ?? null
+        );
+
+        if (! $deviceCheck['success']) {
+            return $this->failure($deviceCheck['message'], [
+                'code' => $deviceCheck['code'] ?? 'device_rejected',
+            ]);
         }
 
         $policy = AttendancePolicy::where('company_id', $companyId)->first();
@@ -938,8 +969,8 @@ class AttendanceService
         ]);
     }
 
-    private function failure(string $message): array
+    private function failure(string $message, array $extra = []): array
     {
-        return ['success' => false, 'message' => $message];
+        return array_merge(['success' => false, 'message' => $message], $extra);
     }
 }

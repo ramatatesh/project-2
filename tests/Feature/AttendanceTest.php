@@ -92,6 +92,22 @@ class AttendanceTest extends TestCase
         return app(AttendanceService::class)->currentQrToken($this->company->id)['token'];
     }
 
+    private function checkInPayload(array $extra = []): array
+    {
+        return array_merge([
+            'qr_token' => $this->currentQrToken(),
+            'device_id' => 'test-device-employee-1',
+        ], $extra);
+    }
+
+    private function checkOutPayload(array $extra = []): array
+    {
+        return array_merge([
+            'qr_token' => $this->currentQrToken(),
+            'device_id' => 'test-device-employee-1',
+        ], $extra);
+    }
+
     public function test_management_qr_code_endpoint_returns_token_and_rendered_image(): void
     {
         $this->actingAs($this->hrManager);
@@ -114,18 +130,24 @@ class AttendanceTest extends TestCase
     {
         $this->actingAs($this->employeeUser);
 
-        $response = $this->postJson('/api/employee/attendance/check-in', [
-            'qr_token' => $this->currentQrToken(),
-        ]);
+        $response = $this->postJson('/api/employee/attendance/check-in', $this->checkInPayload());
 
         $response->assertStatus(201);
         $response->assertJsonPath('success', true);
         $response->assertJsonPath('data.status', AttendanceRecord::STATUS_CHECKED_IN);
+        $response->assertJsonPath('device_bound_now', true);
 
         $this->assertDatabaseHas('attendance_records', [
             'company_id' => $this->company->id,
             'employee_id' => $this->employee->id,
             'status' => AttendanceRecord::STATUS_CHECKED_IN,
+            'check_in_device_id' => 'test-device-employee-1',
+        ]);
+
+        $this->assertDatabaseHas('employee_devices', [
+            'employee_id' => $this->employee->id,
+            'device_id' => 'test-device-employee-1',
+            'is_active' => true,
         ]);
     }
 
@@ -133,9 +155,9 @@ class AttendanceTest extends TestCase
     {
         $this->actingAs($this->employeeUser);
 
-        $response = $this->postJson('/api/employee/attendance/check-in', [
+        $response = $this->postJson('/api/employee/attendance/check-in', $this->checkInPayload([
             'qr_token' => '123456.not-a-real-signature',
-        ]);
+        ]));
 
         $response->assertStatus(422);
         $response->assertJsonPath('success', false);
@@ -146,10 +168,10 @@ class AttendanceTest extends TestCase
     {
         $this->actingAs($this->employeeUser);
 
-        $this->postJson('/api/employee/attendance/check-in', ['qr_token' => $this->currentQrToken()])
+        $this->postJson('/api/employee/attendance/check-in', $this->checkInPayload())
             ->assertStatus(201);
 
-        $response = $this->postJson('/api/employee/attendance/check-in', ['qr_token' => $this->currentQrToken()]);
+        $response = $this->postJson('/api/employee/attendance/check-in', $this->checkInPayload());
 
         $response->assertStatus(422);
         $response->assertJsonFragment(['message' => 'You have already checked in today.']);
@@ -160,10 +182,10 @@ class AttendanceTest extends TestCase
     {
         $this->actingAs($this->employeeUser);
 
-        $this->postJson('/api/employee/attendance/check-in', ['qr_token' => $this->currentQrToken()])
+        $this->postJson('/api/employee/attendance/check-in', $this->checkInPayload())
             ->assertStatus(201);
 
-        $response = $this->postJson('/api/employee/attendance/check-out', ['qr_token' => $this->currentQrToken()]);
+        $response = $this->postJson('/api/employee/attendance/check-out', $this->checkOutPayload());
 
         $response->assertStatus(200);
         $response->assertJsonPath('data.status', AttendanceRecord::STATUS_COMPLETED);
@@ -179,7 +201,7 @@ class AttendanceTest extends TestCase
     {
         $this->actingAs($this->employeeUser);
 
-        $response = $this->postJson('/api/employee/attendance/check-out', ['qr_token' => $this->currentQrToken()]);
+        $response = $this->postJson('/api/employee/attendance/check-out', $this->checkOutPayload());
 
         $response->assertStatus(422);
         $response->assertJsonFragment(['message' => 'You have not checked in today or your attendance is already completed.']);
@@ -198,11 +220,10 @@ class AttendanceTest extends TestCase
 
         $this->actingAs($this->employeeUser);
 
-        $response = $this->postJson('/api/employee/attendance/check-in', [
-            'qr_token' => $this->currentQrToken(),
+        $response = $this->postJson('/api/employee/attendance/check-in', $this->checkInPayload([
             'latitude' => 33.5238, // roughly ~1.1km away, well outside a 100m radius
             'longitude' => 36.2765,
-        ]);
+        ]));
 
         $response->assertStatus(422);
         $response->assertJsonFragment(['message' => 'You are outside the allowed check-in location radius.']);
@@ -226,16 +247,90 @@ class AttendanceTest extends TestCase
 
         $this->actingAs($this->employeeUser);
 
-        $response = $this->postJson('/api/employee/attendance/check-in', [
-            'qr_token' => $this->currentQrToken(),
+        $response = $this->postJson('/api/employee/attendance/check-in', $this->checkInPayload([
             'latitude' => 33.5138,
             'longitude' => 36.2765,
-        ]);
+        ]));
 
         $response->assertStatus(201);
 
         $this->assertDatabaseHas('attendance_location_logs', [
             'is_within_radius' => true,
+        ]);
+    }
+
+    public function test_buddy_punching_same_device_for_second_employee_is_rejected(): void
+    {
+        $otherUser = User::create([
+            'id' => Str::uuid()->toString(),
+            'company_id' => $this->company->id,
+            'full_name' => 'Other Employee',
+            'email' => 'other@attendance.test',
+            'password_hash' => bcrypt('password'),
+            'role' => Role::Employee->value,
+            'status' => 'active',
+            'is_first_login' => false,
+        ]);
+
+        $otherEmployee = Employee::create([
+            'id' => Str::uuid()->toString(),
+            'user_id' => $otherUser->id,
+            'company_id' => $this->company->id,
+            'department_id' => $this->department->id,
+            'job_title' => 'Developer',
+            'base_salary' => 1000,
+            'hire_date' => '2022-01-01',
+            'employment_type' => 'full-time',
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($this->employeeUser);
+        $this->postJson('/api/employee/attendance/check-in', $this->checkInPayload([
+            'device_id' => 'shared-phone',
+        ]))->assertStatus(201);
+
+        $this->actingAs($otherUser);
+        $response = $this->postJson('/api/employee/attendance/check-in', [
+            'qr_token' => $this->currentQrToken(),
+            'device_id' => 'shared-phone',
+        ]);
+
+        $response->assertStatus(422);
+        $response->assertJsonPath('code', 'device_bound_to_other');
+        $this->assertDatabaseCount('attendance_records', 1);
+        unset($otherEmployee);
+    }
+
+    public function test_check_in_from_different_device_is_rejected_until_hr_unbinds(): void
+    {
+        $this->actingAs($this->employeeUser);
+        $this->postJson('/api/employee/attendance/check-in', $this->checkInPayload([
+            'device_id' => 'old-phone',
+        ]))->assertStatus(201);
+
+        AttendanceRecord::query()->delete();
+
+        $response = $this->postJson('/api/employee/attendance/check-in', $this->checkInPayload([
+            'device_id' => 'new-phone',
+        ]));
+
+        $response->assertStatus(422);
+        $response->assertJsonPath('code', 'device_mismatch');
+
+        $this->actingAs($this->hrManager);
+        $this->postJson("/api/hr/employees/{$this->employee->id}/device/unbind", [
+            'reason' => 'Employee replaced lost phone',
+        ])->assertStatus(200);
+
+        $this->actingAs($this->employeeUser);
+        $this->postJson('/api/employee/attendance/check-in', $this->checkInPayload([
+            'device_id' => 'new-phone',
+        ]))->assertStatus(201);
+
+        $this->assertDatabaseHas('employee_devices', [
+            'employee_id' => $this->employee->id,
+            'device_id' => 'new-phone',
+            'is_active' => true,
         ]);
     }
 

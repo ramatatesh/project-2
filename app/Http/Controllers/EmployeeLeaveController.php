@@ -3,14 +3,16 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\EmployeeLeaveRequest;
+use App\Http\Requests\LeaveAttachmentUploadRequest;
 use App\Models\LeaveRequest;
 use App\Models\LeaveType;
+use App\Services\LeaveAttachmentService;
 use App\Services\LeaveBalanceService;
 use App\Services\LeaveDurationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
  * @OA\Tag(
@@ -23,6 +25,7 @@ class EmployeeLeaveController extends Controller
     public function __construct(
         private readonly LeaveDurationService $leaveDurationService,
         private readonly LeaveBalanceService $leaveBalanceService,
+        private readonly LeaveAttachmentService $leaveAttachmentService,
     ) {
     }
 
@@ -116,7 +119,8 @@ class EmployeeLeaveController extends Controller
                     'start_date' => $leaveRequest->start_date?->toDateString(),
                     'duration_days' => (int) $leaveRequest->requested_value,
                     'status' => $this->resolveHistoryStatus($leaveRequest),
-                    'attachment_url' => $leaveRequest->attachment_url, // تم إضافته هنا
+                    'attachment_url' => $this->leaveAttachmentService->publicUrl($leaveRequest->attachment_url),
+                    'has_attachment' => $this->leaveAttachmentService->exists($leaveRequest->attachment_url),
                 ];
             });
 
@@ -171,8 +175,45 @@ class EmployeeLeaveController extends Controller
     }
 /**
      * @OA\Post(
+     *    path="/api/employee/leaves/upload-attachment",
+     *    summary="Upload leave proof file (multipart), same pattern as Excel employee import",
+     *    description="Send multipart/form-data with field name `file` (pdf/jpg/jpeg/png, max 5MB). Returns path to use in apply as attachment_path, or you can send `file` directly on /apply.",
+     *    tags={"Employee Leaves"},
+     *    security={{"sanctum":{}}},
+     *    @OA\RequestBody(
+     *      required=true,
+     *      @OA\MediaType(
+     *        mediaType="multipart/form-data",
+     *        @OA\Schema(
+     *          required={"file"},
+     *          @OA\Property(property="file", type="string", format="binary", description="Proof document (pdf/jpg/jpeg/png)")
+     *        )
+     *      )
+     *    ),
+     *    @OA\Response(response=201, description="File uploaded"),
+     *    @OA\Response(response=422, description="Validation failed")
+     * )
+     */
+    public function uploadAttachment(LeaveAttachmentUploadRequest $request): JsonResponse
+    {
+        $path = $this->leaveAttachmentService->store($request->file('file'));
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Attachment uploaded successfully.',
+            'data' => [
+                'path' => $path,
+                'url' => $this->leaveAttachmentService->publicUrl($path),
+                'original_name' => $request->file('file')->getClientOriginalName(),
+            ],
+        ], 201);
+    }
+
+/**
+     * @OA\Post(
      *    path="/api/employee/leaves/apply",
      *    summary="Submit a leave request",
+     *    description="Use multipart/form-data. Proof file: send field `file` (same as Excel import) or `attachment`, or first call upload-attachment and pass `attachment_path`.",
      *    tags={"Employee Leaves"},
      *    security={{"sanctum":{}}},
      *    @OA\RequestBody(
@@ -188,7 +229,9 @@ class EmployeeLeaveController extends Controller
      *          @OA\Property(property="start_time", type="string", format="time", nullable=true),
      *          @OA\Property(property="end_time", type="string", format="time", nullable=true),
      *          @OA\Property(property="reason", type="string", nullable=true),
-     *          @OA\Property(property="attachment", type="string", format="binary", nullable=true)
+     *          @OA\Property(property="file", type="string", format="binary", nullable=true, description="Proof file — same field name as Excel import"),
+     *          @OA\Property(property="attachment", type="string", format="binary", nullable=true, description="Alias of file"),
+     *          @OA\Property(property="attachment_path", type="string", nullable=true, description="Path returned by upload-attachment")
      *        )
      *      )
      *    ),
@@ -248,10 +291,12 @@ class EmployeeLeaveController extends Controller
             ], 422);
         }
 
-        $attachmentUrl = null;
-        if ($request->hasFile('attachment')) {
-            $path = $request->file('attachment')->store('leave_attachments', 'public');
-            $attachmentUrl = Storage::disk('public')->url($path);
+        $attachmentPath = null;
+        $uploaded = $request->file('file') ?? $request->file('attachment');
+        if ($uploaded) {
+            $attachmentPath = $this->leaveAttachmentService->store($uploaded);
+        } elseif (! empty($data['attachment_path'])) {
+            $attachmentPath = $this->leaveAttachmentService->normalizeStoredValue($data['attachment_path']);
         }
 
         $employee->loadMissing('department');
@@ -267,7 +312,7 @@ class EmployeeLeaveController extends Controller
             'start_time' => $data['start_time'] ?? null,
             'end_time' => $data['end_time'] ?? null,
             'requested_value' => $durationDays,
-            'attachment_url' => $attachmentUrl,
+            'attachment_url' => $attachmentPath,
             'reason' => $data['reason'] ?? null,
             'status' => $isOwnDepartmentManager ? 'pending_hr' : 'pending_department_manager',
         ]);
@@ -275,8 +320,50 @@ class EmployeeLeaveController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Leave request submitted successfully.',
-            'data' => $leaveRequest,
+            'data' => [
+                ...$leaveRequest->toArray(),
+                'attachment_url' => $this->leaveAttachmentService->publicUrl($leaveRequest->attachment_url),
+                'has_attachment' => $this->leaveAttachmentService->exists($leaveRequest->attachment_url),
+            ],
         ], 201);
+    }
+
+    /**
+     * @OA\Get(
+     *    path="/api/employee/leaves/{id}/attachment",
+     *    summary="Download leave proof file (authenticated, like Excel template download)",
+     *    tags={"Employee Leaves"},
+     *    security={{"sanctum":{}}},
+     *    @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="string", format="uuid")),
+     *    @OA\Response(response=200, description="File download"),
+     *    @OA\Response(response=404, description="Not found")
+     * )
+     */
+    public function downloadAttachment(string $id): StreamedResponse|JsonResponse
+    {
+        $user = auth()->user();
+        $employee = $user?->employee;
+
+        if (! $employee) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Employee record not found.',
+            ], 403);
+        }
+
+        $leaveRequest = LeaveRequest::where('id', $id)
+            ->where('employee_id', $employee->id)
+            ->where('company_id', $user->company_id)
+            ->firstOrFail();
+
+        if (! $this->leaveAttachmentService->exists($leaveRequest->attachment_url)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Attachment not found.',
+            ], 404);
+        }
+
+        return $this->leaveAttachmentService->download($leaveRequest);
     }
 
     /**

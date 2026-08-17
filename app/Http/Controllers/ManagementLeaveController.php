@@ -5,11 +5,16 @@ namespace App\Http\Controllers;
 use App\Enums\Role;
 use App\Http\Requests\ManagementLeaveActionRequest;
 use App\Models\LeaveRequest;
+use App\Services\LeaveAttachmentService;
 use App\Services\LeaveBalanceService;
 use App\Services\NotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
+<<<<<<< HEAD
+use Symfony\Component\HttpFoundation\StreamedResponse;
+=======
 use Illuminate\Support\Facades\Log;
+>>>>>>> 213e2a0a9c94fd50b3117913cddd19dd060b86f8
 
 /**
  * @OA\Tag(
@@ -21,6 +26,7 @@ class ManagementLeaveController extends Controller
 {
     public function __construct(
         private readonly LeaveBalanceService $leaveBalanceService,
+        private readonly LeaveAttachmentService $leaveAttachmentService,
     ) {
     }
 
@@ -94,7 +100,8 @@ class ManagementLeaveController extends Controller
                     'end_date' => $leaveRequest->end_date?->toDateString(),
                     'duration_days' => (int) $leaveRequest->requested_value,
                     'reason' => $leaveRequest->reason,
-                    'attachment_url' => $leaveRequest->attachment_url, // تم إضافته هنا
+                    'attachment_url' => $this->leaveAttachmentService->publicUrl($leaveRequest->attachment_url),
+                    'has_attachment' => $this->leaveAttachmentService->exists($leaveRequest->attachment_url),
                     'status' => $leaveRequest->status,
                     'remaining_balance_days' => $this->calculateRemainingBalance($leaveRequest),
                 ];
@@ -104,6 +111,53 @@ class ManagementLeaveController extends Controller
             'success' => true,
             'data' => $requests,
         ]);
+    }
+
+    /**
+     * @OA\Get(
+     *    path="/api/management/leaves/{id}/attachment",
+     *    summary="Download leave proof file for a request in your company",
+     *    tags={"Management Leaves"},
+     *    security={{"sanctum":{}}},
+     *    @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="string", format="uuid")),
+     *    @OA\Response(response=200, description="File download"),
+     *    @OA\Response(response=404, description="Not found")
+     * )
+     */
+    public function downloadAttachment(string $id): StreamedResponse|JsonResponse
+    {
+        $user = auth()->user();
+        $companyId = $user?->company_id;
+        $employee = $user?->employee;
+        $role = $user?->role;
+
+        $query = LeaveRequest::where('id', $id)->where('company_id', $companyId);
+
+        if ($role === Role::DepartmentManager->value) {
+            $managedDepartmentIds = DB::table('departments')
+                ->where('manager_id', $employee?->id)
+                ->pluck('id');
+
+            $query->whereHas('employee', function ($q) use ($managedDepartmentIds) {
+                $q->whereIn('department_id', $managedDepartmentIds);
+            });
+        } elseif ($role !== Role::HrManager->value) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized role.',
+            ], 403);
+        }
+
+        $leaveRequest = $query->firstOrFail();
+
+        if (! $this->leaveAttachmentService->exists($leaveRequest->attachment_url)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Attachment not found.',
+            ], 404);
+        }
+
+        return $this->leaveAttachmentService->download($leaveRequest);
     }
 
     /**

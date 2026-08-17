@@ -35,15 +35,15 @@ class AttendanceController extends Controller
      *   @OA\RequestBody(
      *     required=true,
      *     @OA\JsonContent(
-     *       required={"qr_token"},
+     *       required={"qr_token","device_id"},
      *       @OA\Property(property="qr_token", type="string", example="29234567.a1b2c3d4e5f6a7b8c9d0e1f2"),
      *       @OA\Property(property="latitude", type="number", format="float", nullable=true, example=33.5138),
      *       @OA\Property(property="longitude", type="number", format="float", nullable=true, example=36.2765),
-     *       @OA\Property(property="device_id", type="string", nullable=true, example="device-abc-123")
+     *       @OA\Property(property="device_id", type="string", example="device-abc-123", description="Stable mobile device id; first check-in binds it to the employee")
      *     )
      *   ),
      *   @OA\Response(response=201, description="Checked in successfully"),
-     *   @OA\Response(response=422, description="Invalid/expired QR code, GPS out of range, or already checked in"),
+     *   @OA\Response(response=422, description="Invalid/expired QR, GPS out of range, device mismatch, or already checked in"),
      *   @OA\Response(response=403, description="No employee record found")
      * )
      */
@@ -67,6 +67,7 @@ class AttendanceController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Checked in successfully.',
+            'device_bound_now' => (bool) ($result['device_bound_now'] ?? false),
             'data' => $this->mapRecord($result['record']),
         ], 201);
     }
@@ -80,14 +81,15 @@ class AttendanceController extends Controller
      *   @OA\RequestBody(
      *     required=true,
      *     @OA\JsonContent(
-     *       required={"qr_token"},
+     *       required={"qr_token","device_id"},
      *       @OA\Property(property="qr_token", type="string", example="29234568.b2c3d4e5f6a7b8c9d0e1f2a3"),
      *       @OA\Property(property="latitude", type="number", format="float", nullable=true, example=33.5138),
-     *       @OA\Property(property="longitude", type="number", format="float", nullable=true, example=36.2765)
+     *       @OA\Property(property="longitude", type="number", format="float", nullable=true, example=36.2765),
+     *       @OA\Property(property="device_id", type="string", example="device-abc-123")
      *     )
      *   ),
      *   @OA\Response(response=200, description="Checked out successfully"),
-     *   @OA\Response(response=422, description="Invalid/expired QR code, GPS out of range, not checked in, or already checked out"),
+     *   @OA\Response(response=422, description="Invalid/expired QR, GPS out of range, device mismatch, not checked in, or already checked out"),
      *   @OA\Response(response=403, description="No employee record found")
      * )
      */

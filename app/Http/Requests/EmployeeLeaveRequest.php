@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Models\LeaveType;
+use App\Services\LeaveAttachmentService;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
@@ -15,10 +16,17 @@ class EmployeeLeaveRequest extends FormRequest
         return true;
     }
 
+    protected function prepareForValidation(): void
+    {
+        // Excel-style field name `file` maps to the leave attachment upload.
+        if ($this->hasFile('file') && ! $this->hasFile('attachment')) {
+            $this->files->set('attachment', $this->file('file'));
+        }
+    }
+
     public function rules(): array
     {
         $companyId = $this->user()?->company_id;
-        $leaveTypeId = $this->input('leave_type_id');
 
         return [
             'leave_type_id' => [
@@ -53,23 +61,53 @@ class EmployeeLeaveRequest extends FormRequest
             'start_time' => ['sometimes', 'nullable', 'date_format:H:i'],
             'end_time' => ['sometimes', 'nullable', 'date_format:H:i'],
             'reason' => ['sometimes', 'nullable', 'string', 'max:2000'],
-            'attachment' => [
-                Rule::requiredIf(function () use ($companyId, $leaveTypeId) {
-                    if (! $leaveTypeId) {
-                        return false;
+            'file' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
+            'attachment' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
+            'attachment_path' => [
+                'nullable',
+                'string',
+                'max:500',
+                function ($attribute, $value, $fail) {
+                    if (blank($value)) {
+                        return;
                     }
 
-                    $leaveType = LeaveType::where('id', $leaveTypeId)
-                        ->where('company_id', $companyId)
-                        ->first();
-
-                    return $leaveType && $leaveType->requires_proof;
-                }),
-                'file',
-                'mimes:pdf,jpg,jpeg,png',
-                'max:5120',
+                    if (! app(LeaveAttachmentService::class)->isOwnedPath((string) $value)) {
+                        $fail('The attachment_path is invalid or the file was not found. Upload via /api/employee/leaves/upload-attachment first.');
+                    }
+                },
             ],
         ];
+    }
+
+    public function withValidator(Validator $validator): void
+    {
+        $validator->after(function (Validator $validator) {
+            $companyId = $this->user()?->company_id;
+            $leaveTypeId = $this->input('leave_type_id');
+
+            if (! $leaveTypeId || ! $companyId) {
+                return;
+            }
+
+            $leaveType = LeaveType::where('id', $leaveTypeId)
+                ->where('company_id', $companyId)
+                ->first();
+
+            if (! $leaveType?->requires_proof) {
+                return;
+            }
+
+            $hasUpload = $this->hasFile('file') || $this->hasFile('attachment');
+            $hasPath = filled($this->input('attachment_path'));
+
+            if (! $hasUpload && ! $hasPath) {
+                $validator->errors()->add(
+                    'file',
+                    'A proof file is required for this leave type. Upload with field "file" (multipart), same as Excel import.'
+                );
+            }
+        });
     }
 
     protected function failedValidation(Validator $validator): void
