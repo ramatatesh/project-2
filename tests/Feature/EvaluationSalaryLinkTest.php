@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Enums\Role;
+use App\Models\AttendanceRecord;
 use App\Models\Company;
 use App\Models\Department;
 use App\Models\Employee;
@@ -10,10 +11,12 @@ use App\Models\EvaluationCycle;
 use App\Models\EvaluationPolicy;
 use App\Models\EvaluationScore;
 use App\Models\EvaluationTemplate;
+use App\Models\OvertimeRequest;
 use App\Models\SalaryAdvance;
 use App\Models\SalaryAdvanceInstallment;
 use App\Models\SalaryAdvancePolicy;
 use App\Models\SalaryRecord;
+use App\Models\SalaryRule;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
@@ -208,8 +211,10 @@ class EvaluationSalaryLinkTest extends TestCase
         $this->assertEquals(1100, (float) $record->net_salary);
     }
 
-    public function test_paid_salary_is_not_modified(): void
+    public function test_generate_is_rejected_when_the_period_is_already_paid_or_closed(): void
     {
+        // SalaryService::periodIsLocked() locks the whole company+month+year period the
+        // moment ANY record in it is paid/closed - not just the individual employee's record.
         $this->setPolicy(true, 10, 5, 8);
         $this->createFinalizedScore(8.7);
 
@@ -237,8 +242,8 @@ class EvaluationSalaryLinkTest extends TestCase
                 'year' => 2026,
                 'employee_id' => $this->employee->id,
             ])
-            ->assertCreated()
-            ->assertJsonPath('data.skipped_paid', 1);
+            ->assertStatus(422)
+            ->assertJsonPath('message', 'Cannot recalculate a closed or paid payroll period.');
 
         $paid->refresh();
         $this->assertEquals(0, (float) $paid->bonus_amount);
@@ -246,10 +251,67 @@ class EvaluationSalaryLinkTest extends TestCase
         $this->assertSame(SalaryRecord::STATUS_PAID, $paid->status);
     }
 
-    public function test_existing_overtime_absence_late_and_loan_are_preserved(): void
+    public function test_overtime_attendance_and_loan_are_recalculated_from_real_records_while_manual_bonus_is_preserved(): void
     {
+        // SalaryService::calculateDraftRecord() only preserves manual_bonus/manual_deduction
+        // across a recalculation - overtime_amount, late/absent deductions and loan_deduction
+        // are always recomputed fresh from real OvertimeRequest/AttendanceRecord/
+        // SalaryAdvanceInstallment rows, never carried over from whatever a draft had before.
         $this->setPolicy(true, 10, 5, 8);
         $this->createFinalizedScore(8.7);
+
+        OvertimeRequest::create([
+            'id' => Str::uuid()->toString(),
+            'company_id' => $this->company->id,
+            'employee_id' => $this->employee->id,
+            'request_date' => '2026-08-10',
+            'duration_type' => OvertimeRequest::DURATION_HOUR,
+            'hours_requested' => 5,
+            'status' => OvertimeRequest::STATUS_APPROVED,
+            'calculated_amount' => 50,
+        ]);
+
+        // base_salary(1000)/30 * 0.45 = 15 exactly for 1 late day.
+        SalaryRule::create([
+            'id' => Str::uuid()->toString(),
+            'company_id' => $this->company->id,
+            'rule_type' => 'late',
+            'time_unit' => 'day',
+            'operation' => 'deduction',
+            'value_type' => 'fixed',
+            'value' => 0.45,
+            'is_active' => true,
+        ]);
+
+        // base_salary(1000)/30 * 0.6 = 20 exactly for 1 absent day.
+        SalaryRule::create([
+            'id' => Str::uuid()->toString(),
+            'company_id' => $this->company->id,
+            'rule_type' => 'absence',
+            'time_unit' => 'day',
+            'operation' => 'deduction',
+            'value_type' => 'fixed',
+            'value' => 0.6,
+            'is_active' => true,
+        ]);
+
+        AttendanceRecord::create([
+            'id' => Str::uuid()->toString(),
+            'company_id' => $this->company->id,
+            'employee_id' => $this->employee->id,
+            'work_date' => '2026-08-11',
+            'status' => AttendanceRecord::STATUS_COMPLETED,
+            'attendance_type' => AttendanceRecord::TYPE_LATE,
+        ]);
+
+        AttendanceRecord::create([
+            'id' => Str::uuid()->toString(),
+            'company_id' => $this->company->id,
+            'employee_id' => $this->employee->id,
+            'work_date' => '2026-08-12',
+            'status' => AttendanceRecord::STATUS_ABSENT,
+            'attendance_type' => AttendanceRecord::TYPE_ABSENT,
+        ]);
 
         SalaryAdvancePolicy::create([
             'id' => Str::uuid()->toString(),

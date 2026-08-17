@@ -45,9 +45,9 @@ class EnsureCompanyIsNotFrozen
 
     private function isExemptWritePath(Request $request): bool
     {
-        return $request->is(
-            'api/auth/*',
-            'api/company/subscription/renew',
+        return $request->routeIs(
+            'auth.*',
+            'company.subscription.renew',
         );
     }
 }
