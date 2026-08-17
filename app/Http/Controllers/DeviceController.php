@@ -6,6 +6,7 @@ use App\Http\Requests\RegisterDeviceRequest;
 use App\Http\Requests\UnregisterDeviceRequest;
 use App\Services\DeviceService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Log;
 
 /**
  * @OA\Tag(
@@ -46,6 +47,15 @@ class DeviceController extends Controller
             $request->validated('platform'),
             $request->validated('device_name'),
         );
+
+        $fcmToken = (string) $request->validated('fcm_token');
+        Log::info('FCM device register received.', [
+            'user_id' => $request->user()?->id,
+            'token_prefix' => substr($fcmToken, 0, 12),
+            'token_len' => strlen($fcmToken),
+            'platform' => $request->validated('platform'),
+            'device_id' => $device->id,
+        ]);
 
         return response()->json([
             'success' => true,

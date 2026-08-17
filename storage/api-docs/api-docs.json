@@ -4257,6 +4257,46 @@
                 ]
             }
         },
+        "/api/hr/employees/{employee}/profile-overview": {
+            "get": {
+                "tags": [
+                    "Employees"
+                ],
+                "summary": "عرض شامل لملف الموظف: البيانات الشخصية والوثائق، تصنيف كل تقييم نهائي (بدون علامة رقمية)، وسجل الحضور/الغياب/الإجازات/العطل منذ تاريخ التعيين حتى اليوم",
+                "description": "متاح فقط لمدير الموارد البشرية والمدير العام لنفس الشركة. لا يُرجع أي علامات رقمية للتقييمات، فقط تصنيف نصي (excellent/good/average/weak).",
+                "operationId": "5caadf9bb3107dcb05b63e91fce6bc14",
+                "parameters": [
+                    {
+                        "name": "employee",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "ملف الموظف الشامل"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "403": {
+                        "description": "Forbidden (HR Manager or General Manager only)"
+                    },
+                    "404": {
+                        "description": "Not found / not in your company"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
         "/api/hr/employees/import": {
             "post": {
                 "tags": [

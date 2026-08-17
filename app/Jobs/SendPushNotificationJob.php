@@ -31,6 +31,10 @@ class SendPushNotificationJob implements ShouldQueue
                 return;
             }
 
+            Log::info('Push job executed.', [
+                'notification_id' => $this->notificationId,
+            ]);
+
             $notificationService->sendPush($notification);
         } catch (\Throwable $e) {
             Log::error('Push notification send failed without affecting the source action.', [
