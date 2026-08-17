@@ -48,14 +48,14 @@ class AttendanceAdjustmentRequest extends FormRequest
             if ($effectiveCheckIn === null && $effectiveCheckOut !== null) {
                 throw new HttpResponseException(response()->json([
                     'success' => false,
-                    'message' => 'لا يمكن تسجيل وقت الانصراف بدون وجود تسجيل دخول لهذا اليوم.',
+                    'message' => 'Cannot record check-out without a check-in for this day.',
                 ], 422));
             }
 
             if ($effectiveCheckIn !== null && $effectiveCheckOut !== null && $effectiveCheckOut <= $effectiveCheckIn) {
                 throw new HttpResponseException(response()->json([
                     'success' => false,
-                    'message' => 'وقت الانصراف يجب أن يكون بعد وقت الدخول.',
+                    'message' => 'Check-out time must be after check-in time.',
                 ], 422));
             }
         });

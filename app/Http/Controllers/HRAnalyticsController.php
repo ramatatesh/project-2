@@ -31,7 +31,7 @@ class HRAnalyticsController extends Controller
         $userRole = strtolower($user->role->name ?? $user->role ?? '');
 
         if (!in_array($userRole, ['hr_manager', 'general_manager', 'hr', 'company_manager'])) {
-            abort(403, 'عذراً، هذا الإجراء مخصص لمدير الشركة ومدير الموارد البشرية فقط.');
+            abort(403, 'This action is only available to the company manager and HR manager.');
         }
     }
 

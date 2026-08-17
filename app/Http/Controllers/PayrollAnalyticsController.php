@@ -69,7 +69,7 @@ class PayrollAnalyticsController extends Controller
 
     if (!$user) {
         return response()->json([
-            'message' => 'غير مصرح بالوصول.'
+            'message' => 'Access denied.'
         ], 401);
     }
 
@@ -81,7 +81,7 @@ class PayrollAnalyticsController extends Controller
 
     if (!in_array($userRole, $allowedRoles)) {
         return response()->json([
-            'message' => 'عذراً، هذا الإجراء مخصص لمدير الشركة ومدير الموارد البشرية فقط.'
+            'message' => 'This action is only available to the company manager and HR manager.'
         ], 403);
     }
 

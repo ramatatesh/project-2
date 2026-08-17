@@ -252,7 +252,7 @@ class SubscriptionService
                 'error' => $e->getMessage(),
             ]);
 
-            return ['success' => false, 'message' => 'Failed to provision company: '.$e->getMessage()];
+            return ['success' => false, 'message' => __('Failed to provision company: :error', ['error' => $e->getMessage()])];
         }
     }
 
@@ -394,7 +394,7 @@ class SubscriptionService
                 'error' => $e->getMessage(),
             ]);
 
-            return ['success' => false, 'message' => 'Failed to renew subscription: '.$e->getMessage()];
+            return ['success' => false, 'message' => __('Failed to renew subscription: :error', ['error' => $e->getMessage()])];
         }
     }
 

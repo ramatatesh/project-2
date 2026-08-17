@@ -59,9 +59,9 @@ class UpdateDepartmentManagerRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'phone.regex' => 'رقم الهاتف يجب أن يبدأ بـ 09 ويتكون من 10 أرقام.',
-            'hire_date.before_or_equal' => 'لا يمكن أن يكون تاريخ التعيين في المستقبل.',
-            'birth_date.before_or_equal' => 'لا يمكن أن يكون تاريخ الميلاد في المستقبل.',
+            'phone.regex' => 'Phone number must start with 09 and contain 10 digits.',
+            'hire_date.before_or_equal' => 'Hire date cannot be in the future.',
+            'birth_date.before_or_equal' => 'Birth date cannot be in the future.',
         ];
     }
 

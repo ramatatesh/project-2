@@ -56,6 +56,61 @@ class AuthFlowTest extends TestCase
         $this->assertNotEmpty($response->json('data.token'));
     }
 
+    public function test_login_explains_unknown_email(): void
+    {
+        $this->postJson('/api/auth/login', [
+            'email' => 'nobody@user.test',
+            'password' => 'OldPassword123!',
+        ])
+            ->assertStatus(401)
+            ->assertJsonPath('success', false)
+            ->assertJsonPath('message', 'No account is registered with this email.')
+            ->assertJsonPath('errors.email.0', 'No account is registered with this email.');
+    }
+
+    public function test_login_explains_wrong_password(): void
+    {
+        $this->postJson('/api/auth/login', [
+            'email' => 'authflow@user.test',
+            'password' => 'WrongPassword123!',
+        ])
+            ->assertStatus(401)
+            ->assertJsonPath('message', 'The password is incorrect.')
+            ->assertJsonPath('errors.password.0', 'The password is incorrect.');
+    }
+
+    public function test_login_explains_missing_fields(): void
+    {
+        $this->postJson('/api/auth/login', [])
+            ->assertStatus(422)
+            ->assertJsonPath('success', false)
+            ->assertJsonPath('message', 'Please enter your email address. Please enter your password.')
+            ->assertJsonPath('errors.email.0', 'Please enter your email address.')
+            ->assertJsonPath('errors.password.0', 'Please enter your password.');
+    }
+
+    public function test_login_explains_invalid_email_format(): void
+    {
+        $this->postJson('/api/auth/login', [
+            'email' => 'not-an-email',
+            'password' => 'anything',
+        ])
+            ->assertStatus(422)
+            ->assertJsonPath('message', 'The email address format is invalid. Example: name@company.com');
+    }
+
+    public function test_login_explains_inactive_account(): void
+    {
+        $this->user->update(['status' => 'inactive']);
+
+        $this->postJson('/api/auth/login', [
+            'email' => 'authflow@user.test',
+            'password' => 'OldPassword123!',
+        ])
+            ->assertStatus(403)
+            ->assertJsonPath('message', 'This account is inactive. Contact your company administrator.');
+    }
+
     public function test_logout_revokes_only_the_current_token(): void
     {
         $tokenA = $this->postJson('/api/auth/login', [
@@ -149,10 +204,10 @@ class AuthFlowTest extends TestCase
 
         $response->assertStatus(422);
         $errors = $response->json('errors.password');
-        $this->assertContains('يجب أن تحتوي كلمة المرور على 8 أحرف على الأقل.', $errors);
-        $this->assertContains('يجب أن تحتوي كلمة المرور على حرف كبير وحرف صغير.', $errors);
-        $this->assertContains('يجب أن تحتوي كلمة المرور على رقم واحد على الأقل.', $errors);
-        $this->assertContains('يجب أن تحتوي كلمة المرور على رمز خاص واحد على الأقل.', $errors);
+        $this->assertContains('Password must be at least 8 characters.', $errors);
+        $this->assertContains('Password must contain both uppercase and lowercase letters.', $errors);
+        $this->assertContains('Password must contain at least one number.', $errors);
+        $this->assertContains('Password must contain at least one special character.', $errors);
     }
 
     public function test_complete_first_login_rejects_weak_password_with_specific_messages(): void
@@ -166,10 +221,27 @@ class AuthFlowTest extends TestCase
 
         $response->assertStatus(422);
         $errors = $response->json('errors.password');
-        $this->assertContains('يجب أن تحتوي كلمة المرور على 8 أحرف على الأقل.', $errors);
-        $this->assertContains('يجب أن تحتوي كلمة المرور على حرف كبير وحرف صغير.', $errors);
-        $this->assertContains('يجب أن تحتوي كلمة المرور على رقم واحد على الأقل.', $errors);
-        $this->assertContains('يجب أن تحتوي كلمة المرور على رمز خاص واحد على الأقل.', $errors);
+        $this->assertContains('Password must be at least 8 characters.', $errors);
+        $this->assertContains('Password must contain both uppercase and lowercase letters.', $errors);
+        $this->assertContains('Password must contain at least one number.', $errors);
+        $this->assertContains('Password must contain at least one special character.', $errors);
+        $this->assertStringContainsString('special character', $response->json('message'));
+    }
+
+    public function test_complete_first_login_rejects_password_without_symbol_with_clear_message(): void
+    {
+        $this->actingAs($this->user);
+
+        $response = $this->postJson('/api/auth/complete-first-login', [
+            'password' => 'Rama1234',
+            'password_confirmation' => 'Rama1234',
+        ]);
+
+        $response->assertStatus(422);
+        $response->assertJsonPath('success', false);
+        $response->assertJsonFragment([
+            'message' => 'Password must contain at least one special character.',
+        ]);
     }
 
     public function test_complete_first_login_accepts_strong_password(): void

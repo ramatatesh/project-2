@@ -363,11 +363,10 @@ class SalaryService
 
         if (now()->startOfDay()->lt($cutoff)) {
             throw new RuntimeException(
-                'Cannot mark payroll as paid before the cutoff day ('
-                .self::PAYROLL_CUTOFF_DAY
-                .'). Payment opens on '
-                .$cutoff->toDateString()
-                .'.'
+                __('Cannot mark payroll as paid before the cutoff day (:day). Payment opens on :date.', [
+                    'day' => self::PAYROLL_CUTOFF_DAY,
+                    'date' => $cutoff->toDateString(),
+                ])
             );
         }
     }

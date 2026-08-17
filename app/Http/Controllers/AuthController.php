@@ -40,6 +40,9 @@ use Illuminate\Support\Facades\Log;
  */
 class AuthController extends Controller
 {
+    private const PASSWORD_REQUIREMENTS_MESSAGE =
+        'Password must be strong and include: at least 8 characters, an uppercase and lowercase letter, a number, and a special character (such as @ # $ %).';
+
     /**
      * @OA\Post(
      * path="/api/auth/login",
@@ -92,12 +95,28 @@ class AuthController extends Controller
 
             $user = User::where('email', $credentials['email'])->first();
 
-            if (! $user || ! Hash::check($credentials['password'], $user->password_hash)) {
-                return $this->errorResponse('Invalid credentials.', 401);
+            if (! $user) {
+                return $this->errorResponse(
+                    'No account is registered with this email.',
+                    401,
+                    ['email' => ['No account is registered with this email.']]
+                );
+            }
+
+            if (! Hash::check($credentials['password'], $user->password_hash)) {
+                return $this->errorResponse(
+                    'The password is incorrect.',
+                    401,
+                    ['password' => ['The password is incorrect.']]
+                );
             }
 
             if ($user->status !== 'active') {
-                return $this->errorResponse('User account is inactive.', 403);
+                return $this->errorResponse(
+                    'This account is inactive. Contact your company administrator.',
+                    403,
+                    ['email' => ['This account is inactive. Contact your company administrator.']]
+                );
             }
 
             if ($user->two_factor_enabled) {
@@ -175,17 +194,29 @@ class AuthController extends Controller
                 ->first();
 
             if (! $otp) {
-                return $this->errorResponse('Invalid or expired verification code.', 400);
+                return $this->errorResponse(
+                    'The verification code is incorrect or has expired.',
+                    400,
+                    ['otp' => ['The verification code is incorrect or has expired.']]
+                );
             }
 
             $user = User::where('email', $request->email)->first();
 
             if (! $user) {
-                return $this->errorResponse('User not found.', 404);
+                return $this->errorResponse(
+                    'No account is registered with this email.',
+                    404,
+                    ['email' => ['No account is registered with this email.']]
+                );
             }
 
             if ($user->status !== 'active') {
-                return $this->errorResponse('User account is inactive.', 403);
+                return $this->errorResponse(
+                    'This account is inactive. Contact your company administrator.',
+                    403,
+                    ['email' => ['This account is inactive. Contact your company administrator.']]
+                );
             }
 
             LoginOtp::where('email', $request->email)->delete();
@@ -548,26 +579,28 @@ public function resendOtp(ForgotPasswordRequest $request): JsonResponse
                         ->symbols(),
                 ],
             ], [
-                'password.required' => 'كلمة المرور مطلوبة.',
-                'password.confirmed' => 'تأكيد كلمة المرور غير متطابق.',
-                'password.min' => 'يجب أن تحتوي كلمة المرور على 8 أحرف على الأقل.',
-                'password.letters' => 'يجب أن تحتوي كلمة المرور على حرف واحد على الأقل.',
-                'password.mixed' => 'يجب أن تحتوي كلمة المرور على حرف كبير وحرف صغير.',
-                'password.numbers' => 'يجب أن تحتوي كلمة المرور على رقم واحد على الأقل.',
-                'password.symbols' => 'يجب أن تحتوي كلمة المرور على رمز خاص واحد على الأقل.',
+                'password.required' => __('Password is required.'),
+                'password.confirmed' => __('Password confirmation does not match.'),
+                'password.min' => __('Password must be at least 8 characters.'),
+                'password.letters' => __('Password must contain at least one letter.'),
+                'password.mixed' => __('Password must contain both uppercase and lowercase letters.'),
+                'password.numbers' => __('Password must contain at least one number.'),
+                'password.symbols' => __('Password must contain at least one special character.'),
             ]);
 
             if ($validator->fails()) {
-                return $this->errorResponse('Validation error', 422, $validator->errors());
+                return $this->errorResponse(
+                    $this->formatValidationMessage($validator, self::PASSWORD_REQUIREMENTS_MESSAGE),
+                    422,
+                    $validator->errors()
+                );
             }
-
 
             $user = auth()->user();
 
             if (! $user) {
                 return $this->errorResponse('Unauthenticated.', 401);
             }
-
 
             $user->update([
                 'password_hash' => Hash::make($request->password),
@@ -679,7 +712,7 @@ public function resendOtp(ForgotPasswordRequest $request): JsonResponse
     {
         return response()->json([
             'success' => true,
-            'message' => $message,
+            'message' => __($message),
             'data' => $data,
         ], $status);
     }
@@ -688,9 +721,27 @@ public function resendOtp(ForgotPasswordRequest $request): JsonResponse
     {
         return response()->json([
             'success' => false,
-            'message' => $message,
+            'message' => __($message),
             'errors' => $errors,
         ], $status);
+    }
+
+    /**
+     * Build a user-facing validation message (frontend often shows only `message`, not `errors`).
+     */
+    protected function formatValidationMessage(
+        \Illuminate\Contracts\Validation\Validator $validator,
+        ?string $fallback = null,
+    ): string {
+        $passwordErrors = $validator->errors()->get('password', []);
+
+        if ($passwordErrors !== []) {
+            return implode(' ', $passwordErrors);
+        }
+
+        $first = $validator->errors()->first();
+
+        return $first ?: ($fallback ?? __('Please check the input and try again.'));
     }
 
 }

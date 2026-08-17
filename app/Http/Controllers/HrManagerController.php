@@ -479,7 +479,7 @@ class HrManagerController extends Controller
             if ($hrManager->id === auth()->id()) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'لا يمكنك حذف حسابك الخاص كمدير موارد بشرية.',
+                    'message' => 'You cannot delete your own HR manager account.',
                 ], 409);
             }
 
@@ -491,7 +491,7 @@ class HrManagerController extends Controller
             if (! $hasOtherHrManager) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'لا يمكن حذف آخر مدير موارد بشرية في الشركة.',
+                    'message' => 'Cannot delete the last HR manager in the company.',
                 ], 409);
             }
 
@@ -502,7 +502,7 @@ class HrManagerController extends Controller
 
                 return response()->json([
                     'success' => false,
-                    'message' => 'لا يمكن حذف الموظف لأنه يمتلك سجلات مرتبطة بالنظام. تم تجميد حسابه بدلاً من ذلك.',
+                    'message' => 'Cannot delete this employee because they have related records. The account was frozen instead.',
                 ], 409);
             }
 

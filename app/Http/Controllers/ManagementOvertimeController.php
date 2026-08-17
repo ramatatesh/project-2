@@ -285,7 +285,7 @@ class ManagementOvertimeController extends Controller
                             $approvedUnits = (int) $request->validated('hours_approved');
                             $managerApproved = (int) ($ot->hours_approved ?? $ot->hours_requested);
                             if ($approvedUnits > $managerApproved) {
-                                return ['error' => true, 'status' => 422, 'message' => 'HR approval cannot exceed the hours approved by the department manager ('.$managerApproved.').'];
+                                return ['error' => true, 'status' => 422, 'message' => __('HR approval cannot exceed the hours approved by the department manager (:hours).', ['hours' => $managerApproved])];
                             }
                             $ot->hours_approved = $approvedUnits;
                         }

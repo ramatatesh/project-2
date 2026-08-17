@@ -32,7 +32,9 @@ use App\Http\Controllers\ManagementLeaveController;
 use App\Http\Controllers\ManagementOvertimeController;
 use App\Http\Controllers\EmployeeOvertimeController;
 use App\Http\Controllers\EmployeeSalaryController;
+use App\Http\Controllers\HrCompanyPolicyController;
 use App\Http\Controllers\HrManagerController;
+use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\ManagementSalaryController;
 use App\Http\Controllers\PaymentWebhookController;
 use App\Http\Controllers\PayrollAnalyticsController;
@@ -40,6 +42,8 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SalaryAdvancePolicyController;
 use App\Http\Controllers\SubscriptionPlanController;
 use Illuminate\Support\Facades\Route;
+
+Route::get('/translations', [LocaleController::class, 'translations'])->name('translations');
 
 Route::middleware('guest')->prefix('auth')->group(function () {
     Route::post('/login', [AuthController::class, 'login'])->name('auth.login')->middleware('throttle:5,1');
@@ -150,35 +154,39 @@ Route::middleware(['auth:sanctum', 'role:super_admin'])->group(function () {
 
 });
 
-// Tenant area: company-scoped policy & setup (General Manager only, must belong to the company).
+// Tenant area: read-only company policies (HR Manager & General Manager).
+Route::middleware(['auth:sanctum', 'tenant', 'role:hr_manager,general_manager', 'company.active'])->prefix('companies')->group(function () {
+    Route::get('/{company}/leave-types', [CompanyPolicyController::class, 'indexLeaveTypes']);
+    Route::get('/{company}/salary-rules', [CompanyPolicyController::class, 'indexSalaryRules']);
+    Route::get('/{company}/holidays', [HolidayPolicyController::class, 'indexHolidays']);
+    Route::get('/{company}/weekly-holidays', [HolidayPolicyController::class, 'indexWeeklyHolidays']);
+    Route::get('/{company}/evaluation-policy', [HolidayPolicyController::class, 'indexEvaluationPolicy']);
+    Route::get('/{company}/attendance-policy', [CompanySettingsController::class, 'showAttendancePolicy'])->name('companies.attendance-policy.show');
+    Route::get('/{company}/advance-policy', [SalaryAdvancePolicyController::class, 'show'])->name('companies.advance-policy.show');
+});
+
+// Tenant area: company-scoped policy & setup writes (General Manager only, must belong to the company).
 // company.active blocks write actions (not GET) when the company is frozen/suspended; Super Admin is exempt.
 Route::middleware(['auth:sanctum', 'tenant', 'role:general_manager', 'company.active'])->prefix('companies')->group(function () {
-    Route::get('/{company}/leave-types', [CompanyPolicyController::class, 'indexLeaveTypes']);
     Route::post('/{company}/leave-types', [CompanyPolicyController::class, 'storeLeaveTypes']);
     Route::put('/{company}/leave-types', [CompanyPolicyController::class, 'updateLeaveTypes']);
     Route::post('/{company}/leave-types/{leaveType}/toggle', [CompanyPolicyController::class, 'toggleLeaveType']);
-    Route::get('/{company}/salary-rules', [CompanyPolicyController::class, 'indexSalaryRules']);
     Route::post('/{company}/salary-rules', [CompanyPolicyController::class, 'storeSalaryRule']);
     Route::put('/{company}/salary-rules/{rule}', [CompanyPolicyController::class, 'updateSalaryRule']);
     Route::post('/{company}/salary-rules/{rule}/toggle', [CompanyPolicyController::class, 'toggleSalaryRule']);
     Route::put('/{company}/payroll-currency', [CompanyPolicyController::class, 'updatePayrollCurrency'])->name('companies.payroll-currency');
 
-    Route::get('/{company}/holidays', [HolidayPolicyController::class, 'indexHolidays']);
     Route::post('/{company}/holidays', [HolidayPolicyController::class, 'storeHoliday']);
     Route::put('/{company}/holidays/{holiday}', [HolidayPolicyController::class, 'updateHoliday']);
     Route::delete('/{company}/holidays/{holiday}', [HolidayPolicyController::class, 'deleteHoliday']);
     Route::post('/{company}/holidays/defaults', [HolidayPolicyController::class, 'addDefaultSyrianHolidays']);
     Route::delete('/{company}/holidays/defaults', [HolidayPolicyController::class, 'removeDefaultSyrianHolidays']);
-    Route::get('/{company}/weekly-holidays', [HolidayPolicyController::class, 'indexWeeklyHolidays']);
     Route::post('/{company}/weekly-holidays', [HolidayPolicyController::class, 'updateWeeklyHolidays']);
-    Route::get('/{company}/evaluation-policy', [HolidayPolicyController::class, 'indexEvaluationPolicy']);
     Route::put('/{company}/evaluation-policy', [HolidayPolicyController::class, 'updateEvaluationPolicy']);
 
-    Route::get('/{company}/attendance-policy', [CompanySettingsController::class, 'showAttendancePolicy'])->name('companies.attendance-policy.show');
     Route::put('/{company}/attendance-policy', [CompanySettingsController::class, 'updateAttendancePolicy'])->name('companies.attendance-policy');
     Route::put('/{company}/attendance-location', [CompanySettingsController::class, 'updateAttendanceLocation'])->name('companies.attendance-location');
 
-    Route::get('/{company}/advance-policy', [SalaryAdvancePolicyController::class, 'show'])->name('companies.advance-policy.show');
     Route::put('/{company}/advance-policy', [SalaryAdvancePolicyController::class, 'storeOrUpdate'])->name('companies.advance-policy.update');
     Route::post('/{company}/advance-policy', [SalaryAdvancePolicyController::class, 'storeOrUpdate'])->name('companies.advance-policy.store');
 
@@ -222,6 +230,17 @@ Route::middleware(['auth:sanctum', 'company.active', 'role:hr_manager,general_ma
     Route::delete('/employees/{employee}', [EmployeeController::class, 'destroy']);
 
     Route::get('/employees/{employee}', [EmployeeController::class, 'show']);
+
+    // Company policies (read-only, scoped to auth user's company)
+    Route::prefix('company-policies')->group(function () {
+        Route::get('/leave-types', [HrCompanyPolicyController::class, 'leaveTypes'])->name('hr.company-policies.leave-types');
+        Route::get('/salary-rules', [HrCompanyPolicyController::class, 'salaryRules'])->name('hr.company-policies.salary-rules');
+        Route::get('/holidays', [HrCompanyPolicyController::class, 'holidays'])->name('hr.company-policies.holidays');
+        Route::get('/weekly-holidays', [HrCompanyPolicyController::class, 'weeklyHolidays'])->name('hr.company-policies.weekly-holidays');
+        Route::get('/evaluation-policy', [HrCompanyPolicyController::class, 'evaluationPolicy'])->name('hr.company-policies.evaluation-policy');
+        Route::get('/attendance-policy', [HrCompanyPolicyController::class, 'attendancePolicy'])->name('hr.company-policies.attendance-policy');
+        Route::get('/advance-policy', [HrCompanyPolicyController::class, 'advancePolicy'])->name('hr.company-policies.advance-policy');
+    });
 });
 
 // HR Dashboard area: Departments & Employees management (HR Manager only).

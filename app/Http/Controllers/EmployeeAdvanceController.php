@@ -240,7 +240,7 @@ class EmployeeAdvanceController extends Controller
         if (! $advance) {
             return response()->json([
                 'success' => false,
-                'message' => 'لا يمكنك تقديم طلب سلفة جديد لوجود سلفة نشطة قيد السداد',
+                'message' => 'You cannot submit a new advance request while another active advance is being repaid.',
             ], 422);
         }
 

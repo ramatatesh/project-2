@@ -36,11 +36,11 @@ class ResetPasswordRequest extends FormRequest
             'email.email' => 'Please provide a valid email address.',
             'password.required' => 'Password is required.',
             'password.confirmed' => 'Password confirmation does not match.',
-            'password.min' => 'يجب أن تحتوي كلمة المرور على 8 أحرف على الأقل.',
-            'password.letters' => 'يجب أن تحتوي كلمة المرور على حرف واحد على الأقل.',
-            'password.mixed' => 'يجب أن تحتوي كلمة المرور على حرف كبير وحرف صغير.',
-            'password.numbers' => 'يجب أن تحتوي كلمة المرور على رقم واحد على الأقل.',
-            'password.symbols' => 'يجب أن تحتوي كلمة المرور على رمز خاص واحد على الأقل.',
+            'password.min' => 'Password must be at least 8 characters.',
+            'password.letters' => 'Password must contain at least one letter.',
+            'password.mixed' => 'Password must contain both uppercase and lowercase letters.',
+            'password.numbers' => 'Password must contain at least one number.',
+            'password.symbols' => 'Password must contain at least one special character.',
         ];
     }
 
@@ -48,8 +48,20 @@ class ResetPasswordRequest extends FormRequest
     {
         throw new HttpResponseException(response()->json([
             'success' => false,
-            'message' => 'Validation failed.',
+            'message' => $this->passwordValidationMessage($validator),
             'errors' => $validator->errors(),
         ], 422));
+    }
+
+    private function passwordValidationMessage(Validator $validator): string
+    {
+        $passwordErrors = $validator->errors()->get('password', []);
+
+        if ($passwordErrors !== []) {
+            return implode(' ', $passwordErrors);
+        }
+
+        return $validator->errors()->first()
+            ?: 'Password must be strong and include: at least 8 characters, an uppercase and lowercase letter, a number, and a special character (such as @ # $ %).';
     }
 }

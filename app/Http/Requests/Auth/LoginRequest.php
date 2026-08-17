@@ -17,26 +17,29 @@ class LoginRequest extends FormRequest
     {
         return [
             'email' => ['required', 'email', 'max:255'],
-            'password' => ['required', 'string', 'min:8'],
+            'password' => ['required', 'string'],
         ];
     }
 
     public function messages(): array
     {
         return [
-            'email.required' => 'Email is required.',
-            'email.email' => 'Please provide a valid email address.',
-            'password.required' => 'Password is required.',
-            'password.min' => 'Password must be at least 8 characters.',
+            'email.required' => 'Please enter your email address.',
+            'email.email' => 'The email address format is invalid. Example: name@company.com',
+            'email.max' => 'The email address is too long.',
+            'password.required' => 'Please enter your password.',
         ];
     }
 
     protected function failedValidation(Validator $validator): void
     {
+        $errors = $validator->errors();
+        $message = collect($errors->all())->unique()->implode(' ');
+
         throw new HttpResponseException(response()->json([
             'success' => false,
-            'message' => 'Validation failed.',
-            'errors' => $validator->errors(),
+            'message' => $message,
+            'errors' => $errors,
         ], 422));
     }
 }

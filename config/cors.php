@@ -12,6 +12,7 @@ return [
         'http://localhost:8000',
         'http://127.0.0.1:8000',
         'http://localhost:3000', // في حال تغير منفذ React
+        'https://03e5-212-8-253-37.ngrok-free.app'
     ],
 
     // إضافة نمط للتعرف على أي رابط ngrok ديناميكياً
@@ -22,7 +23,7 @@ return [
 
     'allowed_headers' => ['*'],
 
-    'exposed_headers' => [],
+    'exposed_headers' => ['Content-Language'],
 
     'max_age' => 0,
 

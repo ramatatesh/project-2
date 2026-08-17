@@ -193,7 +193,7 @@ class SalaryAdvanceTest extends TestCase
         ]);
 
         $response->assertStatus(422);
-        $response->assertJsonPath('message', 'لا يمكنك تقديم طلب سلفة جديد لوجود سلفة نشطة قيد السداد');
+        $response->assertJsonPath('message', 'You cannot submit a new advance request while another active advance is being repaid.');
 
         $this->assertSame(1, SalaryAdvance::where('employee_id', $this->employee->id)->count());
     }

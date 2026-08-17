@@ -114,7 +114,7 @@ class EmployeeProtectionAndValidationTest extends TestCase
         $this->deleteJson("/api/hr/employees/{$employee->id}")
             ->assertStatus(409)
             ->assertJsonPath('success', false)
-            ->assertJsonPath('message', 'لا يمكن حذف الموظف لأنه يمتلك سجلات مرتبطة بالنظام. تم تجميد حسابه بدلاً من ذلك.');
+            ->assertJsonPath('message', 'Cannot delete this employee because they have related records. The account was frozen instead.');
 
         // Nothing was deleted - only frozen.
         $this->assertDatabaseHas('employees', ['id' => $employee->id, 'is_active' => false]);
@@ -150,7 +150,7 @@ class EmployeeProtectionAndValidationTest extends TestCase
         $this->deleteJson("/api/companies/{$this->company->id}/hr-managers/{$this->hrManager->id}")
             ->assertStatus(409)
             ->assertJsonPath('success', false)
-            ->assertJsonPath('message', 'لا يمكن حذف آخر مدير موارد بشرية في الشركة.');
+            ->assertJsonPath('message', 'Cannot delete the last HR manager in the company.');
 
         $this->assertDatabaseHas('users', ['id' => $this->hrManager->id]);
     }
@@ -195,7 +195,7 @@ class EmployeeProtectionAndValidationTest extends TestCase
         ]);
 
         $response->assertStatus(422);
-        $response->assertJsonPath('errors.hire_date.0', 'لا يمكن أن يكون تاريخ التعيين في المستقبل.');
+        $response->assertJsonPath('errors.hire_date.0', 'Hire date cannot be in the future.');
     }
 
     public function test_store_employee_accepts_todays_hire_date(): void
@@ -232,7 +232,7 @@ class EmployeeProtectionAndValidationTest extends TestCase
         ]);
 
         $response->assertStatus(422);
-        $response->assertJsonPath('errors.phone.0', 'رقم الهاتف يجب أن يبدأ بـ 09 ويتكون من 10 أرقام.');
+        $response->assertJsonPath('errors.phone.0', 'Phone number must start with 09 and contain 10 digits.');
     }
 
     public function test_store_employee_accepts_valid_phone_format(): void

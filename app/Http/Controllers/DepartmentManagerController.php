@@ -400,7 +400,7 @@ class DepartmentManagerController extends Controller
 
                 return response()->json([
                     'success' => false,
-                    'message' => 'لا يمكن حذف الموظف لأنه يمتلك سجلات مرتبطة بالنظام. تم تجميد حسابه بدلاً من ذلك.',
+                    'message' => 'Cannot delete this employee because they have related records. The account was frozen instead.',
                 ], 409);
             }
 

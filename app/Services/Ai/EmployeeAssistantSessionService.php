@@ -202,10 +202,10 @@ class EmployeeAssistantSessionService
         $name = trim((string) $user->full_name);
 
         if ($name === '') {
-            return "أهلاً بك 👋\nكيف يمكنني مساعدتك؟";
+            return __("Welcome 👋\nHow can I help you?");
         }
 
-        return "أهلاً بك، {$name} 👋\nكيف يمكنني مساعدتك؟";
+        return __('Welcome, :name 👋'."\n".'How can I help you?', ['name' => $name]);
     }
 
     private function assertEmployeeOwnership(User $user, Employee $employee): void

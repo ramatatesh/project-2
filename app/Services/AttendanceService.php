@@ -310,14 +310,14 @@ class AttendanceService
             if (! $newCheckIn && $newCheckOut) {
                 throw new HttpResponseException(response()->json([
                     'success' => false,
-                    'message' => 'لا يمكن تسجيل وقت الانصراف بدون وجود تسجيل دخول لهذا اليوم.',
+                    'message' => 'Cannot record check-out without a check-in for this day.',
                 ], 422));
             }
 
             if ($newCheckIn && $newCheckOut && $newCheckOut->lessThanOrEqualTo($newCheckIn)) {
                 throw new HttpResponseException(response()->json([
                     'success' => false,
-                    'message' => 'وقت الانصراف يجب أن يكون بعد وقت الدخول.',
+                    'message' => 'Check-out time must be after check-in time.',
                 ], 422));
             }
 
@@ -971,6 +971,6 @@ class AttendanceService
 
     private function failure(string $message, array $extra = []): array
     {
-        return array_merge(['success' => false, 'message' => $message], $extra);
+        return array_merge(['success' => false, 'message' => __($message)], $extra);
     }
 }

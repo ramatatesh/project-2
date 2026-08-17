@@ -32,7 +32,7 @@ class UpdateProfileRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'phone.regex' => 'رقم الهاتف يجب أن يبدأ بـ 09 ويتكون من 10 أرقام.',
+            'phone.regex' => 'Phone number must start with 09 and contain 10 digits.',
         ];
     }
 

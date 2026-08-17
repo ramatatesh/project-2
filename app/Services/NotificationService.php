@@ -23,7 +23,7 @@ class NotificationService
 
         $employeeName = $this->sanitizeDisplayName($review->employee?->user?->full_name);
 
-        $title = 'تقييم أداء جديد 📋';
+        $title = __('New performance evaluation 📋');
         $body = $this->evaluationAssignedBody($review->review_type, $employeeName);
 
         $this->createAndDispatch(
@@ -62,14 +62,14 @@ class NotificationService
 
         $leaveTypeName = $this->sanitizeDisplayName($leaveRequest->leaveType?->name);
 
-        $title = $approved ? 'تمت الموافقة على الإجازة ✅' : 'تم رفض طلب الإجازة ❌';
+        $title = $approved ? __('Leave request approved ✅') : __('Leave request rejected ❌');
         $body = $approved
             ? ($leaveTypeName
-                ? "تمت الموافقة على طلب إجازتك ({$leaveTypeName}). يمكنك متابعة التفاصيل من التطبيق."
-                : 'تمت الموافقة على طلب إجازتك. يمكنك متابعة التفاصيل من التطبيق.')
+                ? __('Your leave request (:type) has been approved. You can view the details in the app.', ['type' => $leaveTypeName])
+                : __('Your leave request has been approved. You can view the details in the app.'))
             : ($leaveTypeName
-                ? "تم رفض طلب إجازتك ({$leaveTypeName}). يرجى فتح التطبيق للاطلاع على التفاصيل."
-                : 'تم رفض طلب إجازتك. يرجى فتح التطبيق للاطلاع على التفاصيل.');
+                ? __('Your leave request (:type) has been rejected. Please open the app for details.', ['type' => $leaveTypeName])
+                : __('Your leave request has been rejected. Please open the app for details.'));
 
         $this->createAndDispatch(
             companyId: $leaveRequest->company_id,
@@ -108,10 +108,10 @@ class NotificationService
             return;
         }
 
-        $title = $approved ? 'تمت الموافقة على العمل الإضافي ✅' : 'تم رفض طلب العمل الإضافي ❌';
+        $title = $approved ? __('Overtime request approved ✅') : __('Overtime request rejected ❌');
         $body = $approved
-            ? 'تمت الموافقة على طلب العمل الإضافي الخاص بك. يمكنك متابعة التفاصيل من التطبيق.'
-            : 'تم رفض طلب العمل الإضافي الخاص بك. يرجى فتح التطبيق للاطلاع على التفاصيل.';
+            ? __('Your overtime request has been approved. You can view the details in the app.')
+            : __('Your overtime request has been rejected. Please open the app for details.');
 
         $this->createAndDispatch(
             companyId: $overtimeRequest->company_id,
@@ -150,10 +150,10 @@ class NotificationService
             return;
         }
 
-        $title = $approved ? 'تمت الموافقة على طلب السلفة ✅' : 'تم رفض طلب السلفة ❌';
+        $title = $approved ? __('Salary advance request approved ✅') : __('Salary advance request rejected ❌');
         $body = $approved
-            ? 'تمت الموافقة على طلب السلفة الخاص بك. يمكنك متابعة التفاصيل من التطبيق.'
-            : 'تم رفض طلب السلفة الخاص بك. يرجى فتح التطبيق للاطلاع على التفاصيل.';
+            ? __('Your salary advance request has been approved. You can view the details in the app.')
+            : __('Your salary advance request has been rejected. Please open the app for details.');
 
         $this->createAndDispatch(
             companyId: $advance->company_id,
@@ -285,14 +285,14 @@ class NotificationService
     private function evaluationAssignedBody(?string $reviewType, ?string $employeeName): string
     {
         return match ($reviewType) {
-            EvaluationReview::TYPE_SELF => 'لديك تقييم أداء ذاتي جديد. يرجى فتح التطبيق وإكمال التقييم.',
+            EvaluationReview::TYPE_SELF => __('You have a new self performance evaluation. Please open the app and complete it.'),
             EvaluationReview::TYPE_MANAGER => $employeeName
-                ? "لديك تقييم أداء جديد كمدير للموظف {$employeeName}. يرجى فتح التطبيق وإكمال التقييم."
-                : 'لديك تقييم أداء جديد كمدير. يرجى فتح التطبيق وإكمال التقييم.',
+                ? __('You have a new manager performance evaluation for :name. Please open the app and complete it.', ['name' => $employeeName])
+                : __('You have a new manager performance evaluation. Please open the app and complete it.'),
             EvaluationReview::TYPE_PEER => $employeeName
-                ? "لديك تقييم زميل جديد للموظف {$employeeName}. يرجى فتح التطبيق وإكمال التقييم."
-                : 'لديك تقييم زميل جديد. يرجى فتح التطبيق وإكمال التقييم.',
-            default => 'لديك تقييم أداء جديد. يرجى فتح التطبيق وإكمال التقييم.',
+                ? __('You have a new peer evaluation for :name. Please open the app and complete it.', ['name' => $employeeName])
+                : __('You have a new peer evaluation. Please open the app and complete it.'),
+            default => __('You have a new performance evaluation. Please open the app and complete it.'),
         };
     }
 

@@ -405,7 +405,7 @@ class AttendanceTest extends TestCase
         ]);
 
         $response->assertStatus(422);
-        $response->assertJsonPath('message', 'وقت الانصراف يجب أن يكون بعد وقت الدخول.');
+        $response->assertJsonPath('message', 'Check-out time must be after check-in time.');
 
         $this->assertDatabaseMissing('attendance_adjustments', [
             'attendance_record_id' => $record->id,
@@ -438,7 +438,7 @@ class AttendanceTest extends TestCase
         ]);
 
         $response->assertStatus(422);
-        $response->assertJsonPath('message', 'لا يمكن تسجيل وقت الانصراف بدون وجود تسجيل دخول لهذا اليوم.');
+        $response->assertJsonPath('message', 'Cannot record check-out without a check-in for this day.');
 
         $this->assertDatabaseMissing('attendance_adjustments', [
             'attendance_record_id' => $record->id,

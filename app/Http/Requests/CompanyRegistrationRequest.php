@@ -34,8 +34,8 @@ class CompanyRegistrationRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'phone.regex' => 'رقم الهاتف يجب أن يبدأ بـ 09 ويتكون من 10 أرقام.',
-            'email.unique' => 'البريد الإلكتروني مستخدم مسبقاً من قبل شركة أخرى.',
+            'phone.regex' => 'Phone number must start with 09 and contain 10 digits.',
+            'email.unique' => 'This email is already used by another company.',
         ];
     }
 

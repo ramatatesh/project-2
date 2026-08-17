@@ -37,6 +37,8 @@ return Application::configure(basePath: dirname(__DIR__))
     })
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->append(\Illuminate\Http\Middleware\HandleCors::class);
+        $middleware->append(\App\Http\Middleware\SetLocale::class);
+        $middleware->append(\App\Http\Middleware\TranslateJsonMessages::class);
 
         $middleware->alias([
             'role' => \App\Http\Middleware\RequireRole::class,
@@ -56,7 +58,7 @@ return Application::configure(basePath: dirname(__DIR__))
             if ($request->is('api/*') || $request->expectsJson()) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Unauthenticated.',
+                    'message' => __('Unauthenticated.'),
                 ], 401);
             }
         });

@@ -97,7 +97,7 @@ class CompanySettingsController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'تم تحديث سياسة الحضور بنجاح.',
+            'message' => 'Attendance policy updated successfully.',
             'data'    => $policy,
         ]);
     }
@@ -152,7 +152,7 @@ class CompanySettingsController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'تم تحديث إعدادات الموقع الجغرافي بنجاح.',
+            'message' => 'Location settings updated successfully.',
             'data'    => $policy,
         ]);
     }

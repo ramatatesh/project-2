@@ -165,7 +165,7 @@ class EmployeeAssistantSessionTest extends TestCase
 
         $welcome = $response->json('data.messages.0.message');
         $this->assertStringContainsString('أحمد الموظف', $welcome);
-        $this->assertStringContainsString('كيف يمكنني مساعدتك', $welcome);
+        $this->assertStringContainsString('How can I help you', $welcome);
         $this->assertSame('assistant', $response->json('data.messages.0.role'));
     }
 

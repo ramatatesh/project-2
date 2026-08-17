@@ -39,7 +39,7 @@ class AttendanceManualRegisterRequest extends FormRequest
             if ($checkOut !== null && $checkOut <= $checkIn) {
                 throw new HttpResponseException(response()->json([
                     'success' => false,
-                    'message' => 'وقت الانصراف يجب أن يكون بعد وقت الدخول.',
+                    'message' => 'Check-out time must be after check-in time.',
                 ], 422));
             }
         });
