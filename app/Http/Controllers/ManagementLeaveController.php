@@ -10,11 +10,8 @@ use App\Services\LeaveBalanceService;
 use App\Services\NotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
-<<<<<<< HEAD
-use Symfony\Component\HttpFoundation\StreamedResponse;
-=======
 use Illuminate\Support\Facades\Log;
->>>>>>> 213e2a0a9c94fd50b3117913cddd19dd060b86f8
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
  * @OA\Tag(
