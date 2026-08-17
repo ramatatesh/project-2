@@ -17,8 +17,19 @@ use Carbon\Carbon;
  */
 class CompanyAdminController extends Controller
 {
+    /**
+     * Khibrat is the platform owner, not a tenant/subscriber - it must never appear
+     * in the companies list or be counted in any of the dashboard statistics.
+     */
+    private const KHIBRAT_OWNER_EMAIL = 'owner@khibrat.sa';
+
     public function __construct(private readonly SubscriptionService $subscriptionService)
     {
+    }
+
+    private function khibratCompanyId(): ?string
+    {
+        return Company::where('email', self::KHIBRAT_OWNER_EMAIL)->value('id');
     }
 
     /**
@@ -32,7 +43,10 @@ class CompanyAdminController extends Controller
      */
     public function index(): JsonResponse
     {
-        $companies = Company::with(['subscriptions.plan'])->get()->map(function (Company $company) {
+        $companies = Company::where('email', '!=', self::KHIBRAT_OWNER_EMAIL)
+            ->with(['subscriptions.plan'])
+            ->get()
+            ->map(function (Company $company) {
             $currentSubscription = $company->subscriptions->sortByDesc('end_date')->first();
 
             return [
@@ -232,28 +246,43 @@ class CompanyAdminController extends Controller
      */
   public function stats(): JsonResponse
 {
+    // Khibrat is the platform owner, not a tenant - excluded from every count below.
+    $khibratCompanyId = $this->khibratCompanyId();
+
     // 1. الإحصائيات العامة (Summary Metrics)
-    $totalCompanies = Company::count();
-    $totalSubscriptions = Subscription::count();
-    $newCompaniesThisMonth = Company::where('name', '!=', 'Khibrat (Platform Owner)')
+    $totalCompanies = Company::where('email', '!=', self::KHIBRAT_OWNER_EMAIL)->count();
+    $totalSubscriptions = Subscription::when($khibratCompanyId, fn ($q) => $q->where('company_id', '!=', $khibratCompanyId))->count();
+    $newCompaniesThisMonth = Company::where('email', '!=', self::KHIBRAT_OWNER_EMAIL)
         ->whereMonth('created_at', now()->month)
         ->whereYear('created_at', now()->year)
         ->count();
 
     // الأسطر المطلوبة لحساب المجاني والمدفوع:
-    $freeCompanies = Company::whereHas('subscriptions', fn ($query) => $query->where('plan_type', 'free'))->count();
-    $paidCompanies = Company::whereHas('subscriptions', fn ($query) => $query->where('plan_type', 'paid'))->count();
+    $freeCompanies = Company::where('email', '!=', self::KHIBRAT_OWNER_EMAIL)
+        ->whereHas('subscriptions', fn ($query) => $query->where('plan_type', 'free'))->count();
+    $paidCompanies = Company::where('email', '!=', self::KHIBRAT_OWNER_EMAIL)
+        ->whereHas('subscriptions', fn ($query) => $query->where('plan_type', 'paid'))->count();
 
     // حساب الإيرادات الإجمالية والشهرية
-    $totalRevenue = PaymentTransaction::where('status', 'paid')->sum('amount');
-    $monthlyRevenue = PaymentTransaction::where('status', 'paid')->whereMonth('created_at', now()->month)->sum('amount');
-    $yearlyRevenue = PaymentTransaction::where('status', 'paid')->whereYear('created_at', now()->year)->sum('amount');
+    $totalRevenue = PaymentTransaction::where('status', 'paid')
+        ->when($khibratCompanyId, fn ($q) => $q->where('company_id', '!=', $khibratCompanyId))
+        ->sum('amount');
+    $monthlyRevenue = PaymentTransaction::where('status', 'paid')
+        ->when($khibratCompanyId, fn ($q) => $q->where('company_id', '!=', $khibratCompanyId))
+        ->whereMonth('created_at', now()->month)->sum('amount');
+    $yearlyRevenue = PaymentTransaction::where('status', 'paid')
+        ->when($khibratCompanyId, fn ($q) => $q->where('company_id', '!=', $khibratCompanyId))
+        ->whereYear('created_at', now()->year)->sum('amount');
 
     // 2. توزيع حالات الشركات للمخطط الدائري (Company Status Distribution)
-    $activeCompanies = Company::where('status', 'active')->orWhere('status', 'ACTIVE')->count();
-    $frozenCompanies = Company::where('status', 'suspended')->count();
+    $activeCompanies = Company::where('email', '!=', self::KHIBRAT_OWNER_EMAIL)
+        ->where(fn ($q) => $q->where('status', 'active')->orWhere('status', 'ACTIVE'))
+        ->count();
+    $frozenCompanies = Company::where('email', '!=', self::KHIBRAT_OWNER_EMAIL)
+        ->where('status', 'suspended')->count();
 
-    $atRiskCompanies = Company::whereHas('subscriptions', function ($query) {
+    $atRiskCompanies = Company::where('email', '!=', self::KHIBRAT_OWNER_EMAIL)
+        ->whereHas('subscriptions', function ($query) {
         $query->where('status', 'expired')
               ->orWhere(function ($q) {
                   $q->where('status', 'active')
@@ -267,7 +296,8 @@ class CompanyAdminController extends Controller
         $monthDate = now()->startOfMonth()->subMonths($i);
         $monthName = $monthDate->format('M Y');
 
-        $count = Subscription::whereMonth('created_at', $monthDate->month)
+        $count = Subscription::when($khibratCompanyId, fn ($q) => $q->where('company_id', '!=', $khibratCompanyId))
+            ->whereMonth('created_at', $monthDate->month)
             ->whereYear('created_at', $monthDate->year)
             ->count();
 
@@ -278,7 +308,8 @@ class CompanyAdminController extends Controller
     }
 
     // 4. جلب آخر 5 منصات/شركات تم تسجيلها
-   $latestCompanies = Company::whereHas('subscriptions')
+   $latestCompanies = Company::where('email', '!=', self::KHIBRAT_OWNER_EMAIL)
+    ->whereHas('subscriptions')
     ->with(['subscriptions' => function($q) {
         $q->latest();
     }])
