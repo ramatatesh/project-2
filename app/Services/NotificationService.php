@@ -280,6 +280,13 @@ class NotificationService
         ]);
 
         SendPushNotificationJob::dispatch($notification->id);
+
+        Log::info('Push job dispatched.', [
+            'notification_id' => $notification->id,
+            'user_id' => $userId,
+            'type' => $type,
+            'queue' => config('queue.default'),
+        ]);
     }
 
     private function evaluationAssignedBody(?string $reviewType, ?string $employeeName): string

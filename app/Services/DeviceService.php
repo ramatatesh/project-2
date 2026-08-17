@@ -30,6 +30,14 @@ class DeviceService
             ]);
         }
 
+        Log::info('FCM device stored.', [
+            'user_id' => $user->id,
+            'device_id' => $device->id,
+            'token_prefix' => substr($fcmToken, 0, 12),
+            'token_len' => strlen($fcmToken),
+            'is_active' => (bool) $device->is_active,
+        ]);
+
         // If evaluation (or other) pushes were skipped earlier because this user
         // had no token yet, retry them now that a device is active.
         try {

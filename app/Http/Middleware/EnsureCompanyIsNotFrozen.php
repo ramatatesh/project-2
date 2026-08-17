@@ -6,6 +6,7 @@ use App\Enums\Role;
 use App\Models\Company;
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\Response;
 
 class EnsureCompanyIsNotFrozen
@@ -37,6 +38,12 @@ class EnsureCompanyIsNotFrozen
         }
 
         if ($company && $company->status === 'suspended') {
+            Log::warning('Write blocked: company is frozen.', [
+                'user_id' => $user->id,
+                'company_id' => $company->id,
+                'path' => $request->path(),
+                'method' => $request->method(),
+            ]);
             abort(403, 'Company is frozen.');
         }
 
