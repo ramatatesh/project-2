@@ -243,6 +243,7 @@ class SubscriptionLifecycleTest extends TestCase
         $this->assertSame($beforeUsers, User::where('company_id', $company->id)->count());
         $this->assertSame($beforeEmployees, Employee::where('company_id', $company->id)->count());
         $this->assertSame(1, Department::where('company_id', $company->id)->count());
+        $this->assertTrue($user->fresh()->is_first_login);
 
         $hr = $this->makeUser($company, Role::HrManager);
         $this->actingAs($hr)
@@ -324,5 +325,46 @@ class SubscriptionLifecycleTest extends TestCase
             ->assertJsonPath('data.company.id', $company->id)
             ->assertJsonPath('data.company.name', $company->name)
             ->assertJsonPath('data.company.status', 'active');
+    }
+
+    public function test_checkout_session_status_returns_renewal_password_change_hint(): void
+    {
+        $company = $this->makeCompany('suspended');
+        $user = $this->makeUser($company);
+        $subscription = $this->makeSubscription($company, [
+            'status' => 'expired',
+            'end_date' => now()->subDay(),
+        ]);
+        $plan = $this->makePlan(99, 'month');
+
+        $session = StripeSession::constructFrom([
+            'id' => 'cs_test_renew_status',
+            'payment_status' => 'paid',
+            'amount_total' => 9900,
+            'payment_intent' => 'pi_test',
+            'metadata' => [
+                'purpose' => 'renewal',
+                'company_id' => $company->id,
+                'plan_id' => $plan->id,
+            ],
+        ]);
+
+        app(SubscriptionService::class)->renewCompanyFromStripeSession($session);
+
+        $stripe = Mockery::mock(StripeService::class);
+        $stripe->shouldReceive('retrieveCheckoutSession')
+            ->once()
+            ->with('cs_test_renew_status')
+            ->andReturn($session);
+        $this->app->instance(StripeService::class, $stripe);
+
+        $this->getJson('/api/stripe/checkout-sessions/cs_test_renew_status')
+            ->assertOk()
+            ->assertJsonPath('status', 'completed')
+            ->assertJsonPath('purpose', 'renewal')
+            ->assertJsonPath('requires_password_change', true)
+            ->assertJsonPath('company_id', $company->id);
+
+        $this->assertTrue($user->fresh()->is_first_login);
     }
 }
