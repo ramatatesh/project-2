@@ -113,7 +113,14 @@ class CompanySubscriptionController extends Controller
             return response()->json(['success' => false, 'message' => 'Company not found.'], 404);
         }
 
-        $result = $this->subscriptionService->startRenewalCheckout($company, $validator->validated()['plan_id']);
+        try {
+            $result = $this->subscriptionService->startRenewalCheckout($company, $validator->validated()['plan_id']);
+        } catch (\RuntimeException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 422);
+        }
 
         if (empty($result['success'])) {
             return response()->json([
