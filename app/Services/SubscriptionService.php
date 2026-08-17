@@ -435,8 +435,17 @@ class SubscriptionService
         }
 
         $company->update(['status' => 'active']);
+        $this->requirePasswordChangeForCompanyManagers($company);
 
         return $subscription;
+    }
+
+    protected function requirePasswordChangeForCompanyManagers(Company $company): void
+    {
+        $company->users()
+            ->where('role', Role::GeneralManager->value)
+            ->where('status', 'active')
+            ->update(['is_first_login' => true]);
     }
 
     public function suspendCompany(\App\Models\Company $company): void

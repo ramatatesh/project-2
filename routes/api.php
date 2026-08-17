@@ -80,11 +80,14 @@ Route::middleware(['auth:sanctum', 'company.active'])->prefix('company/profile')
         ->name('company.profile.update');
 });
 
-// Current subscription + renewal checkout. POST /renew is allowed even when the company
-// is frozen (see EnsureCompanyIsNotFrozen exemptions) so a suspended tenant can pay.
+// Current subscription status (reads allowed while frozen via company.active GET pass-through).
 Route::middleware(['auth:sanctum', 'company.active', 'role:general_manager,hr_manager'])->prefix('company/subscription')->group(function () {
     Route::get('/', [CompanySubscriptionController::class, 'show'])->name('company.subscription.show');
     Route::get('/usage', [CompanySubscriptionController::class, 'usage'])->name('company.subscription.usage');
+});
+
+// Paid renewal checkout — must stay reachable for frozen/suspended tenants without company.active blocking POST.
+Route::middleware(['auth:sanctum', 'role:general_manager,hr_manager'])->prefix('company/subscription')->group(function () {
     Route::post('/renew', [CompanySubscriptionController::class, 'renew'])->name('company.subscription.renew');
 });
 

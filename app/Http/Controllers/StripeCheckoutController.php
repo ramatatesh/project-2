@@ -62,7 +62,8 @@ class StripeCheckoutController extends Controller
         $transaction = $this->findTransaction($sessionId);
 
         if ($transaction) {
-            return $this->completedResponse($transaction);
+            $purpose = $this->detectPurpose($sessionId);
+            return $this->completedResponse($transaction, $purpose);
         }
 
         try {
@@ -77,6 +78,8 @@ class StripeCheckoutController extends Controller
             ], 404);
         }
 
+        $purpose = $session->metadata['purpose'] ?? 'registration';
+
         if (($session->payment_status ?? null) !== 'paid') {
             return response()->json([
                 'success' => true,
@@ -85,11 +88,11 @@ class StripeCheckoutController extends Controller
                 'message' => 'Payment has not been completed yet.',
                 'company_id' => null,
                 'payment_status' => $session->payment_status,
+                'purpose' => $purpose,
             ]);
         }
 
         // Paid at Stripe but webhook may be late — try to provision now (idempotent).
-        $purpose = $session->metadata['purpose'] ?? 'registration';
         try {
             if ($purpose === 'renewal') {
                 $this->subscriptionService->renewCompanyFromStripeSession($session);
@@ -106,7 +109,7 @@ class StripeCheckoutController extends Controller
         $transaction = $this->findTransaction($sessionId);
 
         if ($transaction) {
-            return $this->completedResponse($transaction);
+            return $this->completedResponse($transaction, $purpose);
         }
 
         return response()->json([
@@ -119,6 +122,16 @@ class StripeCheckoutController extends Controller
         ]);
     }
 
+    private function detectPurpose(string $sessionId): string
+    {
+        try {
+            $session = $this->stripeService->retrieveCheckoutSession($sessionId);
+            return $session->metadata['purpose'] ?? 'registration';
+        } catch (\Throwable) {
+            return 'registration';
+        }
+    }
+
     private function findTransaction(string $sessionId): ?PaymentTransaction
     {
         return PaymentTransaction::query()
@@ -127,15 +140,21 @@ class StripeCheckoutController extends Controller
             ->first();
     }
 
-    private function completedResponse(PaymentTransaction $transaction): JsonResponse
+    private function completedResponse(PaymentTransaction $transaction, string $purpose = 'registration'): JsonResponse
     {
+        $isRenewal = $purpose === 'renewal';
+
         return response()->json([
             'success' => true,
             'status' => 'completed',
             'can_login' => true,
-            'message' => 'Payment successful. Account is ready — check email for the temporary password, then go to login.',
+            'message' => $isRenewal
+                ? 'Payment successful. Your workspace has been reactivated — please set a new password to continue.'
+                : 'Payment successful. Account is ready — check email for the temporary password, then go to login.',
             'company_id' => $transaction->company_id,
             'subscription_id' => $transaction->subscription_id,
+            'purpose' => $purpose,
+            'requires_password_change' => $isRenewal,
         ]);
     }
 }
