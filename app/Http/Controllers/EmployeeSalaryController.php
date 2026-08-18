@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Company;
 use App\Models\SalaryRecord;
 use App\Services\SalaryService;
 use Illuminate\Http\JsonResponse;
@@ -43,6 +44,7 @@ class EmployeeSalaryController extends Controller
             ], 403);
         }
 
+        $currency = Company::find($user->company_id)?->payroll_currency;
         $perPage = max(1, min((int) $request->input('per_page', 12), 100));
 
         $query = SalaryRecord::where('employee_id', $employee->id)
@@ -54,8 +56,6 @@ class EmployeeSalaryController extends Controller
             $query->where('year', (int) $request->input('year'));
         }
 
-        // Employees mainly care about finalized/received slips; drafts still listed
-        // so they can see in-progress months after overtime/advances are applied.
         $paginator = $query->paginate($perPage);
         $paginator->getCollection()->transform(
             fn (SalaryRecord $record) => $this->salaryService->serializeSummary($record)
@@ -69,6 +69,7 @@ class EmployeeSalaryController extends Controller
                 'last_received_salary' => $lastReceived
                     ? [
                         'amount' => (float) $lastReceived->net_salary,
+                        'currency' => $currency,
                         'month' => (int) $lastReceived->month,
                         'year' => (int) $lastReceived->year,
                         'period' => sprintf('%04d-%02d', $lastReceived->year, $lastReceived->month),

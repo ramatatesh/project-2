@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\ApplySalaryAdvanceRequest;
+use App\Models\Company;
 use App\Models\Employee;
 use App\Models\SalaryAdvance;
 use App\Services\SalaryAdvanceService;
@@ -53,6 +54,7 @@ class EmployeeAdvanceController extends Controller
             ], 403);
         }
 
+        $currency = Company::find($user->company_id)?->payroll_currency;
         $perPage = (int) $request->input('per_page', 15);
         $perPage = max(1, min($perPage, 100));
 
@@ -60,12 +62,13 @@ class EmployeeAdvanceController extends Controller
             ->where('company_id', $user->company_id)
             ->orderByDesc('created_at')
             ->paginate($perPage)
-            ->through(function (SalaryAdvance $advance) {
+            ->through(function (SalaryAdvance $advance) use ($currency) {
                 return [
                     'id' => $advance->id,
                     'requested_amount' => $advance->requested_amount,
                     'repayment_months' => $advance->repayment_months,
                     'monthly_installment' => $advance->monthly_installment,
+                    'currency' => $currency,
                     'status' => $advance->status,
                     'rejection_reason' => $advance->rejection_reason,
                     'created_at' => $advance->created_at?->toDateTimeString(),
@@ -102,6 +105,7 @@ class EmployeeAdvanceController extends Controller
             ], 403);
         }
 
+        $currency = Company::find($companyId)?->payroll_currency;
         $basicSalary = (float) $employee->base_salary;
         $policy = $this->salaryAdvanceService->policyForCompany($companyId);
         $maxAllowedAmount = $policy
@@ -118,6 +122,7 @@ class EmployeeAdvanceController extends Controller
                 'requested_amount' => $activeAdvance->requested_amount,
                 'monthly_installment' => $activeAdvance->monthly_installment,
                 'repayment_months' => $activeAdvance->repayment_months,
+                'currency' => $currency,
                 'status' => $activeAdvance->status,
             ];
         }
@@ -127,6 +132,7 @@ class EmployeeAdvanceController extends Controller
             'data' => [
                 'basic_salary' => $basicSalary,
                 'max_allowed_amount' => $maxAllowedAmount,
+                'currency' => $currency,
                 'max_repayment_months' => $policy?->max_repayment_months,
                 'allow_multiple_active_advances' => (bool) ($policy?->allow_multiple_active_advances ?? false),
                 'policy_configured' => $policy !== null,
@@ -178,8 +184,6 @@ class EmployeeAdvanceController extends Controller
             ], 422);
         }
 
-        // A department manager applying for their own advance can't review their own request -
-        // skip the manager step and send it straight to HR instead of requiring a (different) manager.
         $employee->loadMissing('department');
         $isOwnDepartmentManager = (bool) ($employee->department && $employee->department->manager_id === $employee->id);
 
@@ -213,9 +217,6 @@ class EmployeeAdvanceController extends Controller
         $repaymentMonths = (int) $request->validated('repayment_months');
         $monthlyInstallment = round($requestedAmount / $repaymentMonths, 2);
 
-        // Lock the (always-existing) employee row first so concurrent apply() requests for the
-        // same employee are serialized - this prevents two simultaneous requests from both
-        // passing the "no active advance" check before either one has been created.
         $advance = DB::transaction(function () use ($employee, $companyId, $policy, $requestedAmount, $repaymentMonths, $monthlyInstallment, $request, $isOwnDepartmentManager) {
             Employee::where('id', $employee->id)->lockForUpdate()->first();
 
@@ -244,6 +245,8 @@ class EmployeeAdvanceController extends Controller
             ], 422);
         }
 
+        $currency = Company::find($companyId)?->payroll_currency;
+
         return response()->json([
             'success' => true,
             'message' => 'Salary advance request submitted successfully.',
@@ -253,6 +256,7 @@ class EmployeeAdvanceController extends Controller
                 'repayment_months' => $advance->repayment_months,
                 'monthly_installment' => $advance->monthly_installment,
                 'status' => $advance->status,
+                'currency' => $currency,
             ],
         ], 201);
     }

@@ -150,7 +150,9 @@ class CompanyProfileController extends Controller
         return [
             'id' => $company->id,
             'name' => $company->name,
-            'logo_url' => $company->logo_path ? Storage::disk('public')->url($company->logo_path) : null,
+            'logo_url' => $company->logo_path && Storage::disk('public')->exists($company->logo_path)
+                ? Storage::disk('public')->url($company->logo_path)
+                : null,
             'tagline' => $company->tagline,
             'about' => $company->about,
             'phone' => $company->phone,
