@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\Role;
 use App\Exceptions\EvaluationCycleAlreadyClosedException;
 use App\Models\Employee;
 use App\Models\EvaluationAnswer;
@@ -158,9 +159,13 @@ class EvaluationService
         }
 
         $due = $dueDate ?? $cycle->end_date;
+        // HR Managers are excluded entirely: they administer evaluations (templates, cycles,
+        // scoring, finalizing) but are never a subject to be reviewed, and never picked as a
+        // manager/peer reviewer for anyone else.
         $employees = Employee::where('company_id', $cycle->company_id)
             ->where('is_active', true)
             ->whereNotNull('user_id')
+            ->whereHas('user', fn ($query) => $query->where('role', '!=', Role::HrManager->value))
             ->with('department.manager.user')
             ->get();
 
@@ -695,6 +700,12 @@ class EvaluationService
     private function resolveManagerReviewerId(Employee $employee, ?User $companyGeneralManager): ?string
     {
         $managerUserId = $employee->department?->manager?->user_id;
+
+        // An HR Manager must never be assigned as anyone's reviewer, even if a department's
+        // manager_id happens to point at one - fall back exactly as if there were no manager.
+        if ($managerUserId && $employee->department?->manager?->user?->role === Role::HrManager->value) {
+            $managerUserId = null;
+        }
 
         if (! $managerUserId && $companyGeneralManager) {
             $managerUserId = $companyGeneralManager->id;
