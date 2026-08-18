@@ -107,4 +107,86 @@ class LocaleSwitchTest extends TestCase
             ->assertStatus(422)
             ->assertJsonPath('message', 'يجب أن تحتوي كلمة المرور على رمز خاص واحد على الأقل.');
     }
+
+    public function test_reset_password_validation_messages_are_translated_to_arabic(): void
+    {
+        $response = $this->withHeader('X-Locale', 'ar')
+            ->postJson('/api/auth/reset-password', [
+                'email' => 'missing@test.com',
+                'password' => 'Ghalua',
+                'password_confirmation' => 'Ghalua',
+            ]);
+
+        $response->assertStatus(422)
+            ->assertHeader('Content-Language', 'ar')
+            ->assertJsonPath(
+                'message',
+                'يجب أن تحتوي كلمة المرور على 8 أحرف على الأقل. يجب أن تحتوي كلمة المرور على رمز خاص واحد على الأقل. يجب أن تحتوي كلمة المرور على رقم واحد على الأقل.'
+            )
+            ->assertJsonPath('errors.password.0', 'يجب أن تحتوي كلمة المرور على 8 أحرف على الأقل.')
+            ->assertJsonPath('errors.password.1', 'يجب أن تحتوي كلمة المرور على رمز خاص واحد على الأقل.')
+            ->assertJsonPath('errors.password.2', 'يجب أن تحتوي كلمة المرور على رقم واحد على الأقل.');
+    }
+
+    public function test_login_validation_messages_are_translated_when_combined(): void
+    {
+        $this->withHeader('X-Locale', 'ar')
+            ->postJson('/api/auth/login', [
+                'email' => 'bad',
+            ])
+            ->assertStatus(422)
+            ->assertJsonPath(
+                'message',
+                'صيغة البريد الإلكتروني غير صحيحة. مثال: name@company.com يرجى إدخال كلمة المرور.'
+            );
+    }
+
+    public function test_verify_login_otp_validation_messages_are_translated_when_combined(): void
+    {
+        $this->withHeader('X-Locale', 'ar')
+            ->postJson('/api/auth/verify-login-otp', [
+                'email' => 'bad',
+                'otp' => '12',
+            ])
+            ->assertStatus(422)
+            ->assertJsonPath(
+                'message',
+                'صيغة البريد الإلكتروني غير صحيحة. مثال: name@company.com رمز التحقق يجب أن يكون 4 أرقام بالضبط.'
+            );
+    }
+
+    public function test_complete_first_login_validation_messages_are_translated_when_combined(): void
+    {
+        $company = Company::create([
+            'id' => Str::uuid()->toString(),
+            'name' => 'Locale Co 2',
+            'email' => 'locale2@company.test',
+            'address' => 'Address',
+            'phone' => '0922222222',
+            'status' => 'active',
+        ]);
+
+        $user = User::create([
+            'id' => Str::uuid()->toString(),
+            'company_id' => $company->id,
+            'full_name' => 'Locale User 2',
+            'email' => 'locale2@user.test',
+            'password_hash' => bcrypt('OldPassword123!'),
+            'role' => Role::Employee->value,
+            'status' => 'active',
+            'is_first_login' => true,
+        ]);
+
+        $this->actingAs($user)
+            ->withHeader('X-Locale', 'ar')
+            ->postJson('/api/auth/complete-first-login', [
+                'password' => 'Ghalua',
+                'password_confirmation' => 'Ghalua',
+            ])
+            ->assertStatus(422)
+            ->assertJsonPath(
+                'message',
+                'يجب أن تحتوي كلمة المرور على 8 أحرف على الأقل. يجب أن تحتوي كلمة المرور على رمز خاص واحد على الأقل. يجب أن تحتوي كلمة المرور على رقم واحد على الأقل.'
+            );
+    }
 }
