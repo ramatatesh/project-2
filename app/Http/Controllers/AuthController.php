@@ -13,6 +13,7 @@ use App\Models\PasswordResetOtp;
 use App\Models\LoginOtp;
 use App\Jobs\SendPasswordResetOtpJob;
 use App\Jobs\SendLoginOtpJob;
+use App\Support\ValidationMessages;
 //use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 //use Illuminate\Support\Facades\DB;
@@ -47,7 +48,15 @@ class AuthController extends Controller
      * @OA\Post(
      * path="/api/auth/login",
      * summary="تسجيل دخول المستخدم للمنصة",
+     * description="أرسلي X-Locale: ar أو en لتغيير لغة رسائل message و errors.",
      * tags={"المصادقة (Authentication)"},
+     * @OA\Parameter(
+     *     name="X-Locale",
+     *     in="header",
+     *     required=false,
+     *     description="لغة رسائل message و errors: ar (عربي) أو en (إنجليزي). الافتراضي en.",
+     *     @OA\Schema(type="string", enum={"ar","en"}, default="en")
+     * ),
      * @OA\RequestBody(
      * required=true,
      * @OA\JsonContent(
@@ -171,7 +180,15 @@ class AuthController extends Controller
      * @OA\Post(
      * path="/api/auth/verify-login-otp",
      * summary="التحقق من رمز الدخول بخطوتين وإصدار التوكن",
+     * description="أرسلي X-Locale: ar أو en لتغيير لغة رسائل message و errors.",
      * tags={"المصادقة (Authentication)"},
+     * @OA\Parameter(
+     *     name="X-Locale",
+     *     in="header",
+     *     required=false,
+     *     description="لغة رسائل message و errors: ar (عربي) أو en (إنجليزي). الافتراضي en.",
+     *     @OA\Schema(type="string", enum={"ar","en"}, default="en")
+     * ),
      * @OA\RequestBody(
      * required=true,
      * @OA\JsonContent(
@@ -253,7 +270,15 @@ class AuthController extends Controller
      * @OA\Post(
      * path="/api/auth/forgot-password",
      * summary="إرسال رمز OTP لإعادة تعيين كلمة المرور",
+     * description="أرسلي X-Locale: ar أو en لتغيير لغة رسائل message و errors.",
      * tags={"المصادقة (Authentication)"},
+     * @OA\Parameter(
+     *     name="X-Locale",
+     *     in="header",
+     *     required=false,
+     *     description="لغة رسائل message و errors: ar (عربي) أو en (إنجليزي). الافتراضي en.",
+     *     @OA\Schema(type="string", enum={"ar","en"}, default="en")
+     * ),
      * @OA\RequestBody(
      * required=true,
      * @OA\JsonContent(
@@ -465,8 +490,15 @@ public function resendOtp(ForgotPasswordRequest $request): JsonResponse
      * @OA\Post(
      * path="/api/auth/reset-password",
      * summary="إعادة تعيين كلمة المرور بعد التحقق من رمز OTP",
-     * description="كلمة المرور الجديدة يجب أن تحتوي على 8 أحرف على الأقل، حرف كبير، حرف صغير، رقم، ورمز خاص - وإلا يُرجع 422 مع رسالة توضح تحديداً أي شرط لم يتحقق.",
+     * description="كلمة المرور الجديدة يجب أن تحتوي على 8 أحرف على الأقل، حرف كبير، حرف صغير، رقم، ورمز خاص - وإلا يُرجع 422 مع رسالة توضح تحديداً أي شرط لم يتحقق. أرسلي X-Locale: ar أو en لتغيير لغة رسائل الاستجابة.",
      * tags={"المصادقة (Authentication)"},
+     * @OA\Parameter(
+     *     name="X-Locale",
+     *     in="header",
+     *     required=false,
+     *     description="لغة رسائل message و errors: ar (عربي) أو en (إنجليزي). الافتراضي en.",
+     *     @OA\Schema(type="string", enum={"ar","en"}, default="en")
+     * ),
      * @OA\RequestBody(
      * required=true,
      * @OA\JsonContent(
@@ -533,9 +565,16 @@ public function resendOtp(ForgotPasswordRequest $request): JsonResponse
      * @OA\Post(
      * path="/api/auth/complete-first-login",
      * summary="تغيير كلمة المرور الإلزامية عند تسجيل الدخول الأول للمنصة",
-     * description="كلمة المرور الجديدة يجب أن تحتوي على 8 أحرف على الأقل، حرف كبير، حرف صغير، رقم، ورمز خاص - وإلا يُرجع 422 مع رسالة توضح تحديداً أي شرط لم يتحقق.",
+     * description="كلمة المرور الجديدة يجب أن تحتوي على 8 أحرف على الأقل، حرف كبير، حرف صغير، رقم، ورمز خاص - وإلا يُرجع 422 مع رسالة توضح تحديداً أي شرط لم يتحقق. أرسلي X-Locale: ar أو en لتغيير لغة رسائل الاستجابة.",
      * tags={"المصادقة (Authentication)"},
      * security={{"sanctum":{}}},
+     * @OA\Parameter(
+     *     name="X-Locale",
+     *     in="header",
+     *     required=false,
+     *     description="لغة رسائل message و errors: ar (عربي) أو en (إنجليزي). الافتراضي en.",
+     *     @OA\Schema(type="string", enum={"ar","en"}, default="en")
+     * ),
      * @OA\RequestBody(
      * required=true,
      * @OA\JsonContent(
@@ -579,13 +618,13 @@ public function resendOtp(ForgotPasswordRequest $request): JsonResponse
                         ->symbols(),
                 ],
             ], [
-                'password.required' => __('Password is required.'),
-                'password.confirmed' => __('Password confirmation does not match.'),
-                'password.min' => __('Password must be at least 8 characters.'),
-                'password.letters' => __('Password must contain at least one letter.'),
-                'password.mixed' => __('Password must contain both uppercase and lowercase letters.'),
-                'password.numbers' => __('Password must contain at least one number.'),
-                'password.symbols' => __('Password must contain at least one special character.'),
+                'password.required' => 'Password is required.',
+                'password.confirmed' => 'Password confirmation does not match.',
+                'password.min' => 'Password must be at least 8 characters.',
+                'password.letters' => 'Password must contain at least one letter.',
+                'password.mixed' => 'Password must contain both uppercase and lowercase letters.',
+                'password.numbers' => 'Password must contain at least one number.',
+                'password.symbols' => 'Password must contain at least one special character.',
             ]);
 
             if ($validator->fails()) {
@@ -733,15 +772,7 @@ public function resendOtp(ForgotPasswordRequest $request): JsonResponse
         \Illuminate\Contracts\Validation\Validator $validator,
         ?string $fallback = null,
     ): string {
-        $passwordErrors = $validator->errors()->get('password', []);
-
-        if ($passwordErrors !== []) {
-            return implode(' ', $passwordErrors);
-        }
-
-        $first = $validator->errors()->first();
-
-        return $first ?: ($fallback ?? __('Please check the input and try again.'));
+        return ValidationMessages::fromValidator($validator, $fallback);
     }
 
 }

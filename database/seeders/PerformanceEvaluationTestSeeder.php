@@ -114,6 +114,11 @@ class PerformanceEvaluationTestSeeder extends Seeder
 
     private EvaluationCycle $expiredCycle;
 
+    private EvaluationCycle $fullTeamCycle;
+
+    /** @var array<string, array{user: User, employee: Employee}> */
+    private array $teamMembers = [];
+
     private EvaluationService $evaluationService;
 
     public function run(): void
@@ -205,6 +210,16 @@ class PerformanceEvaluationTestSeeder extends Seeder
             $employee = $this->upsertEmployee($user, 'Software Engineer', 1500);
             $this->scenarioPeople[$key] = compact('user', 'employee');
         }
+
+        // Extra teammates so peer_reviews_count=2 always has same-department candidates.
+        foreach ([
+            'hadi' => ['evaluation-teammate-hadi@'.self::DOMAIN, 'Hadi Nasser'],
+            'maya' => ['evaluation-teammate-maya@'.self::DOMAIN, 'Maya Khoury'],
+        ] as $key => [$email, $name]) {
+            $user = $this->upsertUser($email, $name, Role::Employee->value);
+            $employee = $this->upsertEmployee($user, 'Software Engineer', 1450);
+            $this->teamMembers[$key] = compact('user', 'employee');
+        }
     }
 
     /**
@@ -240,7 +255,7 @@ class PerformanceEvaluationTestSeeder extends Seeder
         }
         $policy->fill([
             'apply_review_to_salary' => false,
-            'peer_reviews_count' => 1,
+            'peer_reviews_count' => 2,
             'excellent_bonus_percent' => 10,
             'good_bonus_percent' => 5,
             'poor_deduction_percent' => 0,
@@ -320,6 +335,17 @@ class PerformanceEvaluationTestSeeder extends Seeder
             'end_date' => now()->subDays(10)->toDateString(),
             // Keep status active-like historically but dates are past; reviews themselves are expired.
             'status' => EvaluationCycle::STATUS_CLOSED,
+            'updated_at' => now(),
+        ]);
+
+        $this->fullTeamCycle = EvaluationCycle::create([
+            'id' => Str::uuid()->toString(),
+            'company_id' => $this->company->id,
+            'evaluation_template_id' => $this->template->id,
+            'name' => 'Evaluation Lab — Full Team Cycle (Peers + Manager)',
+            'start_date' => now()->subDays(3)->toDateString(),
+            'end_date' => now()->addWeeks(2)->toDateString(),
+            'status' => EvaluationCycle::STATUS_DRAFT,
             'updated_at' => now(),
         ]);
     }
@@ -447,6 +473,233 @@ class PerformanceEvaluationTestSeeder extends Seeder
         $this->completeReviewWithAnswers($mixed['self'], rating: 4, comment: 'Mixed self done');
         $this->completeReviewWithAnswers($mixed['peer'], rating: 3, comment: 'Mixed peer done');
         // manager remains pending — no answers
+
+        // --- Full team cycle: real launchCycle() distribution (self + manager + peers same dept) ---
+        $this->seedFullTeamCycle();
+    }
+
+    /**
+     * Launches a cycle through production logic, then executes a realistic peer/manager/self mesh.
+     * HR is excluded by EvaluationService; department manager (Omar) is the manager reviewer.
+     */
+    private function seedFullTeamCycle(): void
+    {
+        $launch = $this->evaluationService->launchCycle($this->fullTeamCycle);
+        $this->fullTeamCycle->refresh();
+
+        // 1) Tariq — all review types submitted, HR scored, finalized (demo: complete success path).
+        $this->runSubjectPipeline(
+            $this->fullTeamCycle,
+            $this->scenarioPeople['finalized']['employee'],
+            submitRatings: [
+                EvaluationReview::TYPE_SELF => 4,
+                EvaluationReview::TYPE_MANAGER => 5,
+                EvaluationReview::TYPE_PEER => 4,
+            ],
+            hrScoresByType: [
+                EvaluationReview::TYPE_SELF => 8,
+                EvaluationReview::TYPE_MANAGER => 9,
+                EvaluationReview::TYPE_PEER => 7,
+            ],
+            finalize: true,
+        );
+
+        // 2) Mona — everything submitted, waiting HR scoring/finalize.
+        $this->runSubjectPipeline(
+            $this->fullTeamCycle,
+            $this->scenarioPeople['review']['employee'],
+            submitRatings: [
+                EvaluationReview::TYPE_SELF => 4,
+                EvaluationReview::TYPE_MANAGER => 4,
+                EvaluationReview::TYPE_PEER => 5,
+            ],
+        );
+
+        // 3) Khaled — self only done (manager + peers still pending on subject side).
+        $this->runSubjectPipeline(
+            $this->fullTeamCycle,
+            $this->scenarioPeople['completed']['employee'],
+            submitRatings: [EvaluationReview::TYPE_SELF => 3],
+            onlyTypes: [EvaluationReview::TYPE_SELF],
+        );
+
+        // 4) Lina — self + peer reviews on her completed; manager review still pending.
+        $this->runSubjectPipeline(
+            $this->fullTeamCycle,
+            $this->scenarioPeople['mixed']['employee'],
+            submitRatings: [
+                EvaluationReview::TYPE_SELF => 4,
+                EvaluationReview::TYPE_PEER => 3,
+            ],
+            onlyTypes: [EvaluationReview::TYPE_SELF, EvaluationReview::TYPE_PEER],
+        );
+
+        // 5) Fill outgoing reviews: employees evaluating their colleagues (peer + manager + self).
+        $this->completeOutgoingReviewsForReviewer(
+            $this->fullTeamCycle,
+            $this->peerUser,
+            defaultRating: 4,
+            commentPrefix: 'Peer assessment by Sara',
+        );
+        $this->completeOutgoingReviewsForReviewer(
+            $this->fullTeamCycle,
+            $this->teamMembers['hadi']['user'],
+            defaultRating: 4,
+            commentPrefix: 'Peer assessment by Hadi',
+        );
+        $this->completeOutgoingReviewsForReviewer(
+            $this->fullTeamCycle,
+            $this->teamMembers['maya']['user'],
+            defaultRating: 5,
+            commentPrefix: 'Peer assessment by Maya',
+        );
+        $this->completeOutgoingReviewsForReviewer(
+            $this->fullTeamCycle,
+            $this->managerUser,
+            defaultRating: 5,
+            commentPrefix: 'Manager assessment by Omar',
+            onlyTypes: [EvaluationReview::TYPE_MANAGER],
+        );
+
+        // 6) HR scores Mona after peers/manager filled in above.
+        $monaReviews = EvaluationReview::where('evaluation_cycle_id', $this->fullTeamCycle->id)
+            ->where('employee_id', $this->scenarioPeople['review']['employee']->id)
+            ->where('status', EvaluationReview::STATUS_COMPLETED)
+            ->get();
+        foreach ($monaReviews as $review) {
+            $hrScore = match ($review->review_type) {
+                EvaluationReview::TYPE_SELF => 7,
+                EvaluationReview::TYPE_MANAGER => 8,
+                EvaluationReview::TYPE_PEER => 7,
+                default => 7,
+            };
+            $this->hrScoreReview($review, $hrScore);
+        }
+
+        // 7) Draft-like incomplete self on Ahmad (not submitted).
+        $ahmadSelf = EvaluationReview::where('evaluation_cycle_id', $this->fullTeamCycle->id)
+            ->where('employee_id', $this->scenarioPeople['new']['employee']->id)
+            ->where('review_type', EvaluationReview::TYPE_SELF)
+            ->first();
+        if ($ahmadSelf) {
+            EvaluationAnswer::create([
+                'id' => Str::uuid()->toString(),
+                'evaluation_review_id' => $ahmadSelf->id,
+                'evaluation_template_question_id' => $this->ratingQuestion->id,
+                'rating' => 3,
+                'comment' => null,
+                'hr_score' => null,
+            ]);
+        }
+
+        // Dana (none) + Rana (incomplete) intentionally left with pending reviews on this cycle.
+        $this->fullTeamLaunchStats = [
+            'created_reviews' => $launch['created_reviews'],
+            'completed_reviews' => EvaluationReview::where('evaluation_cycle_id', $this->fullTeamCycle->id)
+                ->where('status', EvaluationReview::STATUS_COMPLETED)
+                ->count(),
+            'pending_reviews' => EvaluationReview::where('evaluation_cycle_id', $this->fullTeamCycle->id)
+                ->where('status', EvaluationReview::STATUS_PENDING)
+                ->count(),
+            'peer_reviews' => EvaluationReview::where('evaluation_cycle_id', $this->fullTeamCycle->id)
+                ->where('review_type', EvaluationReview::TYPE_PEER)
+                ->count(),
+        ];
+    }
+
+    /** @var array<string, int>|null */
+    private ?array $fullTeamLaunchStats = null;
+
+    /**
+     * Complete pending reviews where $subject is the person being evaluated.
+     *
+     * @param  array<string, int>  $submitRatings
+     * @param  array<string, int>|null  $hrScoresByType
+     * @param  list<string>|null  $onlyTypes
+     */
+    private function runSubjectPipeline(
+        EvaluationCycle $cycle,
+        Employee $subject,
+        array $submitRatings,
+        ?array $hrScoresByType = null,
+        bool $finalize = false,
+        ?array $onlyTypes = null,
+    ): void {
+        $reviews = EvaluationReview::where('evaluation_cycle_id', $cycle->id)
+            ->where('employee_id', $subject->id)
+            ->when($onlyTypes, fn ($q) => $q->whereIn('review_type', $onlyTypes))
+            ->get();
+
+        foreach ($reviews as $review) {
+            if ($review->status !== EvaluationReview::STATUS_PENDING) {
+                continue;
+            }
+
+            $rating = $submitRatings[$review->review_type]
+                ?? $submitRatings[EvaluationReview::TYPE_PEER]
+                ?? 4;
+
+            $subjectName = $subject->user?->full_name ?? 'employee';
+            $this->completeReviewWithAnswers(
+                $review,
+                $rating,
+                "{$review->review_type} review for {$subjectName}",
+            );
+        }
+
+        if ($hrScoresByType !== null) {
+            $scoredReviews = EvaluationReview::where('evaluation_cycle_id', $cycle->id)
+                ->where('employee_id', $subject->id)
+                ->where('status', EvaluationReview::STATUS_COMPLETED)
+                ->get();
+
+            foreach ($scoredReviews as $review) {
+                $hrScore = $hrScoresByType[$review->review_type]
+                    ?? $hrScoresByType[EvaluationReview::TYPE_PEER]
+                    ?? null;
+
+                if ($hrScore !== null) {
+                    $this->hrScoreReview($review, $hrScore);
+                }
+            }
+        }
+
+        if ($finalize) {
+            $this->evaluationService->finalizeEmployeeScore(
+                $cycle,
+                $subject->id,
+                $this->hrUser->id,
+            );
+        }
+    }
+
+    /**
+     * Complete pending reviews assigned TO a reviewer (e.g. peers evaluating colleagues).
+     *
+     * @param  list<string>|null  $onlyTypes
+     */
+    private function completeOutgoingReviewsForReviewer(
+        EvaluationCycle $cycle,
+        User $reviewer,
+        int $defaultRating,
+        string $commentPrefix,
+        ?array $onlyTypes = null,
+    ): void {
+        $reviews = EvaluationReview::where('evaluation_cycle_id', $cycle->id)
+            ->where('reviewer_id', $reviewer->id)
+            ->where('status', EvaluationReview::STATUS_PENDING)
+            ->when($onlyTypes, fn ($q) => $q->whereIn('review_type', $onlyTypes))
+            ->with('employee.user')
+            ->get();
+
+        foreach ($reviews as $review) {
+            $targetName = $review->employee?->user?->full_name ?? 'colleague';
+            $this->completeReviewWithAnswers(
+                $review,
+                $defaultRating,
+                "{$commentPrefix} → {$targetName}",
+            );
+        }
     }
 
     /**
@@ -545,9 +798,7 @@ class PerformanceEvaluationTestSeeder extends Seeder
         // For closed cycles, scoreReview is blocked — write hr_score + totals manually.
         if ($review->cycle->isClosed()) {
             foreach ($review->answers as $answer) {
-                if ($answer->question?->response_type === EvaluationTemplateQuestion::RESPONSE_TYPE_RATING) {
-                    $answer->update(['hr_score' => $hrScore, 'updated_at' => now()]);
-                }
+                $answer->update(['hr_score' => $hrScore, 'updated_at' => now()]);
             }
             $this->evaluationService->computeReviewScore($review->fresh());
             $this->evaluationService->updateEmployeeScores($review->cycle, $review->employee_id);
@@ -556,7 +807,7 @@ class PerformanceEvaluationTestSeeder extends Seeder
         }
 
         $scores = $review->answers
-            ->filter(fn (EvaluationAnswer $a) => $a->question?->response_type === EvaluationTemplateQuestion::RESPONSE_TYPE_RATING)
+            ->filter(fn (EvaluationAnswer $a) => $a->question !== null)
             ->map(fn (EvaluationAnswer $a) => [
                 'answer_id' => $a->id,
                 'hr_score' => $hrScore,
@@ -638,6 +889,27 @@ class PerformanceEvaluationTestSeeder extends Seeder
         $this->command->info('Active cycle: '.$this->activeCycle->name.' ('.$this->activeCycle->id.')');
         $this->command->info('Past cycle:   '.$this->pastCycle->name.' ('.$this->pastCycle->id.')');
         $this->command->info('Expired cycle:'.$this->expiredCycle->name.' ('.$this->expiredCycle->id.')');
+        $this->command->info('Full team:  '.$this->fullTeamCycle->name.' ('.$this->fullTeamCycle->id.')');
+
+        if ($this->fullTeamLaunchStats) {
+            $stats = $this->fullTeamLaunchStats;
+            $this->command->info('  Reviews created: '.$stats['created_reviews']
+                .' | completed: '.$stats['completed_reviews']
+                .' | pending: '.$stats['pending_reviews']
+                .' | peer rows: '.$stats['peer_reviews']);
+        }
+
+        $this->command->info('--------------------------------------------------');
+        $this->command->info('Full Team Cycle — employee states (login password: '.self::PASSWORD.')');
+        $this->command->line('  Tariq Hamdan (evaluation-finalized@...)     → all done + HR scored + FINALIZED');
+        $this->command->line('  Mona Saleh (evaluation-review@...)          → all done + HR scored, not finalized');
+        $this->command->line('  Khaled Barakat (evaluation-completed@...)   → self done only');
+        $this->command->line('  Lina Zaidan (evaluation-mixed@...)          → self + peer done, manager pending');
+        $this->command->line('  Ahmad Youssef (evaluation-new@...)          → draft self answer, not submitted');
+        $this->command->line('  Rana Idris (evaluation-incomplete@...)      → pending (no answers)');
+        $this->command->line('  Dana Fares (evaluation-none@...)            → pending (never touched)');
+        $this->command->line('  Sara / Hadi / Maya / Omar                   → completed outgoing peer/manager reviews');
+        $this->command->line('  HR (evaluation-hr@...)                      → admin only, NOT in evaluation pool');
         $this->command->info('--------------------------------------------------');
         $this->command->info('Staff logins (password: '.self::PASSWORD.')');
         $this->command->info('  HR:      evaluation-hr@'.self::DOMAIN);
@@ -656,6 +928,8 @@ class PerformanceEvaluationTestSeeder extends Seeder
         $this->command->info('  GET  /api/evaluations/my-reviews');
         $this->command->info('  GET  /api/evaluations/my-reviews/{review}');
         $this->command->info('  POST /api/employee/assistant/chat  {"message":"هل عندي تقييم لازم عبّيه؟"}');
+        $this->command->info('  GET  /api/hr/evaluation-cycles/{cycle}/progress');
+        $this->command->info('  GET  /api/hr/evaluation-cycles/{cycle}/scoring?employee_id={employee_uuid}');
         $this->command->info('  GET  /api/hr/evaluation-cycles/{cycle}/final-results/{employee}');
         $this->command->info('==================================================');
     }

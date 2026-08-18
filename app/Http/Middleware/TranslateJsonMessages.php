@@ -73,6 +73,21 @@ class TranslateJsonMessages
             return $message;
         }
 
-        return __($message);
+        $translated = __($message);
+        if ($translated !== $message) {
+            return $translated;
+        }
+
+        $parts = preg_split('/(?<=\.)\s+/', trim($message)) ?: [];
+        if (count($parts) <= 1) {
+            return $message;
+        }
+
+        $translatedParts = array_map(fn (string $part) => __($part), $parts);
+        if ($translatedParts === $parts) {
+            return $message;
+        }
+
+        return implode(' ', $translatedParts);
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Auth;
 
+use App\Support\ValidationMessages;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
@@ -32,7 +33,7 @@ class ForgotPasswordRequest extends FormRequest
     {
         throw new HttpResponseException(response()->json([
             'success' => false,
-            'message' => 'Validation failed.',
+            'message' => ValidationMessages::fromValidator($validator, 'Validation failed.'),
             'errors' => $validator->errors(),
         ], 422));
     }

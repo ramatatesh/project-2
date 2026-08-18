@@ -9,7 +9,7 @@ use Illuminate\Http\Request;
 /**
  * @OA\Tag(
  *   name="Locale",
- *   description="Language switching (Arabic / English) without reloading the app. Send X-Locale or Accept-Language on every API request."
+ *   description="Language switching (Arabic / English) without reloading the app. Send X-Locale or Accept-Language on every API request. Auth validation messages (login, reset password, complete first login, verify OTP) are included in the dictionary."
  * )
  */
 class LocaleController extends Controller

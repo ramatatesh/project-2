@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Auth;
 
+use App\Support\ValidationMessages;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
@@ -48,20 +49,11 @@ class ResetPasswordRequest extends FormRequest
     {
         throw new HttpResponseException(response()->json([
             'success' => false,
-            'message' => $this->passwordValidationMessage($validator),
+            'message' => ValidationMessages::fromValidator(
+                $validator,
+                'Password must be strong and include: at least 8 characters, an uppercase and lowercase letter, a number, and a special character (such as @ # $ %).'
+            ),
             'errors' => $validator->errors(),
         ], 422));
-    }
-
-    private function passwordValidationMessage(Validator $validator): string
-    {
-        $passwordErrors = $validator->errors()->get('password', []);
-
-        if ($passwordErrors !== []) {
-            return implode(' ', $passwordErrors);
-        }
-
-        return $validator->errors()->first()
-            ?: 'Password must be strong and include: at least 8 characters, an uppercase and lowercase letter, a number, and a special character (such as @ # $ %).';
     }
 }

@@ -19,7 +19,7 @@ class SaasHrWorkflowTest extends TestCase
     {
         $plan = SubscriptionPlan::create([
             'name' => 'Starter Free',
-            'plan_type' => 'standard',
+            'plan_type' => 'free',
             'billing_period' => 'month',
             'max_employees' => 50,
             'price' => 0,
