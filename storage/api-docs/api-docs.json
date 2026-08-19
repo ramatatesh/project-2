@@ -219,7 +219,24 @@
                     "المصادقة (Authentication)"
                 ],
                 "summary": "تسجيل دخول المستخدم للمنصة",
+                "description": "أرسلي X-Locale: ar أو en لتغيير لغة رسائل message و errors.",
                 "operationId": "8dcb70df1020986038d098cc08d05dae",
+                "parameters": [
+                    {
+                        "name": "X-Locale",
+                        "in": "header",
+                        "description": "لغة رسائل message و errors: ar (عربي) أو en (إنجليزي). الافتراضي en.",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": "en",
+                            "enum": [
+                                "ar",
+                                "en"
+                            ]
+                        }
+                    }
+                ],
                 "requestBody": {
                     "required": true,
                     "content": {
@@ -328,7 +345,24 @@
                     "المصادقة (Authentication)"
                 ],
                 "summary": "التحقق من رمز الدخول بخطوتين وإصدار التوكن",
+                "description": "أرسلي X-Locale: ar أو en لتغيير لغة رسائل message و errors.",
                 "operationId": "aa1103c3bbc8672843dfee37e8755c54",
+                "parameters": [
+                    {
+                        "name": "X-Locale",
+                        "in": "header",
+                        "description": "لغة رسائل message و errors: ar (عربي) أو en (إنجليزي). الافتراضي en.",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": "en",
+                            "enum": [
+                                "ar",
+                                "en"
+                            ]
+                        }
+                    }
+                ],
                 "requestBody": {
                     "required": true,
                     "content": {
@@ -370,7 +404,24 @@
                     "المصادقة (Authentication)"
                 ],
                 "summary": "إرسال رمز OTP لإعادة تعيين كلمة المرور",
+                "description": "أرسلي X-Locale: ar أو en لتغيير لغة رسائل message و errors.",
                 "operationId": "cff9b52a898f73f39d684747bd69c4e1",
+                "parameters": [
+                    {
+                        "name": "X-Locale",
+                        "in": "header",
+                        "description": "لغة رسائل message و errors: ar (عربي) أو en (إنجليزي). الافتراضي en.",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": "en",
+                            "enum": [
+                                "ar",
+                                "en"
+                            ]
+                        }
+                    }
+                ],
                 "requestBody": {
                     "required": true,
                     "content": {
@@ -512,8 +563,24 @@
                     "المصادقة (Authentication)"
                 ],
                 "summary": "إعادة تعيين كلمة المرور بعد التحقق من رمز OTP",
-                "description": "كلمة المرور الجديدة يجب أن تحتوي على 8 أحرف على الأقل، حرف كبير، حرف صغير، رقم، ورمز خاص - وإلا يُرجع 422 مع رسالة توضح تحديداً أي شرط لم يتحقق.",
+                "description": "كلمة المرور الجديدة يجب أن تحتوي على 8 أحرف على الأقل، حرف كبير، حرف صغير، رقم، ورمز خاص - وإلا يُرجع 422 مع رسالة توضح تحديداً أي شرط لم يتحقق. أرسلي X-Locale: ar أو en لتغيير لغة رسائل الاستجابة.",
                 "operationId": "6af92e090f994419a2295111b391a205",
+                "parameters": [
+                    {
+                        "name": "X-Locale",
+                        "in": "header",
+                        "description": "لغة رسائل message و errors: ar (عربي) أو en (إنجليزي). الافتراضي en.",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": "en",
+                            "enum": [
+                                "ar",
+                                "en"
+                            ]
+                        }
+                    }
+                ],
                 "requestBody": {
                     "required": true,
                     "content": {
@@ -588,8 +655,24 @@
                     "المصادقة (Authentication)"
                 ],
                 "summary": "تغيير كلمة المرور الإلزامية عند تسجيل الدخول الأول للمنصة",
-                "description": "كلمة المرور الجديدة يجب أن تحتوي على 8 أحرف على الأقل، حرف كبير، حرف صغير، رقم، ورمز خاص - وإلا يُرجع 422 مع رسالة توضح تحديداً أي شرط لم يتحقق.",
+                "description": "كلمة المرور الجديدة يجب أن تحتوي على 8 أحرف على الأقل، حرف كبير، حرف صغير، رقم، ورمز خاص - وإلا يُرجع 422 مع رسالة توضح تحديداً أي شرط لم يتحقق. أرسلي X-Locale: ar أو en لتغيير لغة رسائل الاستجابة.",
                 "operationId": "b954f9b16adb04877cbe5d6a41900a9e",
+                "parameters": [
+                    {
+                        "name": "X-Locale",
+                        "in": "header",
+                        "description": "لغة رسائل message و errors: ar (عربي) أو en (إنجليزي). الافتراضي en.",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": "en",
+                            "enum": [
+                                "ar",
+                                "en"
+                            ]
+                        }
+                    }
+                ],
                 "requestBody": {
                     "required": true,
                     "content": {
@@ -10841,7 +10924,15 @@
         },
         {
             "name": "Locale",
+<<<<<<< HEAD
             "description": "Language switching (Arabic / English) without reloading the app. Send X-Locale or Accept-Language on every API request."
+=======
+<<<<<<< HEAD
+            "description": "Language switching (Arabic / English) without reloading the app. Send X-Locale or Accept-Language on every API request."
+=======
+            "description": "Language switching (Arabic / English) without reloading the app. Send X-Locale or Accept-Language on every API request. Auth validation messages (login, reset password, complete first login, verify OTP) are included in the dictionary."
+>>>>>>> 5006c170c2d1024f0519010bef189b7b0add8bc4
+>>>>>>> 971ec97d8b062ad2b6eef97818ba7af06f79cd43
         },
         {
             "name": "Management Advances",
