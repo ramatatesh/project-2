@@ -7679,6 +7679,160 @@
                 ]
             }
         },
+        "/api/hr/company-policies/leave-types": {
+            "get": {
+                "tags": [
+                    "HR Company Policies"
+                ],
+                "summary": "List leave types for the HR user's company (read-only)",
+                "operationId": "f9ab31f687b1f0f7e3d8d7750ae0c6f6",
+                "responses": {
+                    "200": {
+                        "description": "Leave types retrieved successfully"
+                    },
+                    "403": {
+                        "description": "Forbidden role"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/hr/company-policies/salary-rules": {
+            "get": {
+                "tags": [
+                    "HR Company Policies"
+                ],
+                "summary": "List salary rules for the HR user's company (read-only)",
+                "operationId": "d72a200ff0484de40f384905496164a7",
+                "responses": {
+                    "200": {
+                        "description": "Salary rules retrieved successfully"
+                    },
+                    "403": {
+                        "description": "Forbidden role"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/hr/company-policies/holidays": {
+            "get": {
+                "tags": [
+                    "HR Company Policies"
+                ],
+                "summary": "List holidays for the HR user's company (read-only)",
+                "operationId": "c3330cd8ad1d2722a76742b7af1026ff",
+                "responses": {
+                    "200": {
+                        "description": "Holidays retrieved successfully"
+                    },
+                    "403": {
+                        "description": "Forbidden role"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/hr/company-policies/weekly-holidays": {
+            "get": {
+                "tags": [
+                    "HR Company Policies"
+                ],
+                "summary": "List weekly holidays for the HR user's company (read-only)",
+                "operationId": "d10791bbf10f7e97af3dcd85c2fd2561",
+                "responses": {
+                    "200": {
+                        "description": "Weekly holidays retrieved successfully"
+                    },
+                    "403": {
+                        "description": "Forbidden role"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/hr/company-policies/evaluation-policy": {
+            "get": {
+                "tags": [
+                    "HR Company Policies"
+                ],
+                "summary": "Get evaluation policy for the HR user's company (read-only)",
+                "operationId": "5517396d5f34b58deb712b2ed3141b90",
+                "responses": {
+                    "200": {
+                        "description": "Evaluation policy retrieved successfully"
+                    },
+                    "403": {
+                        "description": "Forbidden role"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/hr/company-policies/attendance-policy": {
+            "get": {
+                "tags": [
+                    "HR Company Policies"
+                ],
+                "summary": "Get attendance policy for the HR user's company (read-only)",
+                "operationId": "9ea1eb0af069c53aff3bf32131fe589e",
+                "responses": {
+                    "200": {
+                        "description": "Attendance policy retrieved successfully"
+                    },
+                    "403": {
+                        "description": "Forbidden role"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/hr/company-policies/advance-policy": {
+            "get": {
+                "tags": [
+                    "HR Company Policies"
+                ],
+                "summary": "Get salary advance policy for the HR user's company (read-only)",
+                "operationId": "7368ad5aab18f50efb8a8d339ea6bc52",
+                "responses": {
+                    "200": {
+                        "description": "Advance policy retrieved successfully"
+                    },
+                    "403": {
+                        "description": "Forbidden role"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
         "/api/companies/{company}/hr-managers": {
             "get": {
                 "tags": [
@@ -8261,6 +8415,36 @@
                         "sanctum": []
                     }
                 ]
+            }
+        },
+        "/api/translations": {
+            "get": {
+                "tags": [
+                    "Locale"
+                ],
+                "summary": "Get the full translation dictionary for the requested locale",
+                "description": "Use this to switch UI language instantly without a page refresh. Then send X-Locale: ar|en (or Accept-Language) on subsequent API calls so `message` fields match.",
+                "operationId": "485df9880a01a046f4d39b39d0d5bade",
+                "parameters": [
+                    {
+                        "name": "lang",
+                        "in": "query",
+                        "description": "ar or en. Also accepted via X-Locale or Accept-Language headers.",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "ar",
+                                "en"
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Translation dictionary"
+                    }
+                }
             }
         },
         "/api/translations": {
@@ -10919,20 +11103,16 @@
             "description": "Read-only company policy endpoints for HR Manager and General Manager. Always scoped to auth()->user()->company_id — no company_id is accepted from the client."
         },
         {
+            "name": "HR Company Policies",
+            "description": "Read-only company policy endpoints for HR Manager and General Manager. Always scoped to auth()->user()->company_id — no company_id is accepted from the client."
+        },
+        {
             "name": "HR Managers",
             "description": "Endpoints for managing HR manager accounts within a tenant company"
         },
         {
             "name": "Locale",
-<<<<<<< HEAD
             "description": "Language switching (Arabic / English) without reloading the app. Send X-Locale or Accept-Language on every API request."
-=======
-<<<<<<< HEAD
-            "description": "Language switching (Arabic / English) without reloading the app. Send X-Locale or Accept-Language on every API request."
-=======
-            "description": "Language switching (Arabic / English) without reloading the app. Send X-Locale or Accept-Language on every API request. Auth validation messages (login, reset password, complete first login, verify OTP) are included in the dictionary."
->>>>>>> 5006c170c2d1024f0519010bef189b7b0add8bc4
->>>>>>> 971ec97d8b062ad2b6eef97818ba7af06f79cd43
         },
         {
             "name": "Management Advances",
